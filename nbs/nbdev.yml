@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "dialoghelper"
+  site-url: "https://AnswerDotAI.github.io/dialoghelper"
+  description: "Helper functions for solveit dialogs"
+  repo-branch: main
+  repo-url: "https://github.com/AnswerDotAI/dialoghelper"
