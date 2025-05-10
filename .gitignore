@@ -1,3 +1,4 @@
+*.bak
 .last_checked
 _proc/
 docs/

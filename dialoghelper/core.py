@@ -14,15 +14,17 @@ from ghapi.all import *
 from fastlite import *
 
 # %% ../nbs/00_core.ipynb
-def get_db():
+def get_db(ns:dict=None):
     if os.environ.get('IN_SOLVEIT', False): dataparent,nm = Path('/app'),'data.db'
     else: dataparent,nm = Path('..'),'dev_data.db'
     db = database(dataparent/'data'/nm)
-    all_dcs(db)
+    dcs = [o for o in all_dcs(db) if o.__name__[0]!='_']
+    if ns:
+        for o in dcs: ns[o.__name__]=o
     return db
 
 # %% ../nbs/00_core.ipynb
-def find_var(var: str):
+def find_var(var:str):
     "Search for var in all frames of the call stack"
     frame = inspect.currentframe()
     while frame:
@@ -37,7 +39,10 @@ def find_dialog_id():
     return find_var('__dialog_id')
 
 # %% ../nbs/00_core.ipynb
-def find_msgs(pattern: str, limit=10):
+def find_msgs(
+    pattern: str, # Text to search for
+    limit:int=10 # Limit number of returned items
+):
     "Find messages in a specific dialog that contain the given pattern."
     did = find_dialog_id()
     return db.t.message('did=? AND content LIKE ?', [did, f'%{pattern}%'], limit=limit)
@@ -60,8 +65,8 @@ def msg_idx():
     return ids,ids.index(find_msg_id())
 
 # %% ../nbs/00_core.ipynb
-def read_msg(n: int=-1,     # Message index (if relative, +ve is downwards)
-             relative=True  # Is `n` relative to current message (True) or absolute (False)?
+def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
+             relative:bool=True  # Is `n` relative to current message (True) or absolute (False)?
     ):
     "Get the message indexed in the current dialog."
     ids,idx = msg_idx()
@@ -77,7 +82,7 @@ def add_msg(
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
     output='', # for prompts/code, initial output
     placement='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
-    msg_id=None
+    msg_id:str=None # id of message that placement is relative to (if None, uses current message)
 ):
     "Add/update a message to the queue to show after code execution completes."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
@@ -86,26 +91,30 @@ def add_msg(
     run_cmd('add_msg', **kwargs)
 
 # %% ../nbs/00_core.ipynb
-def update_msg(msg):
+def update_msg(msg:dict):
     "Update an existing message in the dialog."
-    add_msg(content=msg.content, msg_type=msg.msg_type, output=msg.output, placement='update', msg_id=msg.id)
+    if not isinstance(msg,dict): msg = asdict(msg)
+    add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'], placement='update', msg_id=msg['id'])
 
 # %% ../nbs/00_core.ipynb
-def load_gist(gist_id):
-    "Get the first file from a gist"
+def load_gist(gist_id:str):
+    "Retrieve a gist"
     api = GhApi()
     if '/' in gist_id: *_,user,gist_id = gist_id.split('/')
     else: user = None
     return api.gists.get(gist_id, user=user)
 
 # %% ../nbs/00_core.ipynb
-def gist_file(gist_id):
+def gist_file(gist_id:str):
     "Get the first file from a gist"
     gist = load_gist(gist_id)
     return first(gist.files.values())
 
 # %% ../nbs/00_core.ipynb
-def import_string(code, name):
+def import_string(
+    code:str, # Code to import as a module
+    name:str  # Name of module to create
+):
     with TemporaryDirectory() as tmpdir:
         path = Path(tmpdir) / f"{name}.py"
         path.write_text(code)
@@ -118,7 +127,11 @@ def import_string(code, name):
         return module
 
 # %% ../nbs/00_core.ipynb
-def import_gist(gist_id, mod_name=None, add_global=True):
+def import_gist(
+    gist_id:str, # user/id or just id of gist to import as a module
+    mod_name:str=None, # module name to create (taken from gist filename if not passed)
+    add_global:bool=True # add module to caller's globals?
+):
     "Import gist directly from string without saving to disk"
     fil = gist_file(gist_id)
     mod_name = mod_name or Path(fil['filename']).stem
