@@ -7,6 +7,8 @@ __all__ = ['get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', '
 # %% ../nbs/00_core.ipynb
 import inspect, json, importlib, linecache
 from tempfile import TemporaryDirectory
+from ipykernel_helper import *
+
 from fastcore.utils import *
 from ghapi.all import *
 from fastlite import *
