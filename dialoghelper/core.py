@@ -2,7 +2,7 @@
 
 # %% auto 0
 __all__ = ['get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', 'read_msg_ids', 'msg_idx', 'read_msg', 'add_msg',
-           'update_msg', 'load_gist', 'gist_file', 'import_string', 'import_gist']
+           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist']
 
 # %% ../nbs/00_core.ipynb
 import inspect, json, importlib, linecache
@@ -86,15 +86,22 @@ def add_msg(
 ):
     "Add/update a message to the queue to show after code execution completes."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
-    kwargs = dict(content=content, msg_type=msg_type, output=output, placement=placement)
-    if msg_id: kwargs['msg_id']=msg_id
-    run_cmd('add_msg', **kwargs)
+#     kwargs = {'msg_id':msg_id} if msg_id else {}
+    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id)
 
 # %% ../nbs/00_core.ipynb
 def update_msg(msg:dict):
     "Update an existing message in the dialog."
     if not isinstance(msg,dict): msg = asdict(msg)
-    add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'], placement='update', msg_id=msg['id'])
+    add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'],
+            placement='update', msg_id=msg['id'])
+
+# %% ../nbs/00_core.ipynb
+def add_html(
+    html:str, # HTML to add to the DOM
+):
+    "Dynamically add HTML to the current web page. Supports HTMX attrs too."
+    run_cmd('add_ft', html=html)
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
