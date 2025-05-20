@@ -15,7 +15,8 @@ from fastlite import *
 
 # %% ../nbs/00_core.ipynb
 def get_db(ns:dict=None):
-    if os.environ.get('IN_SOLVEIT', False): dataparent,nm = Path(os.environ.get('APP_PATH', '/app')),'data.db'
+    app_path = Path('/app') if Path('/.dockerenv').exists() else Path('.')
+    if os.environ.get('IN_SOLVEIT', False): dataparent,nm = app_path, 'data.db'
     else: dataparent,nm = Path('..'),'dev_data.db'
     db = database(dataparent/'data'/nm)
     dcs = [o for o in all_dcs(db) if o.__name__[0]!='_']
