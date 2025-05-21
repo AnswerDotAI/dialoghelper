@@ -15,7 +15,8 @@ from fastlite import *
 
 # %% ../nbs/00_core.ipynb
 def get_db(ns:dict=None):
-    if os.environ.get('IN_SOLVEIT', False): dataparent,nm = Path('/app'),'data.db'
+    app_path = Path('/app') if Path('/.dockerenv').exists() else Path('.')
+    if os.environ.get('IN_SOLVEIT', False): dataparent,nm = app_path, 'data.db'
     else: dataparent,nm = Path('..'),'dev_data.db'
     db = database(dataparent/'data'/nm)
     dcs = [o for o in all_dcs(db) if o.__name__[0]!='_']
@@ -45,6 +46,7 @@ def find_msgs(
 ):
     "Find messages in a specific dialog that contain the given pattern."
     did = find_dialog_id()
+    db = get_db()
     return db.t.message('did=? AND content LIKE ?', [did, f'%{pattern}%'], limit=limit)
 
 # %% ../nbs/00_core.ipynb
@@ -56,6 +58,7 @@ def find_msg_id():
 def read_msg_ids():
     "Get all ids in current dialog."
     did = find_dialog_id()
+    db = get_db()
     return [o.sid for o in db.t.message('did=?', [did], select='sid', order_by='id')]
 
 # %% ../nbs/00_core.ipynb
@@ -74,6 +77,7 @@ def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
         idx = idx+n
         if not 0<=idx<len(ids): return None
     else: idx = n
+    db = get_db()
     return db.t.message.fetchone('sid=?', [ids[idx]])
 
 # %% ../nbs/00_core.ipynb
@@ -82,19 +86,22 @@ def add_msg(
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
     output='', # for prompts/code, initial output
     placement='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
-    msg_id:str=None # id of message that placement is relative to (if None, uses current message)
+    msg_id:str=None, # id of message that placement is relative to (if None, uses current message)
+    **kw # Additional Message fields such as skipped i/o_collapsed, etc, passed through to the server
 ):
     "Add/update a message to the queue to show after code execution completes."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
 #     kwargs = {'msg_id':msg_id} if msg_id else {}
-    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id)
+    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id, **kw)
 
 # %% ../nbs/00_core.ipynb
-def update_msg(msg:dict):
+def update_msg(msg: dict):
     "Update an existing message in the dialog."
-    if not isinstance(msg,dict): msg = asdict(msg)
+    if not isinstance(msg, dict): msg = asdict(msg)
+    exclude = {'id', 'content', 'msg_type', 'output'} # explicit args
+    kw = {k: v for k, v in msg.items() if k not in exclude}
     add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'],
-            placement='update', msg_id=msg['id'])
+            placement = 'update', msg_id=msg['id'], **kw)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
