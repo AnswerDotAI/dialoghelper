@@ -96,7 +96,6 @@ def _msg(
 ): ...
 
 # %% ../nbs/00_core.ipynb
-@delegates(_msg)
 def add_msg(
     content:str, # message that we are updating or adding before/after
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
@@ -110,13 +109,10 @@ def add_msg(
     run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id, **kwargs)
 
 # %% ../nbs/00_core.ipynb
-def update_msg(msg: dict):
+@delegates(add_msg)
+def update_msg(*args, **kwargs):
     "Update an existing message in the dialog."
-    if not isinstance(msg, dict): msg = asdict(msg)
-    exclude = {'id', 'content', 'msg_type', 'output'} # explicit args
-    kw = {k: v for k, v in msg.items() if k not in exclude}
-    add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'],
-            placement='update', msg_id=msg['id'], **kw)
+    add_msg(*args, placement='update', **kwargs)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
