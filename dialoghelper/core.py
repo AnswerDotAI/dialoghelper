@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from ipykernel_helper import *
 
 from fastcore.utils import *
+from fastcore.meta import delegates
 from ghapi.all import *
 from fastlite import *
 
@@ -81,18 +82,32 @@ def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
     return db.t.message.fetchone('sid=?', [ids[idx]])
 
 # %% ../nbs/00_core.ipynb
+def _msg(
+    input_tokens: int | None = 0,
+    output_tokens: int | None = 0,
+    time_run: str | None = '',
+    is_exported: int | None = 0,
+    skipped: int | None = 0,
+    did: int | None = None,
+    i_collapsed: int | None = 0,
+    o_collapsed: int | None = 0,
+    header_collapsed: int | None = 0,
+    pinned: int | None = 0
+): ...
+
+# %% ../nbs/00_core.ipynb
+@delegates(_msg)
 def add_msg(
     content:str, # message that we are updating or adding before/after
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
-    output='', # for prompts/code, initial output
-    placement='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
+    output:str='', # for prompts/code, initial output
+    placement:str='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
     msg_id:str=None, # id of message that placement is relative to (if None, uses current message)
-    **kw # Additional Message fields such as skipped i/o_collapsed, etc, passed through to the server
+    **kwargs # additional Message fields such as skipped i/o_collapsed, etc, passed through to the server
 ):
     "Add/update a message to the queue to show after code execution completes."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
-#     kwargs = {'msg_id':msg_id} if msg_id else {}
-    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id, **kw)
+    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id, **kwargs)
 
 # %% ../nbs/00_core.ipynb
 def update_msg(msg: dict):
@@ -101,7 +116,7 @@ def update_msg(msg: dict):
     exclude = {'id', 'content', 'msg_type', 'output'} # explicit args
     kw = {k: v for k, v in msg.items() if k not in exclude}
     add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'],
-            placement = 'update', msg_id=msg['id'], **kw)
+            placement='update', msg_id=msg['id'], **kw)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
