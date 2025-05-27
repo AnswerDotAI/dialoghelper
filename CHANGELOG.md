@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.4
+
+### Bugs Squashed
+
+- `add_msg` missing types ([#3](https://github.com/AnswerDotAI/dialoghelper/issues/3))
+
+
 ## 0.0.3
 
 ### New Features
