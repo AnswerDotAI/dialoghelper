@@ -62,7 +62,7 @@ def read_msg_ids():
     "Get all ids in current dialog."
     did = find_dialog_id()
     db = get_db()
-    return [o.sid for o in db.t.message('did=?', [did], select='sid', order_by='id')]
+    return [o.sid for o in db.t.message('did=?', [did], select='sid', order_by='mid')]
 
 # %% ../nbs/00_core.ipynb
 def msg_idx():
@@ -117,14 +117,14 @@ _all_ = ["asdict"]
 
 # %% ../nbs/00_core.ipynb
 @delegates(add_msg)
-def update_msg(msg:Dict={}, **kwargs):
+def update_msg(msg:Optional[Dict]=None, **kwargs):
     "Update an existing message in the dialog. Accepts either the same arguments as add_msg or alternatively a dict Message representation. New content goes in the 'content' keyword argument or msg dict field."
     assert not (msg and kwargs), "If providing a message dictionary, no other arguments should be given"
-    if msg: target_id = msg['sid']
+    if msg and 'sid' in msg: target_id = msg['sid']
     elif 'sid' in kwargs: target_id = kwargs['sid']
     else: raise TypeError("update_msg needs either a dict message or `sid=...`")
     old = asdict(get_db().t.message[target_id])
-    kwargs = {**old, **msg, **kwargs}
+    kwargs = {**old,  **(msg or {}), **kwargs}
     return add_msg(kwargs['content'], kwargs['msg_type'], kwargs['output'], placement='update', sid=target_id, **{k: v for k, v in kwargs.items() if k not in {'content', 'msg_type', 'output', 'update', 'placement', 'sid'}})
 
 # %% ../nbs/00_core.ipynb
