@@ -2,10 +2,11 @@
 
 # %% auto 0
 __all__ = ['get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', 'read_msg_ids', 'msg_idx', 'read_msg', 'add_msg',
-           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist']
+           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import inspect, json, importlib, linecache
+from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
 
@@ -13,6 +14,7 @@ from fastcore.utils import *
 from fastcore.meta import delegates
 from ghapi.all import *
 from fastlite import *
+from fastcore.xtras import asdict
 
 # %% ../nbs/00_core.ipynb
 def get_db(ns:dict=None):
@@ -48,7 +50,7 @@ def find_msgs(
     "Find messages in a specific dialog that contain the given pattern."
     did = find_dialog_id()
     db = get_db()
-    return db.t.message('did=? AND content LIKE ?', [did, f'%{pattern}%'], limit=limit)
+    return db.t.message('did=? AND content LIKE ? ORDER BY mid', [did, f'%{pattern}%'], limit=limit)
 
 # %% ../nbs/00_core.ipynb
 def find_msg_id():
@@ -60,7 +62,7 @@ def read_msg_ids():
     "Get all ids in current dialog."
     did = find_dialog_id()
     db = get_db()
-    return [o.sid for o in db.t.message('did=?', [did], select='sid', order_by='id')]
+    return [o.sid for o in db.t.message('did=?', [did], select='sid', order_by='mid')]
 
 # %% ../nbs/00_core.ipynb
 def msg_idx():
@@ -102,21 +104,28 @@ def add_msg(
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
     output:str='', # for prompts/code, initial output
     placement:str='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
-    msg_id:str=None, # id of message that placement is relative to (if None, uses current message)
+    sid:str=None, # id of message that placement is relative to (if None, uses current message)
     **kwargs # additional Message fields such as skipped i/o_collapsed, etc, passed through to the server
 ):
     "Add/update a message to the queue to show after code execution completes."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
-    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, msg_id=msg_id, **kwargs)
+    assert msg_type not in ('note') or output == '', "'note' messages cannot have an output."
+    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
 
 # %% ../nbs/00_core.ipynb
-def update_msg(msg: dict):
-    "Update an existing message in the dialog."
-    if not isinstance(msg, dict): msg = asdict(msg)
-    exclude = {'id', 'content', 'msg_type', 'output'} # explicit args
-    kw = {k: v for k, v in msg.items() if k not in exclude}
-    add_msg(content=msg['content'], msg_type=msg['msg_type'], output=msg['output'],
-            placement='update', msg_id=msg['id'], **kw)
+_all_ = ["asdict"]
+
+# %% ../nbs/00_core.ipynb
+@delegates(add_msg)
+def update_msg(msg:Optional[Dict]=None, **kwargs):
+    "Update an existing message in the dialog. Accepts either the same arguments as add_msg or alternatively a dict Message representation. New content goes in the 'content' keyword argument or msg dict field."
+    assert not (msg and kwargs), "If providing a message dictionary, no other arguments should be given"
+    if msg and 'sid' in msg: target_id = msg['sid']
+    elif 'sid' in kwargs: target_id = kwargs['sid']
+    else: raise TypeError("update_msg needs either a dict message or `sid=...`")
+    old = asdict(get_db().t.message[target_id])
+    kwargs = {**old,  **(msg or {}), **kwargs}
+    return add_msg(kwargs['content'], kwargs['msg_type'], kwargs['output'], placement='update', sid=target_id, **{k: v for k, v in kwargs.items() if k not in {'content', 'msg_type', 'output', 'update', 'placement', 'sid'}})
 
 # %% ../nbs/00_core.ipynb
 def add_html(
