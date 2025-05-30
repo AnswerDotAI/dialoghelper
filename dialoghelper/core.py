@@ -17,6 +17,9 @@ from fastlite import *
 from fastcore.xtras import asdict
 
 # %% ../nbs/00_core.ipynb
+_all_ = ["asdict"]
+
+# %% ../nbs/00_core.ipynb
 def get_db(ns:dict=None):
     app_path = Path('/app') if Path('/.dockerenv').exists() else Path('.')
     if os.environ.get('IN_SOLVEIT', False): dataparent,nm = app_path, 'data.db'
@@ -50,7 +53,8 @@ def find_msgs(
     "Find messages in a specific dialog that contain the given pattern."
     did = find_dialog_id()
     db = get_db()
-    return db.t.message('did=? AND content LIKE ? ORDER BY mid', [did, f'%{pattern}%'], limit=limit)
+    res = db.t.message('did=? AND content LIKE ? ORDER BY mid', [did, f'%{pattern}%'], limit=limit)
+    return [asdict(o) for o in res]
 
 # %% ../nbs/00_core.ipynb
 def find_msg_id():
@@ -100,7 +104,7 @@ def _msg(
 # %% ../nbs/00_core.ipynb
 @delegates(_msg)
 def add_msg(
-    content:str, # message that we are updating or adding before/after
+    content:str, # content of the message (i.e the message prompt, code, or note text)
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
     output:str='', # for prompts/code, initial output
     placement:str='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
@@ -109,23 +113,26 @@ def add_msg(
 ):
     "Add/update a message to the queue to show after code execution completes."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
-    assert msg_type not in ('note') or output == '', "'note' messages cannot have an output."
+    assert msg_type not in ('note') or not output, "'note' messages cannot have an output."
     run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
 
 # %% ../nbs/00_core.ipynb
-_all_ = ["asdict"]
-
-# %% ../nbs/00_core.ipynb
 @delegates(add_msg)
-def update_msg(msg:Optional[Dict]=None, **kwargs):
-    "Update an existing message in the dialog. Accepts either the same arguments as add_msg or alternatively a dict Message representation. New content goes in the 'content' keyword argument or msg dict field."
-    assert not (msg and kwargs), "If providing a message dictionary, no other arguments should be given"
+def update_msg(
+    msg:Optional[Dict]=None, # Dictionary of field keys/values to update
+    sid:str=None, # id of message that placement is relative to (if None, uses current message)
+    content:str=None, # content of the message (i.e the message prompt, code, or note text)
+    **kwargs):
+    "Update an existing message. Provide either `msg` OR field key/values to update. Use `content` param to update contents."
+    if content: kwargs['content']=content
+    assert bool(msg)^bool(kwargs), "Provide *either* msg, for kwargs, not both"
     if msg and 'sid' in msg: target_id = msg['sid']
-    elif 'sid' in kwargs: target_id = kwargs['sid']
+    elif sid: target_id = sid
     else: raise TypeError("update_msg needs either a dict message or `sid=...`")
     old = asdict(get_db().t.message[target_id])
-    kwargs = {**old,  **(msg or {}), **kwargs}
-    return add_msg(kwargs['content'], kwargs['msg_type'], kwargs['output'], placement='update', sid=target_id, **{k: v for k, v in kwargs.items() if k not in {'content', 'msg_type', 'output', 'update', 'placement', 'sid'}})
+    kw = old | (msg or {}) | kwargs
+    kw.pop('did', None)
+    return add_msg(placement='update', **kw)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
