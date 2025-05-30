@@ -221,7 +221,7 @@ def import_tools_gist(gist_id: str):
     if 'prompt' in sections:
         add_msg(
             content=sections['prompt'].strip(),
-            msg_type='note',
+            msg_type='prompt',
             placement='at_start',
             pinned=1
         )
