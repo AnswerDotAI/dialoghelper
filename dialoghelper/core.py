@@ -2,7 +2,8 @@
 
 # %% auto 0
 __all__ = ['get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', 'read_msg_ids', 'msg_idx', 'read_msg', 'add_msg',
-           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist', 'asdict']
+           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist', 'import_tools_gist',
+           'asdict']
 
 # %% ../nbs/00_core.ipynb
 import inspect, json, importlib, linecache
@@ -183,3 +184,76 @@ def import_gist(
     module = import_string(fil['content'], mod_name)
     if add_global: inspect.currentframe().f_back.f_globals[mod_name] = module
     return module
+
+# %% ../nbs/00_core.ipynb
+def import_tools_gist(gist_id: str):
+    """Import tools and prompt from a gist into the current dialog.
+
+    The gist should contain:
+    - A section marked with #%% imports
+    - A section marked with #%% tools 
+    - A section marked with #%% prompt
+    """
+    import ast
+    
+    # Get gist content
+    gist = gist_file(gist_id)
+    content = gist['content']
+
+    # Split content into sections
+    sections = {}
+    current_section = None
+    current_content = []
+
+    for line in content.splitlines():
+        if line.startswith('#%%'):
+            if current_section:
+                sections[current_section] = '\n'.join(current_content)
+            current_section = line.replace('#%%', '').strip()
+            current_content = []
+        else:
+            current_content.append(line)
+
+    if current_section:
+        sections[current_section] = '\n'.join(current_content)
+
+    # Add prompt as pinned message at the start
+    if 'prompt' in sections:
+        add_msg(
+            content=sections['prompt'].strip(),
+            msg_type='note',
+            placement='at_start',
+            pinned=1
+        )
+
+    # Add imports as first code message
+    if 'imports' in sections:
+        add_msg(
+            content=sections['imports'].strip(),
+            msg_type='code',
+            placement='at_start'
+        )
+
+    # Add tools as second code message
+    if 'tools' in sections:
+        tools_code = sections['tools'].strip()
+        add_msg(
+            content=tools_code,
+            msg_type='code',
+            placement='at_end'
+        )
+        
+        # Parse function names using ast
+        tree = ast.parse(tools_code)
+        func_names = [
+            node.name 
+            for node in ast.walk(tree) 
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith('_')
+        ]
+        
+        # Add final prompt with function list
+        add_msg(
+            content=f"&`[{', '.join(func_names)}]`",
+            msg_type='prompt',
+            placement='at_end'
+        )
