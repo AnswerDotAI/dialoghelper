@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.5
+
+- `update_msg` fixes
+
+
 ## 0.0.4
 
 ### Bugs Squashed
