@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.6
+
+### New Features
+
+- Clarify sid vs mid ([#6](https://github.com/AnswerDotAI/dialoghelper/issues/6))
+
+
 ## 0.0.5
 
 - `update_msg` fixes
