@@ -50,7 +50,7 @@ def find_msgs(
     pattern: str, # Text to search for
     limit:int=10 # Limit number of returned items
 ):
-    "Find messages in a specific dialog that contain the given pattern."
+    "Find messages in a specific dialog that contain the given pattern. To refer to a message found later, use its `sid` field."
     did = find_dialog_id()
     db = get_db()
     res = db.t.message('did=? AND content LIKE ? ORDER BY mid', [did, f'%{pattern}%'], limit=limit)
@@ -108,10 +108,10 @@ def add_msg(
     msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
     output:str='', # for prompts/code, initial output
     placement:str='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
-    sid:str=None, # id of message that placement is relative to (if None, uses current message)
+    sid:str=None, # sid of message that placement is relative to (if None, uses current message)
     **kwargs # additional Message fields such as skipped i/o_collapsed, etc, passed through to the server
 ):
-    "Add/update a message to the queue to show after code execution completes."
+    "Add/update a message to the queue to show after code execution completes. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change)."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
     assert msg_type not in ('note') or not output, "'note' messages cannot have an output."
     run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
@@ -120,10 +120,10 @@ def add_msg(
 @delegates(add_msg)
 def update_msg(
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
-    sid:str=None, # id of message that placement is relative to (if None, uses current message)
+    sid:str=None, # sid of message that placement is relative to (if None, uses current message)
     content:str=None, # content of the message (i.e the message prompt, code, or note text)
     **kwargs):
-    "Update an existing message. Provide either `msg` OR field key/values to update. Use `content` param to update contents."
+    "Update an existing message. Provide either `msg` OR field key/values to update. Use `content` param to update contents. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change)."
     if content: kwargs['content']=content
     assert bool(msg)^bool(kwargs), "Provide *either* msg, for kwargs, not both"
     if msg and 'sid' in msg: target_id = msg['sid']
