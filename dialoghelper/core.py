@@ -47,14 +47,19 @@ def find_dialog_id():
 
 # %% ../nbs/00_core.ipynb
 def find_msgs(
-    pattern: str, # Text to search for
-    limit:int=10 # Limit number of returned items
+    pattern:str='', # Optional text to search for
+    msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
+    limit:int=None, # Optionally limit number of returned items
+    include_output:bool=True # Include output in returned dict?
 ):
-    "Find messages in a specific dialog that contain the given pattern. To refer to a message found later, use its `sid` field."
+    "Find messages in current specific dialog that contain the given information. To refer to a message found later, use its `sid` field (which is the pk)."
     did = find_dialog_id()
     db = get_db()
     res = db.t.message('did=? AND content LIKE ? ORDER BY mid', [did, f'%{pattern}%'], limit=limit)
-    return [asdict(o) for o in res]
+    res = [asdict(o) for o in res if not msg_type or (msg_type==o.msg_type)]
+    if not include_output:
+        for o in res: o.pop('output', None)
+    return res
 
 # %% ../nbs/00_core.ipynb
 def find_msg_id():
@@ -70,7 +75,7 @@ def read_msg_ids():
 
 # %% ../nbs/00_core.ipynb
 def msg_idx():
-    "Get index of current message in dialog."
+    "Get relative index of current message in dialog."
     ids = read_msg_ids()
     return ids,ids.index(find_msg_id())
 
@@ -89,27 +94,24 @@ def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
 
 # %% ../nbs/00_core.ipynb
 def _msg(
-    input_tokens: int | None = 0,
-    output_tokens: int | None = 0,
-    time_run: str | None = '',
-    is_exported: int | None = 0,
-    skipped: int | None = 0,
-    did: int | None = None,
-    i_collapsed: int | None = 0,
-    o_collapsed: int | None = 0,
-    header_collapsed: int | None = 0,
-    pinned: int | None = 0
+    time_run: str | None = '', # When was message executed
+    is_exported: int | None = 0, # Export message to a module?
+    skipped: int | None = 0, # Hide message from prompt?
+    i_collapsed: int | None = 0, # Collapse input?
+    o_collapsed: int | None = 0, # Collapse output?
+    header_collapsed: int | None = 0, # Collapse heading section?
+    pinned: int | None = 0 # Pin to context?
 ): ...
 
 # %% ../nbs/00_core.ipynb
 @delegates(_msg)
 def add_msg(
-    content:str, # content of the message (i.e the message prompt, code, or note text)
-    msg_type: str='note', # message type, can be 'code', 'note', or 'prompt'
-    output:str='', # for prompts/code, initial output
-    placement:str='add_after', # can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
-    sid:str=None, # sid of message that placement is relative to (if None, uses current message)
-    **kwargs # additional Message fields such as skipped i/o_collapsed, etc, passed through to the server
+    content:str, # Content of the message (i.e the message prompt, code, or note text)
+    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
+    output:str='', # For prompts/code, initial output
+    placement:str='add_after', # Can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
+    sid:str=None, # sid (stable id -- pk) of message that placement is relative to (if None, uses current message)
+    **kwargs
 ):
     "Add/update a message to the queue to show after code execution completes. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change)."
     assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
@@ -117,22 +119,33 @@ def add_msg(
     run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
 
 # %% ../nbs/00_core.ipynb
-@delegates(add_msg)
+def _umsg(
+    content:str|None = None, # Content of the message (i.e the message prompt, code, or note text)
+    msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
+    output:str|None = None, # For prompts/code, the output
+    time_run: str | None = None, # When was message executed
+    is_exported: int | None = None, # Export message to a module?
+    skipped: int | None = None, # Hide message from prompt?
+    i_collapsed: int | None = None, # Collapse input?
+    o_collapsed: int | None = None, # Collapse output?
+    header_collapsed: int | None = None, # Collapse heading section?
+    pinned: int | None = None # Pin to context?
+): ...
+
+# %% ../nbs/00_core.ipynb
+@delegates(_umsg)
 def update_msg(
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
-    sid:str=None, # sid of message that placement is relative to (if None, uses current message)
-    content:str=None, # content of the message (i.e the message prompt, code, or note text)
+    sid:str=None, # sid (stable id -- pk) of message to update (if None, uses current message)
     **kwargs):
-    "Update an existing message. Provide either `msg` OR field key/values to update. Use `content` param to update contents. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change)."
-    if content: kwargs['content']=content
-    assert bool(msg)^bool(kwargs), "Provide *either* msg, for kwargs, not both"
-    if msg and 'sid' in msg: target_id = msg['sid']
-    elif sid: target_id = sid
-    else: raise TypeError("update_msg needs either a dict message or `sid=...`")
-    old = asdict(get_db().t.message[target_id])
-    kw = old | (msg or {}) | kwargs
+    """Update an existing message. Provide either `msg` OR field key/values to update.
+    Use `content` param to update contents. Be sure to pass a `sid` (stable id -- the pk) not a `mid`
+    (which is used only for sorting, and can change).
+    Only include parameters to update--missing ones will be left unchanged."""
+    kw = (msg or {}) | kwargs
+    if not sid: raise TypeError("update_msg needs either a dict message or `sid=...`")
     kw.pop('did', None)
-    return add_msg(placement='update', **kw)
+    run_cmd('add_msg', placement='update', sid=sid, **kw)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
