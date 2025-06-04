@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.8
+
+### Bugs Squashed
+
+- sid not being used from dict in `update_msg` ([#8](https://github.com/AnswerDotAI/dialoghelper/issues/8))
+
+
 ## 0.0.7
 
 ### New Features
