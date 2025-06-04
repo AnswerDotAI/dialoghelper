@@ -142,6 +142,7 @@ def update_msg(
     Use `content` param to update contents. Be sure to pass a `sid` (stable id -- the pk) not a `mid`
     (which is used only for sorting, and can change).
     Only include parameters to update--missing ones will be left unchanged."""
+    sid = msg.pop('sid', sid)
     kw = (msg or {}) | kwargs
     if not sid: raise TypeError("update_msg needs either a dict message or `sid=...`")
     kw.pop('did', None)
