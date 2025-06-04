@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.9
+
+### Bugs Squashed
+
+- do not remove sid from msg ([#9](https://github.com/AnswerDotAI/dialoghelper/issues/9))
+
+
 ## 0.0.8
 
 ### Bugs Squashed
