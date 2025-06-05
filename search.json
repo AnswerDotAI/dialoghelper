@@ -1,0 +1,52 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "This file will become your README and also the index of your documentation.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#developer-guide",
+    "href": "index.html#developer-guide",
+    "title": "dialoghelper",
+    "section": "Developer Guide",
+    "text": "Developer Guide\nIf you are new to using nbdev here are some useful pointers to get you started.\n\nInstall dialoghelper in Development mode\n# make sure dialoghelper package is installed in development mode\n$ pip install -e .\n\n# make changes under nbs/ directory\n# ...\n\n# compile to have changes apply to dialoghelper\n$ nbdev_prepare",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#usage",
+    "href": "index.html#usage",
+    "title": "dialoghelper",
+    "section": "Usage",
+    "text": "Usage\n\nInstallation\nInstall latest from the GitHub repository:\n$ pip install git+https://github.com/AnswerDotAI/dialoghelper.git\nor from conda\n$ conda install -c AnswerDotAI dialoghelper\nor from pypi\n$ pip install dialoghelper\n\n\nDocumentation\nDocumentation can be found hosted on this GitHub repository’s pages. Additionally you can find package manager specific guidelines on conda and pypi respectively.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "dialoghelper",
+    "section": "How to use",
+    "text": "How to use\nFill me in please! Don’t forget code examples:\n\n1+1\n\n2",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "source\n\nget_db\n\n get_db (ns:dict=None)\n\n\n# db.conn.filename\n\n\ndb = get_db(globals())\ndlg = db.t.dialog.fetchone()\ndlg\n\nDialog(id=1, name='test dialog', mode=2)\n\n\n\nsource\n\n\nfind_var\n\n find_var (var:str)\n\nSearch for var in all frames of the call stack\n\na = 1\nfind_var('a')\n\n1\n\n\n\nsource\n\n\nfind_dialog_id\n\n find_dialog_id ()\n\n*Get the dialog id by searching the call stack for __dialog_id.*\n\n__dialog_id = dlg.id\n\n\nfind_dialog_id()\n\n1\n\n\n\nsource\n\n\nfind_msgs\n\n find_msgs (pattern:str='', msg_type:str=None, limit:int=None,\n            include_output:bool=True)\n\nFind messages in current specific dialog that contain the given information. To refer to a message found later, use its sid field (which is the pk).\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\npattern\nstr\n\nOptional text to search for\n\n\nmsg_type\nstr\nNone\noptional limit by message type (‘code’, ‘note’, or ‘prompt’)\n\n\nlimit\nint\nNone\nOptionally limit number of returned items\n\n\ninclude_output\nbool\nTrue\nInclude output in returned dict?\n\n\n\n\nfound = find_msgs('hello')\nfound[0]['content']\n\n'hello world'\n\n\n\nfind_msgs(msg_type='prompt', include_output=False)\n\n[{'sid': '_W_YSjhjCR5ehQup9F74xEQ',\n  'mid': 'msg-a0',\n  'content': 'Concisely, what is *one* simple way to reverse a list?',\n  'input_tokens': 24,\n  'output_tokens': 54,\n  'msg_type': 'prompt',\n  'time_run': '',\n  'is_exported': 0,\n  'skipped': 0,\n  'did': 1,\n  'i_collapsed': 0,\n  'o_collapsed': 0,\n  'header_collapsed': 0,\n  'pinned': 0}]\n\n\n\nsource\n\n\nfind_msg_id\n\n find_msg_id ()\n\n*Get the message id by searching the call stack for __dialog_id.*\n\n__msg_id = found[0]['sid']\n\n\nfind_msg_id()\n\n'_Q7ejppqNSgOYDXtx2PVkEw'\n\n\n\nsource\n\n\nread_msg_ids\n\n read_msg_ids ()\n\nGet all ids in current dialog.\n\nsource\n\n\nmsg_idx\n\n msg_idx ()\n\nGet relative index of current message in dialog.\n\nids,idx = msg_idx()\nidx\n\n1\n\n\n\nsource\n\n\nread_msg\n\n read_msg (n:int=-1, relative:bool=True)\n\nGet the message indexed in the current dialog.\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nn\nint\n-1\nMessage index (if relative, +ve is downwards)\n\n\nrelative\nbool\nTrue\nIs n relative to current message (True) or absolute (False)?\n\n\n\n\n# Previous message relative to current\nread_msg(-1)\n\nMessage(sid='_W_YSjhjCR5ehQup9F74xEQ', mid='msg-a0', content='Concisely, what is *one* simple way to reverse a list?', output='You can reverse a list using the slice notation with a step of -1:\\n\\n```python\\nmy_list[::-1]\\n```\\n\\nWould you like me to explain how this works?', input_tokens=24, output_tokens=54, msg_type='prompt', time_run='', is_exported=0, skipped=0, did=1, i_collapsed=0, o_collapsed=0, header_collapsed=0, pinned=0)\n\n\n\n# Last message in dialog\nread_msg(-1, relative=False)\n\nMessage(sid='_7BuMofkeTUyf9Jt4iUY_hQ', mid='msg-a3', content='1+1 / 12', output='[{\"output_type\": \"execute_result\", \"metadata\": {}, \"data\": {\"text/plain\": [\"1.0833333333333333\"]}, \"execution_count\": 22}]', input_tokens=9, output_tokens=30, msg_type='code', time_run='', is_exported=0, skipped=0, did=1, i_collapsed=0, o_collapsed=0, header_collapsed=0, pinned=0)\n\n\n\nsource\n\n\nadd_msg\n\n add_msg (content:str, msg_type:str='note', output:str='',\n          placement:str='add_after', sid:str=None, time_run:str|None='',\n          is_exported:int|None=0, skipped:int|None=0,\n          i_collapsed:int|None=0, o_collapsed:int|None=0,\n          header_collapsed:int|None=0, pinned:int|None=0)\n\nAdd/update a message to the queue to show after code execution completes. Be sure to pass a sid (stable id) not a mid (which is used only for sorting, and can change).\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\ncontent\nstr\n\nContent of the message (i.e the message prompt, code, or note text)\n\n\nmsg_type\nstr\nnote\nMessage type, can be ‘code’, ‘note’, or ‘prompt’\n\n\noutput\nstr\n\nFor prompts/code, initial output\n\n\nplacement\nstr\nadd_after\nCan be ‘add_after’, ‘add_before’, ‘update’, ‘at_start’, ‘at_end’\n\n\nsid\nstr\nNone\nsid (stable id – pk) of message that placement is relative to (if None, uses current message)\n\n\ntime_run\nstr | None\n\nWhen was message executed\n\n\nis_exported\nint | None\n0\nExport message to a module?\n\n\nskipped\nint | None\n0\nHide message from prompt?\n\n\ni_collapsed\nint | None\n0\nCollapse input?\n\n\no_collapsed\nint | None\n0\nCollapse output?\n\n\nheader_collapsed\nint | None\n0\nCollapse heading section?\n\n\npinned\nint | None\n0\nPin to context?\n\n\n\n\nsource\n\n\nupdate_msg\n\n update_msg (msg:Optional[Dict]=None, sid:str=None, content:str|None=None,\n             msg_type:str|None=None, output:str|None=None,\n             time_run:str|None=None, is_exported:int|None=None,\n             skipped:int|None=None, i_collapsed:int|None=None,\n             o_collapsed:int|None=None, header_collapsed:int|None=None,\n             pinned:int|None=None)\n\nUpdate an existing message. Provide either msg OR field key/values to update. Use content param to update contents. Be sure to pass a sid (stable id – the pk) not a mid (which is used only for sorting, and can change). Only include parameters to update–missing ones will be left unchanged.\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nmsg\nOptional\nNone\nDictionary of field keys/values to update\n\n\nsid\nstr\nNone\nsid (stable id – pk) of message to update (if None, uses current message)\n\n\ncontent\nstr | None\nNone\nContent of the message (i.e the message prompt, code, or note text)\n\n\nmsg_type\nstr | None\nNone\nMessage type, can be ‘code’, ‘note’, or ‘prompt’\n\n\noutput\nstr | None\nNone\nFor prompts/code, the output\n\n\ntime_run\nstr | None\nNone\nWhen was message executed\n\n\nis_exported\nint | None\nNone\nExport message to a module?\n\n\nskipped\nint | None\nNone\nHide message from prompt?\n\n\ni_collapsed\nint | None\nNone\nCollapse input?\n\n\no_collapsed\nint | None\nNone\nCollapse output?\n\n\nheader_collapsed\nint | None\nNone\nCollapse heading section?\n\n\npinned\nint | None\nNone\nPin to context?\n\n\n\n\nsource\n\n\nadd_html\n\n add_html (html:str)\n\nDynamically add HTML to the current web page. Supports HTMX attrs too.\n\n\n\n\nType\nDetails\n\n\n\n\nhtml\nstr\nHTML to add to the DOM\n\n\n\n\nsource\n\n\nload_gist\n\n load_gist (gist_id:str)\n\nRetrieve a gist\n\ngistid = 'jph00/e7cfd4ded593e8ef6217e78a0131960c'\ngist = load_gist(gistid)\ngist.html_url\n\n'https://gist.github.com/jph00/e7cfd4ded593e8ef6217e78a0131960c'\n\n\n\nsource\n\n\ngist_file\n\n gist_file (gist_id:str)\n\nGet the first file from a gist\n\ngfile = gist_file(gistid)\nprint(gfile.content)\n\ntestfoo='testbar'\n\n\n\nsource\n\n\nimport_string\n\n import_string (code:str, name:str)\n\n\n\n\n\nType\nDetails\n\n\n\n\ncode\nstr\nCode to import as a module\n\n\nname\nstr\nName of module to create\n\n\n\n\nsource\n\n\nimport_gist\n\n import_gist (gist_id:str, mod_name:str=None, add_global:bool=True)\n\nImport gist directly from string without saving to disk\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\ngist_id\nstr\n\nuser/id or just id of gist to import as a module\n\n\nmod_name\nstr\nNone\nmodule name to create (taken from gist filename if not passed)\n\n\nadd_global\nbool\nTrue\nadd module to caller’s globals?\n\n\n\n\nimport_gist(gistid)\nimporttest.testfoo\n\n'testbar'",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  }
+]
