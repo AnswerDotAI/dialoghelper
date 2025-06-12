@@ -2,13 +2,15 @@
 
 # %% auto 0
 __all__ = ['get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', 'read_msg_ids', 'msg_idx', 'read_msg', 'add_msg',
-           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist', 'asdict']
+           'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'import_gist', 'export_dialog',
+           'import_dialog', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import inspect, json, importlib, linecache
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
+from dataclasses import dataclass
 
 from fastcore.utils import *
 from fastcore.meta import delegates
@@ -197,3 +199,30 @@ def import_gist(
     module = import_string(fil['content'], mod_name)
     if add_global: inspect.currentframe().f_back.f_globals[mod_name] = module
     return module
+
+# %% ../nbs/00_core.ipynb
+__EXPORT_FIELDS = set('content output input_tokens output_tokens msg_type is_exported skipped pinned i_collapsed o_collapsed header_collapsed'.split())
+
+__REQUIRED_FIELDS = set('content output msg_type'.split())
+
+# %% ../nbs/00_core.ipynb
+def export_dialog(filename: str, did:int=find_dialog_id(), include_attachments:bool=False):
+    "Export dialog messages and optionally attachments to JSON"
+    db = get_db()
+    msgs = db.t.message('did=? and (pinned=0 or pinned is null)', [did], order_by='mid')
+    msg_data = []
+    for msg in msgs:
+        msg_dict = {k:getattr(msg,k) for k in __EXPORT_FIELDS if hasattr(msg, k)}
+        msg_data.append(msg_dict)
+    result = {'messages': msg_data, 'dialog_name': db.t.dialog[did].name}
+    with open(filename, 'w') as f: json.dump(result, f, indent=2)
+
+# %% ../nbs/00_core.ipynb
+def import_dialog(fname, add_header=True):
+    "Import dialog messages from JSON file using `add_msg`"
+    data = json.loads(Path(fname).read_text())
+    for msg in data['messages'][::-1]:
+        opts = {k:msg[k] for k in __EXPORT_FIELDS - __REQUIRED_FIELDS if k in msg}
+        add_msg(msg.get('content',''), msg.get('msg_type','note'), msg.get('output',''), 'at_end', **opts)
+    if add_header: add_msg(f"# Imported Dialog `{fname}`", 'note', placement='at_end')
+    return f"Imported {len(data['messages'])} messages"
