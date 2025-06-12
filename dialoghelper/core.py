@@ -206,14 +206,13 @@ __EXPORT_FIELDS = set('content output input_tokens output_tokens msg_type is_exp
 __REQUIRED_FIELDS = set('content output msg_type'.split())
 
 # %% ../nbs/00_core.ipynb
-def export_dialog(filename: str, did:int=find_dialog_id(), include_attachments:bool=False):
+def export_dialog(filename: str, did:int=None):
     "Export dialog messages and optionally attachments to JSON"
+    if did is None: did = find_dialog_id()
     db = get_db()
     msgs = db.t.message('did=? and (pinned=0 or pinned is null)', [did], order_by='mid')
-    msg_data = []
-    for msg in msgs:
-        msg_dict = {k:getattr(msg,k) for k in __EXPORT_FIELDS if hasattr(msg, k)}
-        msg_data.append(msg_dict)
+    msg_data = [{k:getattr(msg,k) for k in __EXPORT_FIELDS if hasattr(msg, k)}
+                for msg in msgs]
     result = {'messages': msg_data, 'dialog_name': db.t.dialog[did].name}
     with open(filename, 'w') as f: json.dump(result, f, indent=2)
 

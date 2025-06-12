@@ -23,4 +23,5 @@ d = { 'settings': { 'branch': 'main',
                                    'dialoghelper.core.msg_idx': ('core.html#msg_idx', 'dialoghelper/core.py'),
                                    'dialoghelper.core.read_msg': ('core.html#read_msg', 'dialoghelper/core.py'),
                                    'dialoghelper.core.read_msg_ids': ('core.html#read_msg_ids', 'dialoghelper/core.py'),
-                                   'dialoghelper.core.update_msg': ('core.html#update_msg', 'dialoghelper/core.py')}}}
+                                   'dialoghelper.core.update_msg': ('core.html#update_msg', 'dialoghelper/core.py')},
+            'dialoghelper.db_dc': {}}}
