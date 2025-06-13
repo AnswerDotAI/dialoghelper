@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.10
+
+### New Features
+
+- add export_dialog, import_dialog functionality ([#10](https://github.com/AnswerDotAI/dialoghelper/pull/10)), thanks to [@austinvhuang](https://github.com/austinvhuang)
+
+
 ## 0.0.9
 
 ### Bugs Squashed
