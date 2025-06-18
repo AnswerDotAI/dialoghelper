@@ -29,7 +29,7 @@ class QQ:
         self.msg_type = msg_type
 
     def __call__(self):
-        add_msg(content=self.content, msg_type=self.msg_type, sid=read_msg(0).sid)
+        update_msg(content=self.content, msg_type=self.msg_type, sid=read_msg(0).sid)
 
     def __repr__(self):
         f"{self.msg_type}: \"{self.content}\""
