@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.11
+
+### New Features
+
+- Add `Placements` ([#11](https://github.com/AnswerDotAI/dialoghelper/issues/11))
+
+
 ## 0.0.10
 
 ### New Features
