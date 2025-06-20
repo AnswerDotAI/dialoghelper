@@ -92,7 +92,7 @@ def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
         if not 0<=idx<len(ids): return None
     else: idx = n
     db = get_db()
-    return db.t.message.selectone('sid=?', [ids[idx]])
+    return db.t.message.item('sid=?', [ids[idx]])
 
 # %% ../nbs/00_core.ipynb
 def _msg(
