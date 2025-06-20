@@ -32,7 +32,7 @@ class QQ:
         update_msg(content=self.content, msg_type=self.msg_type, sid=read_msg(0).sid)
 
     def __repr__(self):
-        f"{self.msg_type}: \"{self.content}\""
+        return f"{self.msg_type}: \"{self.content}\""
 
 
 # %% ../nbs/01_polya.ipynb
