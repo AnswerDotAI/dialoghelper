@@ -12,14 +12,14 @@ from .core import *
 # Step: inspired by contextpack.Topic
 class Step:
     def _children(self):
-        return sorted(list(set(c for c in dir(self) if not c.startswith('_')) - {'get','getter','docs'}))
+        return [c for c in dir(self) if not c.startswith('_') or c in ('get','getter','docs')]
     def __iter__(self): 
         yield from (getattr(self, name) for name in self._children() 
                     if isinstance(getattr(self, name),QQ))
     def __repr__(self):
         s = ''
         if self.__doc__: s += f"doc: {self.__doc__}\n"
-        if (cs := self._children()): s += f"question: {cs}\n"            
+        if (cs := self._children()): s += "\n".join([c + ": " + repr(getattr(self, c)) for c in cs])
         return s
 
 # QQ replaces the SolveIt cell with its given question/prompt/note
@@ -30,9 +30,9 @@ class QQ:
 
     def __call__(self):
         update_msg(content=self.content, msg_type=self.msg_type, sid=read_msg(0).sid)
-
+        
     def __repr__(self):
-        return f"{self.msg_type}: \"{self.content}\""
+        return f"({self.msg_type}) \"{self.content}\""
 
 
 # %% ../nbs/01_polya.ipynb
@@ -59,9 +59,6 @@ class PolyaPlan(Step):
         self.backward = QQ("Can we work backward from the desired result?")
         self.aux = QQ("Could we use an auxiliary element (e.g., a variable, diagram, or example) to clarify the path?")
         self.analogy = QQ("Can you use analogy or similarity to relate the problem to a known solution?")
-
-
-        
 
 
 # %% ../nbs/01_polya.ipynb
