@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.12
+
+### New Features
+
+- Improve `import_gist` - `import_wildcard` and `create_msg` ([#13](https://github.com/AnswerDotAI/dialoghelper/issues/13))
+
+
 ## 0.0.11
 
 ### New Features
