@@ -221,7 +221,9 @@ def import_gist(
     syms = [getattr(module, nm) for nm in syms]
     if import_wildcard:
         for sym in syms: glbs[sym.__name__] = sym
-    if create_msg: add_msg(f"Tools added to dialog:\n\n{mk_toollist(syms)}")
+    if create_msg:
+        pref = getattr(module, '__doc__', "Tools added to dialog:")
+        add_msg(f"{pref}\n\n{mk_toollist(syms)}")
     return module
 
 # %% ../nbs/00_core.ipynb
