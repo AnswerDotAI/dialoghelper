@@ -124,6 +124,17 @@ def add_msg(
     run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
 
 # %% ../nbs/00_core.ipynb
+@delegates(add_msg)
+def _add_msg_unsafe(
+    content:str, # Content of the message (i.e the message prompt, code, or note text)
+    run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
+    **kwargs
+):
+    """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
+    *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
+    add_msg(content=content, run=run, **kwargs)
+
+# %% ../nbs/00_core.ipynb
 def _umsg(
     content:str|None = None, # Content of the message (i.e the message prompt, code, or note text)
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
