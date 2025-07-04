@@ -1,0 +1,62 @@
+[
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "from IPython.display import display,Markdown\nRe-export asdict:\nsource",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html#importing-and-exporting-dialogs",
+    "href": "core.html#importing-and-exporting-dialogs",
+    "title": "dialoghelper",
+    "section": "Importing and Exporting Dialogs",
+    "text": "Importing and Exporting Dialogs\nWe use json serialization of list[dict] to represent a dialogue where dict is a serialized solveit.db_dc Message.\n\nSupported Fields\n\nfrom dialoghelper.db_dc import Message\n\n\nMessage.__annotations__\n\n{'sid': str | None,\n 'mid': str | None,\n 'content': str | None,\n 'output': str | None,\n 'input_tokens': int | None,\n 'output_tokens': int | None,\n 'msg_type': str | None,\n 'time_run': str | None,\n 'is_exported': int | None,\n 'skipped': int | None,\n 'did': int | None,\n 'i_collapsed': int | None,\n 'o_collapsed': int | None,\n 'header_collapsed': int | None,\n 'pinned': int | None}\n\n\nWhen exporting and importing we intentionally leave out these fields: - sid - to avoid duplicating sids across dialogues - mid - to ensure mid respects ordering in the new dialogue - did - since the dialogue will be imported into a different dialogue - time_run - since a dialogue may be imported/exported to other environments where execution time is not comparable.\nThe following are required: - content - msg_type - output\nAll other fields (i_collapsed, header_collapsed, … etc) are technically optional. By default we read them on import if they are available. However, there may be other dialog-consuming applications (shell sage, discord buddy, others) we want to share dialogues with where these fields are not supported by the interface.\n\n\nAttachments\nFor now attachments are not included in the importing and exporting.\nAttachments could be added as a future enhanement but would add some additional design considerations - if attachments refer to external artifacts, do the artifacts get copied? Do they get bundled as part of the export artifact? Do we create a new artifact entry with a new sid for the new dialogue or do we share artifacts?\n\n\nImplementation\n\nsource\n\n\nexport_dialog\n\n export_dialog (filename:str, did:int=None)\n\nExport dialog messages and optionally attachments to JSON\n\ntry:\n    test_path = Path('test.json')\n    export_dialog(test_path)\n    test_msgs = test_path.read_json()\n    print(test_msgs['messages'][1]['content'])\nfinally: test_path.unlink(missing_ok=True)\n\nhello world\n\n\n\nsource\n\n\nimport_dialog\n\n import_dialog (fname, add_header=True)\n\nImport dialog messages from JSON file using add_msg",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "This file will become your README and also the index of your documentation.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#developer-guide",
+    "href": "index.html#developer-guide",
+    "title": "dialoghelper",
+    "section": "Developer Guide",
+    "text": "Developer Guide\nIf you are new to using nbdev here are some useful pointers to get you started.\n\nInstall dialoghelper in Development mode\n# make sure dialoghelper package is installed in development mode\n$ pip install -e .\n\n# make changes under nbs/ directory\n# ...\n\n# compile to have changes apply to dialoghelper\n$ nbdev_prepare",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#usage",
+    "href": "index.html#usage",
+    "title": "dialoghelper",
+    "section": "Usage",
+    "text": "Usage\n\nInstallation\nInstall latest from the GitHub repository:\n$ pip install git+https://github.com/AnswerDotAI/dialoghelper.git\nor from conda\n$ conda install -c AnswerDotAI dialoghelper\nor from pypi\n$ pip install dialoghelper\n\n\nDocumentation\nDocumentation can be found hosted on this GitHub repository’s pages. Additionally you can find package manager specific guidelines on conda and pypi respectively.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "dialoghelper",
+    "section": "How to use",
+    "text": "How to use\nFill me in please! Don’t forget code examples:\n\n1+1\n\n2",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  }
+]
