@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', 'read_msg_ids', 'msg_idx',
-           'read_msg', 'add_msg', 'update_msg', 'add_html', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
-           'mk_toollist', 'import_gist', 'export_dialog', 'import_dialog', 'asdict']
+           'read_msg', 'del_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
+           'mk_toollist', 'import_gist', 'export_dialog', 'import_dialog', 'tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -18,6 +18,9 @@ from ghapi.all import *
 from fastlite import *
 from fastcore.xtras import asdict
 from inspect import currentframe,Parameter,signature
+from httpx import get as xget, post as xpost
+from .core import __all__ as _all
+from IPython.display import display,Markdown
 
 # %% ../nbs/00_core.ipynb
 _all_ = ["asdict"]
@@ -93,7 +96,14 @@ def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
         if not 0<=idx<len(ids): return None
     else: idx = n
     db = get_db()
-    return db.t.message.fetchone('sid=?', [ids[idx]])
+    return db.t.message.selectone('sid=?', [ids[idx]])
+
+# %% ../nbs/00_core.ipynb
+def del_msg(
+    sid:str=None, # sid (stable id -- pk) of message that placement is relative to (if None, uses current message)
+):
+    "Delete a message from the dialog. Be sure to pass a `sid`, not a `mid`."
+    xpost('http://localhost:5001/rm_msg_', data=dict(msid=sid)).raise_for_status()
 
 # %% ../nbs/00_core.ipynb
 def _msg(
@@ -119,9 +129,11 @@ def add_msg(
     **kwargs
 ):
     "Add/update a message to the queue to show after code execution completes. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change)."
-    assert msg_type in ('note', 'code', 'prompt'), "msg_type must be 'code', 'note', or 'prompt'."
-    assert msg_type not in ('note') or not output, "'note' messages cannot have an output."
-    run_cmd('add_msg', content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
+    if msg_type not in ('note', 'code', 'prompt'): return "msg_type must be 'code', 'note', or 'prompt'."
+    if msg_type=='note' and output: return "note messages cannot have an output."
+    if not sid: sid = find_msg_id()
+    data = dict(content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
+    return xpost('http://localhost:5001/add_relative_', data=data).text
 
 # %% ../nbs/00_core.ipynb
 @delegates(add_msg)
@@ -136,7 +148,6 @@ def _add_msg_unsafe(
 
 # %% ../nbs/00_core.ipynb
 def _umsg(
-    content:str|None = None, # Content of the message (i.e the message prompt, code, or note text)
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
     output:str|None = None, # For prompts/code, the output
     time_run: str | None = None, # When was message executed
@@ -151,8 +162,9 @@ def _umsg(
 # %% ../nbs/00_core.ipynb
 @delegates(_umsg)
 def update_msg(
-    msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     sid:str=None, # sid (stable id -- pk) of message to update (if None, uses current message)
+    content:str|None = None, # Content of the message (i.e the message prompt, code, or note text)
+    msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     **kwargs):
     """Update an existing message. Provide either `msg` OR field key/values to update.
     Use `content` param to update contents. Be sure to pass a `sid` (stable id -- the pk) not a `mid`
@@ -162,14 +174,7 @@ def update_msg(
     sid = kw.pop('sid', sid)
     if not sid: raise TypeError("update_msg needs either a dict message or `sid=...`")
     kw.pop('did', None)
-    run_cmd('add_msg', placement='update', sid=sid, **kw)
-
-# %% ../nbs/00_core.ipynb
-def add_html(
-    html:str, # HTML to add to the DOM
-):
-    "Dynamically add HTML to the current web page. Supports HTMX attrs too."
-    run_cmd('add_ft', html=html)
+    add_msg(content, placement='update', sid=sid, **kw)
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
@@ -262,3 +267,16 @@ def import_dialog(fname, add_header=True):
         add_msg(msg.get('content',''), msg.get('msg_type','note'), msg.get('output',''), 'at_end', **opts)
     if add_header: add_msg(f"# Imported Dialog `{fname}`", 'note', placement='at_end')
     return f"Imported {len(data['messages'])} messages"
+
+# %% ../nbs/00_core.ipynb
+def tool_info():
+    cts='''Tools available from `dialoghelper`:
+
+- &`find_dialog_id`: Get the current dialog id.
+- &`find_msg_id`: Get the current message id.
+- &`find_msgs`: Find messages in current specific dialog that contain the given information.
+- &`read_msg`: Get the message indexed in the current dialog.
+- &`del_msg`: Delete a message from the dialog.
+- &`add_msg`: Add/update a message to the queue to show after code execution completes.
+- &`update_msg`: Update an existing message.'''
+    add_msg(cts)
