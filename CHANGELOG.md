@@ -2,6 +2,16 @@
 
 <!-- do not remove -->
 
+## 0.0.13
+
+### New Features
+
+- Use httpx for dialog editing ([#16](https://github.com/AnswerDotAI/dialoghelper/issues/16))
+- Add `tool_info` ([#16](https://github.com/AnswerDotAI/dialoghelper/issues/16))
+- Add `_add_msg_unsafe` ([#15](https://github.com/AnswerDotAI/dialoghelper/issues/15))
+- Use module docstring in `import_gist` ([#14](https://github.com/AnswerDotAI/dialoghelper/issues/14))
+
+
 ## 0.0.12
 
 ### New Features
