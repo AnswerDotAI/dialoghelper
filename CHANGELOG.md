@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.14
+
+### New Features
+
+- return `add_msg` ([#17](https://github.com/AnswerDotAI/dialoghelper/issues/17))
+
+
 ## 0.0.13
 
 ### New Features
