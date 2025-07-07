@@ -57,8 +57,8 @@ def find_msgs(
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
     limit:int=None, # Optionally limit number of returned items
     include_output:bool=True # Include output in returned dict?
-):
-    "Find messages in current specific dialog that contain the given information. To refer to a message found later, use its `sid` field (which is the pk)."
+)->list[dict]:
+    "Find `list[dict]` of messages in current specific dialog that contain the given information. To refer to a message found later, use its `sid` field (which is the pk)."
     did = find_dialog_id()
     db = get_db()
     res = db.t.message('did=? AND content LIKE ? ORDER BY mid', [did, f'%{pattern}%'], limit=limit)
@@ -73,7 +73,7 @@ def find_msg_id():
     return find_var('__msg_id')
 
 # %% ../nbs/00_core.ipynb
-def read_msg_ids():
+def read_msg_ids()->list[str]:
     "Get all ids in current dialog."
     did = find_dialog_id()
     db = get_db()
@@ -89,7 +89,7 @@ def msg_idx():
 def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
              relative:bool=True  # Is `n` relative to current message (True) or absolute (False)?
     ):
-    "Get the message indexed in the current dialog."
+    "Get the `Message` object indexed in the current dialog."
     ids,idx = msg_idx()
     if relative:
         idx = idx+n
@@ -144,7 +144,7 @@ def _add_msg_unsafe(
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
-    add_msg(content=content, run=run, **kwargs)
+    return add_msg(content=content, run=run, **kwargs)
 
 # %% ../nbs/00_core.ipynb
 def _umsg(
