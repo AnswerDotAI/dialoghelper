@@ -107,6 +107,8 @@ def del_msg(
 
 # %% ../nbs/00_core.ipynb
 def _msg(
+    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
+    output:str='', # For prompts/code, initial output
     time_run: str | None = '', # When was message executed
     is_exported: int | None = 0, # Export message to a module?
     skipped: int | None = 0, # Hide message from prompt?
@@ -122,17 +124,23 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'update', 'at_sta
 @delegates(_msg)
 def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
-    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
-    output:str='', # For prompts/code, initial output
     placement:str='add_after', # Can be 'add_after', 'add_before', 'update', 'at_start', 'at_end'
     sid:str=None, # sid (stable id -- pk) of message that placement is relative to (if None, uses current message)
     **kwargs
 ):
-    "Add/update a message to the queue to show after code execution completes. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change)."
-    if msg_type not in ('note', 'code', 'prompt'): return "msg_type must be 'code', 'note', or 'prompt'."
-    if msg_type=='note' and output: return "note messages cannot have an output."
+    """Add/update a message to the queue to show after code execution completes.
+    Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
+    Sets msg_type to 'note' by default if not update placement."""
+    if 'msg_type' not in kwargs and placement!='update': kwargs['msg_type']='note'
+    mt = kwargs.get('msg_type',None)
+    ot = kwargs.get('output',None)
+    if mt and mt not in ('note', 'code', 'prompt'): return "msg_type must be 'code', 'note', or 'prompt'."
+    if mt=='note' and ot: return "note messages cannot have an output."
+    if mt=='code':
+        try: json.loads(ot or '[]')
+        except: return "Code output must be valid json"
     if not sid: sid = find_msg_id()
-    data = dict(content=content, msg_type=msg_type, output=output, placement=placement, sid=sid, **kwargs)
+    data = dict(content=content, placement=placement, sid=sid, **kwargs)
     return xpost('http://localhost:5001/add_relative_', data=data).text
 
 # %% ../nbs/00_core.ipynb
@@ -174,7 +182,7 @@ def update_msg(
     sid = kw.pop('sid', sid)
     if not sid: raise TypeError("update_msg needs either a dict message or `sid=...`")
     kw.pop('did', None)
-    add_msg(content, placement='update', sid=sid, **kw)
+    return add_msg(content, placement='update', sid=sid, **kw)
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
