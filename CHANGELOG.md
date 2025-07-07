@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.15
+
+### Bugs Squashed
+
+- Not using UNSET where needed ([#18](https://github.com/AnswerDotAI/dialoghelper/issues/18))
+
+
 ## 0.0.14
 
 ### New Features
