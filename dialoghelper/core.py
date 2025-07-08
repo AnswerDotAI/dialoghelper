@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'get_db', 'find_var', 'find_dialog_id', 'find_msgs', 'find_msg_id', 'read_msg_ids', 'msg_idx',
-           'read_msg', 'del_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
-           'mk_toollist', 'import_gist', 'export_dialog', 'import_dialog', 'tool_info', 'asdict']
+           'read_msg', 'add_html', 'del_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file', 'import_string',
+           'is_usable_tool', 'mk_toollist', 'import_gist', 'export_dialog', 'import_dialog', 'tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -11,6 +11,7 @@ from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
 from dataclasses import dataclass
+from fastcore.xml import to_xml
 
 from fastcore.utils import *
 from fastcore.meta import delegates
@@ -97,6 +98,14 @@ def read_msg(n:int=-1,     # Message index (if relative, +ve is downwards)
     else: idx = n
     db = get_db()
     return db.t.message.selectone('sid=?', [ids[idx]])
+
+# %% ../nbs/00_core.ipynb
+def add_html(
+    content:str, # The HTML to send to the client (generally should include hx-swap-oob)
+):
+    "Send HTML to the browser to be swapped into the DOM"
+    res = to_xml(content)
+    xpost('http://localhost:5001/add_html_', data=dict(content=res))
 
 # %% ../nbs/00_core.ipynb
 def del_msg(
@@ -280,6 +289,7 @@ def import_dialog(fname, add_header=True):
 def tool_info():
     cts='''Tools available from `dialoghelper`:
 
+- &`add_html`: Send HTML to the browser to be swapped into the DOM using hx-swap-oob.
 - &`find_dialog_id`: Get the current dialog id.
 - &`find_msg_id`: Get the current message id.
 - &`find_msgs`: Find messages in current specific dialog that contain the given information.
