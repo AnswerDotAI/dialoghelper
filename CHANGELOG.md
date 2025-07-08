@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.16
+
+### New Features
+
+- Add `add_html` ([#19](https://github.com/AnswerDotAI/dialoghelper/issues/19))
+
+
 ## 0.0.15
 
 ### Bugs Squashed
