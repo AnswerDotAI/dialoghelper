@@ -104,8 +104,7 @@ def add_html(
     content:str, # The HTML to send to the client (generally should include hx-swap-oob)
 ):
     "Send HTML to the browser to be swapped into the DOM"
-    res = to_xml(content)
-    xpost('http://localhost:5001/add_html_', data=dict(content=res))
+    xpost('http://localhost:5001/add_html_', data=dict(content=to_xml(content)))
 
 # %% ../nbs/00_core.ipynb
 def del_msg(
@@ -149,7 +148,8 @@ def add_msg(
         try: json.loads(ot or '[]')
         except: return "Code output must be valid json"
     if not sid: sid = find_msg_id()
-    data = dict(content=content, placement=placement, sid=sid, **kwargs)
+    data = dict(placement=placement, sid=sid, **kwargs)
+    if content is not None: data['content'] = content
     return xpost('http://localhost:5001/add_relative_', data=data).text
 
 # %% ../nbs/00_core.ipynb
@@ -180,7 +180,7 @@ def _umsg(
 @delegates(_umsg)
 def update_msg(
     sid:str=None, # sid (stable id -- pk) of message to update (if None, uses current message)
-    content:str|None = None, # Content of the message (i.e the message prompt, code, or note text)
+    content:str|None=None, # Content of the message (i.e the message prompt, code, or note text)
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     **kwargs):
     """Update an existing message. Provide either `msg` OR field key/values to update.

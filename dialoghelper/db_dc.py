@@ -77,6 +77,7 @@ class Message:
     o_collapsed: int | None = '0'
     header_collapsed: int | None = '0'
     pinned: int | None = '0'
+    use_thinking: int | None = 0
 
 @dataclass
 class Secret:
