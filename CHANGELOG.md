@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.17
+
+### Bugs Squashed
+
+- `update_msg` could delete contents ([#20](https://github.com/AnswerDotAI/dialoghelper/issues/20))
+
+
 ## 0.0.16
 
 ### New Features
