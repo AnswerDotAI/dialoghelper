@@ -49,7 +49,7 @@ class ToolImageResult:
 
 # %% ../nbs/01_experimental.ipynb
 def capture_screen():
-    "Capture current desktop/screen and insert as image in dialog, returning the screenshot as a ToolImageResult which will be sent back to the API is an image. `persist` determines if the screenshot is added as a note"
+    "Capture current desktop returning the screenshot as a ToolImageResult."
     _load_screenshot_js()        
     data_id = str(uuid.uuid4())  # Generate random ID for data communication
     screenshot_code = f'captureScreenAndUpload("{data_id}");'

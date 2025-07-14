@@ -3,8 +3,6 @@
  * Provides browser-based screen capture with solveit integration
  */
 
-var isCapturing = false;
-
 async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
     return new Promise((resolve, reject) => {
         const video = document.createElement('video');
@@ -17,7 +15,7 @@ async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
             const videoHeight = video.videoHeight;
             const scaleX = maxWidth / videoWidth;
             const scaleY = maxHeight / videoHeight;
-            const scale = Math.min(scaleX, scaleY, 1); // Don't upscale
+            const scale = Math.min(scaleX, scaleY, 1); // don't upscale
             const newWidth = Math.floor(videoWidth * scale);
             const newHeight = Math.floor(videoHeight * scale);
             const canvas = document.createElement('canvas');
@@ -31,6 +29,8 @@ async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
         video.play().catch(reject);
     });
 }
+
+var isCapturing = false;
 
 async function captureScreen() {
     if (isCapturing) { throw new Error('Screenshot already in progress'); }
@@ -58,7 +58,7 @@ function blobToBase64(blob) {
 async function processScreenshotBlob(blob) {
     const base64String = await blobToBase64(blob);
     const blob_type = blob.type || 'image/png';
-    const b64data = base64String.split(',')[1];
+    const b64data = base64String.split(',')[1]; // Remove the data URL prefix
     return { size: blob.size, img_type: blob_type, img_data: b64data };
 }
 
