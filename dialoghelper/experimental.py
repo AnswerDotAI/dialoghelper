@@ -48,16 +48,16 @@ class ToolImageResult:
     alt_text: str = "Tool generated image"
 
 # %% ../nbs/01_experimental.ipynb
-def capture_screen(add_note=False):
+def capture_screen():
     "Capture current desktop/screen and insert as image in dialog, returning the screenshot as a ToolImageResult which will be sent back to the API is an image. `persist` determines if the screenshot is added as a note"
     _load_screenshot_js()        
-    sid = add_msg("[Viewing Screen]", mt="note")
-    screenshot_code = f'captureScreenAndUpload("{sid}");'    
+    data_id = str(uuid.uuid4())  # Generate random ID for data communication
+    screenshot_code = f'captureScreenAndUpload("{data_id}");'
     trigger_script = create_iife(screenshot_code)
     add_html(Div(Script(trigger_script), hx_swap_oob=f'beforeend:#js-script'))
     max_attempts = 50
     for attempt in range(max_attempts):
-        result = xpost('http://localhost:5001/pop_data_', data={'data_id': sid})
+        result = xpost('http://localhost:5001/pop_data_', data={'data_id': data_id})
         if result.status_code == 200:
             try:
                 if not result.text.strip():
@@ -71,7 +71,6 @@ def capture_screen(add_note=False):
                 if 'data' in parsed_data:
                     inner_data = json.loads(parsed_data['data'])
                     if 'img_data' in inner_data and 'img_type' in inner_data:
-                        if not add_note: del_msg(sid)
                         return ToolImageResult(data=inner_data['img_data'], # b64 data
                                                media_type=inner_data['img_type'],
                                                alt_text=f"Screenshot captured ({inner_data.get('size', 'unknown')} bytes)")
