@@ -12,23 +12,18 @@ async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
         video.muted = true;
         video.playsInline = true;
         video.addEventListener('loadedmetadata', () => {
-            // Calculate scaling to fit within max dimensions
+            // Downscale to maxWith x maxHeight using canvas
             const videoWidth = video.videoWidth;
             const videoHeight = video.videoHeight;
             const scaleX = maxWidth / videoWidth;
             const scaleY = maxHeight / videoHeight;
             const scale = Math.min(scaleX, scaleY, 1); // Don't upscale
-            
-            // Calculate new dimensions
             const newWidth = Math.floor(videoWidth * scale);
             const newHeight = Math.floor(videoHeight * scale);
-            
             const canvas = document.createElement('canvas');
             canvas.width = newWidth;
             canvas.height = newHeight;
-            
             const ctx = canvas.getContext('2d');
-            // Draw the scaled image directly to the canvas
             ctx.drawImage(video, 0, 0, newWidth, newHeight);
             canvas.toBlob(resolve, 'image/png');
         });
@@ -48,9 +43,7 @@ async function captureScreen() {
         const blob = await streamToBlob(stream);
         stream.getTracks().forEach(track => track.stop());
         return blob;
-    } finally {
-        isCapturing = false;
-    }
+    } finally { isCapturing = false; }
 }
 
 function blobToBase64(blob) {
@@ -62,7 +55,7 @@ function blobToBase64(blob) {
     });
 }
 
-async function handleScreenshotBlob(blob, sid) {
+async function uploadScreenshotBlob(blob, sid) {
     const formData = new FormData();
     // Generate UUID following the same pattern as attachment_upload.js
     const imageid = crypto.randomUUID ? crypto.randomUUID() :
@@ -101,64 +94,34 @@ async function handleScreenshotBlob(blob, sid) {
     return { imageid, filename, sid: sid, markdown: markdown_link, size: blob.size, img_type: blob_type, img_data: b64data};
 }
 
-async function captureScreenshot(sid) {
+async function captureScreenAndUpload(dataId) {
+    console.log("Executing screenshot");
     try {
         const blob = await captureScreen();
-        const result = await handleScreenshotBlob(blob, sid);
-        return result;
+        const result = await uploadScreenshotBlob(blob, dataId);
+        console.log("Screenshot result:", result);
+        const pushResponse = await fetch('/push_data_', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                data_id: dataId,
+                data: JSON.stringify(result)
+            })
+        });
+        if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); } 
+        else { console.log("❌ Failed to push screenshot data"); }
     } catch (error) {
-        console.error('Screenshot error:', error);
-        return `❌ Screenshot failed: ${error.message}`;
-    }
-}
-
-async function captureAndPushScreenshot(dataId) {
-    console.log("Executing screenshot");
-    let attempts = 0;
-    while (!window.captureScreenshot && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    if (window.captureScreenshot) { 
-        try {
-            const result = await captureScreenshot(dataId);
-            console.log("Screenshot result:", result);
-            const pushResponse = await fetch('/push_data_', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                    data_id: dataId,
-                    data: JSON.stringify(result)
-                })
-            });
-            
-            if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); } 
-            else { console.log("❌ Failed to push screenshot data"); }
-        } catch (error) {
-            console.error("Screenshot error:", error);
-            await fetch('/push_data_', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                    data_id: dataId,
-                    data: JSON.stringify({ error: error.message })
-                })
-            });
-        }
-    } else { 
-        console.log('❌ Screenshot function not available after waiting');
+        console.error("Screenshot error:", error);
         await fetch('/push_data_', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 data_id: dataId,
-                data: JSON.stringify({ error: "Screenshot function not available" })
+                data: JSON.stringify({ error: error.message })
             })
         });
     }
     console.log("Finished executing screenshot");
 }
 
-window.captureScreenshot = captureScreenshot;
-window.captureAndPushScreenshot = captureAndPushScreenshot;
-
+window.captureScreenAndUpload = captureScreenAndUpload;
