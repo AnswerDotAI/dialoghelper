@@ -109,24 +109,28 @@ def add_msg(
     o_collapsed: int | None = 0, # Collapse output?
     heading_collapsed: int | None = 0, # Collapse heading section?
     pinned: int | None = 0, # Pin to context?
-    **kwargs):
+):
     "Add/update a message to the queue to show after code execution completes."
     if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
     return call_endp(
         'add_relative_', content=content, placement=placement, msgid=msgid, msg_type=msg_type, output=output,
         time_run=time_run, is_exported=is_exported, skipped=skipped, pinned=pinned,
-        i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed, **kwargs)
+        i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed)
 
 # %% ../nbs/00_core.ipynb
 @delegates(add_msg)
 def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
+    placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
+    msgid:str=None, # id of message that placement is relative to (if None, uses current message)
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     **kwargs
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
-    return add_msg(content=content, run=run, **kwargs)
+    if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
+    return call_endp(
+        'add_relative_', content=content, placement=placement, msgid=msgid, run=run, **kwargs)
 
 # %% ../nbs/00_core.ipynb
 def _umsg(
@@ -225,7 +229,6 @@ def tool_info():
     cts='''Tools available from `dialoghelper`:
 
 - &`add_html`: Send HTML to the browser to be swapped into the DOM using hx-swap-oob.
-- &`find_dialog_id`: Get the current dialog id.
 - &`find_msg_id`: Get the current message id.
 - &`find_msgs`: Find messages in current specific dialog that contain the given information.
 - &`read_msg`: Get the message indexed in the current dialog.
