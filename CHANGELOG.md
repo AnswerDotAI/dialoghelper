@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.20
+
+### New Features
+
+- Add `curr_dialog` ([#24](https://github.com/AnswerDotAI/dialoghelper/issues/24))
+
+
 ## 0.0.19
 
 ### Bugs Squashed
