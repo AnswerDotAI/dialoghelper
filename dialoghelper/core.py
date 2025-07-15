@@ -69,9 +69,9 @@ def find_msg_id():
 
 # %% ../nbs/00_core.ipynb
 def msg_idx(
-    msgid=None # Message id to find (defaults to current message)
+    msgid=None,  # Message id to find (defaults to current message)
 ):
-    "Get relative index of message in dialog."
+    "Get absolute index of message in dialog."
     if not msgid: msgid = find_msg_id()
     return call_endp('msg_idx_', json=True, msgid=msgid)['msgid']
 
@@ -141,6 +141,7 @@ def _add_msg_unsafe(
 
 # %% ../nbs/00_core.ipynb
 def _umsg(
+    content:str|None=None, # Content of the message (i.e the message prompt, code, or note text)
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
     output:str|None = None, # For prompts/code, the output
     time_run: str | None = None, # When was message executed
@@ -156,14 +157,13 @@ def _umsg(
 @delegates(_umsg)
 def update_msg(
     msgid:str=None, # id of message to update (if None, uses current message)
-    content:str|None=None, # Content of the message (i.e the message prompt, code, or note text)
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     **kwargs):
     """Update an existing message. Provide either `msg` OR field key/values to update.
     Use `content` param to update contents.
     Only include parameters to update--missing ones will be left unchanged."""
     if not msgid and not msg: raise TypeError("update_msg needs either a dict message or `msgid=`")
-    return call_endp('add_relative_', content=content, placement='update', msgid=msgid, **kwargs)
+    return call_endp('add_relative_', placement='update', msgid=msgid, **kwargs)
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
@@ -236,6 +236,7 @@ def tool_info():
     cts='''Tools available from `dialoghelper`:
 
 - &`curr_dialog`: Get the current dialog info.
+- &`msg_idx`: Get absolute index of message in dialog.
 - &`add_html`: Send HTML to the browser to be swapped into the DOM using hx-swap-oob.
 - &`find_msg_id`: Get the current message id.
 - &`find_msgs`: Find messages in current specific dialog that contain the given information.
