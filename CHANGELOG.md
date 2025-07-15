@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.19
+
+### Bugs Squashed
+
+- kwargs does not work with add_schema ([#23](https://github.com/AnswerDotAI/dialoghelper/issues/23))
+
+
 ## 0.0.18
 
 ### Breaking Changes
