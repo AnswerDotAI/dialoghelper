@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.18
+
+### Breaking Changes
+
+- Update for new ipynb solveit ([#22](https://github.com/AnswerDotAI/dialoghelper/issues/22))
+
+
 ## 0.0.17
 
 ### Bugs Squashed
