@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.21
+
+### New Features
+
+- Do not make content required in update ([#25](https://github.com/AnswerDotAI/dialoghelper/issues/25))
+
+
 ## 0.0.20
 
 ### New Features
