@@ -32,14 +32,22 @@ async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
 
 var isCapturing = false;
 
+async function waitForGetDisplayMedia(timeout = 30000) {
+    const start = Date.now();
+    while (Date.now() - start < timeout) {
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) { return true; }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error('getDisplayMedia not available after timeout');
+}
+
 async function captureScreen() {
     if (isCapturing) { throw new Error('Screenshot already in progress'); }
     isCapturing = true;
-    try { // Request full monitor instead of window/tab
+    try {
+        await waitForGetDisplayMedia();
         const stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { mediaSource: 'screen', displaySurface: 'monitor' }, 
-            audio: false,
-        });
+            video: { mediaSource: 'screen', displaySurface: 'monitor' },  audio: false,});
         const blob = await streamToBlob(stream);
         stream.getTracks().forEach(track => track.stop());
         return blob;
@@ -55,23 +63,23 @@ function blobToBase64(blob) {
     });
 }
 
-async function processScreenshotBlob(blob) {
+async function processScreenshotBlob(blob, dataId) {
     const base64String = await blobToBase64(blob);
     const blob_type = blob.type || 'image/png';
     const b64data = base64String.split(',')[1]; // Remove the data URL prefix
-    return { size: blob.size, img_type: blob_type, img_data: b64data };
+    return { data_id: dataId, size: blob.size, img_type: blob_type, img_data: b64data };
 }
 
 async function captureScreenAndUpload(dataId) {
     console.log("Executing screenshot");
     try {
         const blob = await captureScreen();
-        const result = await processScreenshotBlob(blob);
+        const result = await processScreenshotBlob(blob, dataId);
         console.log("Screenshot result:", result);
         const pushResponse = await fetch('/push_data_', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({data_id: dataId, data: JSON.stringify(result) })
+            body: new URLSearchParams(result)
         });
         if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); } 
         else { console.log("❌ Failed to push screenshot data"); }
@@ -80,7 +88,7 @@ async function captureScreenAndUpload(dataId) {
         await fetch('/push_data_', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ data_id: dataId, data: JSON.stringify({ error: error.message }) })
+            body: new URLSearchParams({ data_id: dataId, error: error.message })
         });
     }
     console.log("Finished executing screenshot");
