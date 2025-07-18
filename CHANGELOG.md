@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.22
+
+### New Features
+
+- Experimental support to capture screen contents and return b64 encoded image ([#21](https://github.com/AnswerDotAI/dialoghelper/pull/21)), thanks to [@austinvhuang](https://github.com/austinvhuang)
+
+
 ## 0.0.21
 
 ### New Features
