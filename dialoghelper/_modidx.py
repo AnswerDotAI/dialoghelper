@@ -25,4 +25,10 @@ d = { 'settings': { 'branch': 'main',
                                    'dialoghelper.core.read_msg': ('core.html#read_msg', 'dialoghelper/core.py'),
                                    'dialoghelper.core.tool_info': ('core.html#tool_info', 'dialoghelper/core.py'),
                                    'dialoghelper.core.update_msg': ('core.html#update_msg', 'dialoghelper/core.py')},
-            'dialoghelper.db_dc': {}}}
+            'dialoghelper.db_dc': {},
+            'dialoghelper.experimental': { 'dialoghelper.experimental._load_screenshot_js': ( 'experimental.html#_load_screenshot_js',
+                                                                                              'dialoghelper/experimental.py'),
+                                           'dialoghelper.experimental.capture_screen': ( 'experimental.html#capture_screen',
+                                                                                         'dialoghelper/experimental.py'),
+                                           'dialoghelper.experimental.create_iife': ( 'experimental.html#create_iife',
+                                                                                      'dialoghelper/experimental.py')}}}
