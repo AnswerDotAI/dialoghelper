@@ -30,8 +30,6 @@ async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
     });
 }
 
-var isCapturing = false;
-
 async function waitForGetDisplayMedia(timeout = 30000) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
@@ -42,16 +40,12 @@ async function waitForGetDisplayMedia(timeout = 30000) {
 }
 
 async function captureScreen() {
-    if (isCapturing) { throw new Error('Screenshot already in progress'); }
-    isCapturing = true;
-    try {
-        await waitForGetDisplayMedia();
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-            video: { mediaSource: 'screen', displaySurface: 'monitor' },  audio: false,});
-        const blob = await streamToBlob(stream);
-        stream.getTracks().forEach(track => track.stop());
-        return blob;
-    } finally { isCapturing = false; }
+    await waitForGetDisplayMedia();
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { mediaSource: 'screen', displaySurface: 'monitor' },  audio: false,});
+    const blob = await streamToBlob(stream);
+    stream.getTracks().forEach(track => track.stop());
+    return blob;
 }
 
 function blobToBase64(blob) {
