@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.23
+
+### Bugs Squashed
+
+- remove isCapturing restriction in capture_screen ([#26](https://github.com/AnswerDotAI/dialoghelper/pull/26)), thanks to [@austinvhuang](https://github.com/austinvhuang)
+
+
 ## 0.0.22
 
 ### New Features
