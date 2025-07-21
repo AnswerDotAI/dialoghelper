@@ -42,27 +42,60 @@ async function waitForGetDisplayMedia(timeout = 30000) {
     throw new Error('getDisplayMedia not available after timeout');
 }
 
-async function startPersistentScreenShare() {
-    try {
-        streamStatus = 'connecting';
-        await waitForGetDisplayMedia();
-        persistentStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { mediaSource: 'screen', displaySurface: 'monitor' },
-            audio: false
-        });
-        persistentStream.getVideoTracks()[0].addEventListener('ended', () => {
-            console.log('Screen share ended by user');
-            stopPersistentScreenShare();
-        });
-        streamStatus = 'connected';
-        console.log('✅ Persistent screen share started');
-        return { status: 'success', message: 'Screen share started' };
-    } catch (error) {
-        streamStatus = 'error';
-        console.error('Failed to start persistent screen share:', error);
-        return { status: 'error', message: error.message };
-    }
+
+async function startPersistentScreenShare(statusId = null) {
+		try {
+				streamStatus = 'connecting';
+				if (statusId) {
+						fetch('/push_data_', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+								body: new URLSearchParams({
+										data_id: statusId,
+										js_status: 'connecting'
+								})
+						});
+				}
+				await waitForGetDisplayMedia();
+				persistentStream = await navigator.mediaDevices.getDisplayMedia({
+						video: { mediaSource: 'screen', displaySurface: 'monitor' },
+						audio: false
+				});
+				persistentStream.getVideoTracks()[0].addEventListener('ended', () => {
+						console.log('Screen share ended by user');
+						stopPersistentScreenShare();
+				});
+				streamStatus = 'connected';
+				console.log('✅ Persistent screen share started');
+				if (statusId) {
+						fetch('/push_data_', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+								body: new URLSearchParams({
+										data_id: statusId,
+										js_status: 'connected'
+								})
+						});
+				}
+				return { status: 'success', message: 'Screen share started' };
+		} catch (error) {
+				streamStatus = 'error';
+				console.error('Failed to start persistent screen share:', error);
+				if (statusId) {
+						fetch('/push_data_', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+								body: new URLSearchParams({
+										data_id: statusId,
+										js_status: 'error',
+										error: error.message
+								})
+						});
+				}
+				return { status: 'error', message: error.message };
+		}
 }
+
 
 function stopPersistentScreenShare() {
     if (persistentStream) {

@@ -31,4 +31,8 @@ d = { 'settings': { 'branch': 'main',
                                            'dialoghelper.experimental.capture_screen': ( 'experimental.html#capture_screen',
                                                                                          'dialoghelper/experimental.py'),
                                            'dialoghelper.experimental.create_iife': ( 'experimental.html#create_iife',
-                                                                                      'dialoghelper/experimental.py')}}}
+                                                                                      'dialoghelper/experimental.py'),
+                                           'dialoghelper.experimental.start_screen_share': ( 'experimental.html#start_screen_share',
+                                                                                             'dialoghelper/experimental.py'),
+                                           'dialoghelper.experimental.stop_screen_share': ( 'experimental.html#stop_screen_share',
+                                                                                            'dialoghelper/experimental.py')}}}
