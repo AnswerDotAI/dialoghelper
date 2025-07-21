@@ -1,7 +1,10 @@
 /**
  * Screenshot capture functionality for dialoghelper
- * Provides browser-based screen capture with solveit integration
+ * Provides persistent screen sharing with HTTP polling for screenshots
  */
+
+let persistentStream = null;
+let streamStatus = 'disconnected'; // 'disconnected', 'connecting', 'connected', 'error'
 
 async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
     return new Promise((resolve, reject) => {
@@ -10,7 +13,7 @@ async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
         video.muted = true;
         video.playsInline = true;
         video.addEventListener('loadedmetadata', () => {
-            // Downscale to maxWith x maxHeight using canvas
+            // Downscale to maxWidth x maxHeight using canvas
             const videoWidth = video.videoWidth;
             const videoHeight = video.videoHeight;
             const scaleX = maxWidth / videoWidth;
@@ -39,13 +42,36 @@ async function waitForGetDisplayMedia(timeout = 30000) {
     throw new Error('getDisplayMedia not available after timeout');
 }
 
-async function captureScreen() {
-    await waitForGetDisplayMedia();
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { mediaSource: 'screen', displaySurface: 'monitor' },  audio: false,});
-    const blob = await streamToBlob(stream);
-    stream.getTracks().forEach(track => track.stop());
-    return blob;
+async function startPersistentScreenShare() {
+    try {
+        streamStatus = 'connecting';
+        await waitForGetDisplayMedia();
+        persistentStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { mediaSource: 'screen', displaySurface: 'monitor' },
+            audio: false
+        });
+        persistentStream.getVideoTracks()[0].addEventListener('ended', () => {
+            console.log('Screen share ended by user');
+            stopPersistentScreenShare();
+        });
+        streamStatus = 'connected';
+        console.log('✅ Persistent screen share started');
+        return { status: 'success', message: 'Screen share started' };
+    } catch (error) {
+        streamStatus = 'error';
+        console.error('Failed to start persistent screen share:', error);
+        return { status: 'error', message: error.message };
+    }
+}
+
+function stopPersistentScreenShare() {
+    if (persistentStream) {
+        persistentStream.getTracks().forEach(track => track.stop());
+        persistentStream = null;
+    }
+    streamStatus = 'disconnected';
+    console.log('🛑 Persistent screen share stopped');
+    return { status: 'success', message: 'Screen share stopped' };
 }
 
 function blobToBase64(blob) {
@@ -64,28 +90,32 @@ async function processScreenshotBlob(blob, dataId) {
     return { data_id: dataId, size: blob.size, img_type: blob_type, img_data: b64data };
 }
 
-async function captureScreenAndUpload(dataId) {
-    console.log("Executing screenshot");
+async function captureScreenFromStream(dataId) {
+    console.log("Executing screenshot from persistent stream");
     try {
-        const blob = await captureScreen();
+        if (!persistentStream || streamStatus !== 'connected') {
+            throw new Error('No active screen share. Call startPersistentScreenShare() first.');
+        }
+        const blob = await streamToBlob(persistentStream);
         const result = await processScreenshotBlob(blob, dataId);
         console.log("Screenshot result:", result);
         const pushResponse = await fetch('/push_data_', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams(result)
         });
-        if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); } 
-        else { console.log("❌ Failed to push screenshot data"); }
+        if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); }
+				else { console.log("❌ Failed to push screenshot data"); }
     } catch (error) {
         console.error("Screenshot error:", error);
         await fetch('/push_data_', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ data_id: dataId, error: error.message })
         });
     }
     console.log("Finished executing screenshot");
 }
 
-window.captureScreenAndUpload = captureScreenAndUpload;
+window.startPersistentScreenShare = startPersistentScreenShare;
+window.stopPersistentScreenShare = stopPersistentScreenShare;
+window.captureScreenFromStream = captureScreenFromStream;
+window.getStreamStatus = () => streamStatus;
