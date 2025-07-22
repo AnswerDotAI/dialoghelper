@@ -6,6 +6,14 @@
 let persistentStream = null;
 let streamStatus = "disconnected"; // 'disconnected', 'connecting', 'connected', 'error'
 
+function sendDataToServer(dataId, data) {
+    fetch('/push_data_', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({data_id: dataId, ...data})
+    });
+}
+
 async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
@@ -67,7 +75,7 @@ async function startPersistentScreenShare(statusId = null) {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           data_id: statusId,
-          js_status: "connected",
+          js_status: "ready",
         }),
       });
     }
