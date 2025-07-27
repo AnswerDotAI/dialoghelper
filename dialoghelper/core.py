@@ -240,6 +240,7 @@ def tool_info():
 - &`add_html`: Send HTML to the browser to be swapped into the DOM using hx-swap-oob.
 - &`find_msg_id`: Get the current message id.
 - &`find_msgs`: Find messages in current specific dialog that contain the given information.
+  - (solveit can often get this id directly from its context, and will not need to use this if the required information is already available to it.)
 - &`read_msg`: Get the message indexed in the current dialog.
 - &`del_msg`: Delete a message from the dialog.
 - &`add_msg`: Add/update a message to the queue to show after code execution completes.
