@@ -36,6 +36,19 @@ def _wait_for_pop_data(data_id, timeout=20, retry_interval=1, condition=None):
     return None
 
 # %% ../nbs/01_experimental.ipynb
+def _wait_for_pop_data_async(data_id, timeout=20, condition=None):
+  "Wait for data from async pop endpoint with optional condition validation."
+  result = xpost('http://localhost:5001/pop_data_async_', data={'data_id': data_id},
+timeout=timeout)
+  if result.status_code == 200 and result.text.strip():
+      try:
+          data = result.json()
+          if condition and not condition(data): return None
+          return data
+      except json.JSONDecodeError: pass
+  return None
+
+# %% ../nbs/01_experimental.ipynb
 _js_loaded = False
 
 def _load_screenshot_js(timeout=10, retry_interval=1):

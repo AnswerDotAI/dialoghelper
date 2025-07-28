@@ -7,11 +7,19 @@ let persistentStream = null;
 let streamStatus = "disconnected"; // 'disconnected', 'connecting', 'connected', 'error'
 
 function sendDataToServer(dataId, data) {
-    fetch('/push_data_', {
+    return fetch('/push_data_', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({data_id: dataId, ...data})
     });
+}
+
+function sendDataToServerAsync(dataId, data) {
+		return fetch('/push_data_async_', {
+				method: 'POST',
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({data_id: dataId, ...data})
+		});
 }
 
 async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
@@ -53,12 +61,7 @@ async function waitForGetDisplayMedia(timeout = 30000) {
 async function startPersistentScreenShare(statusId = null) {
   try {
     streamStatus = "connecting";
-    if (statusId) {
-      fetch("/push_data_", {
-        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ data_id: statusId, js_status: "connecting" }),
-      });
-    }
+    if (statusId) { sendDataToServer(statusId, { js_status: "connecting" }); }
     await waitForGetDisplayMedia();
     persistentStream = await navigator.mediaDevices.getDisplayMedia({
       video: { mediaSource: "screen", displaySurface: "monitor" }, audio: false,
@@ -69,31 +72,12 @@ async function startPersistentScreenShare(statusId = null) {
     });
     streamStatus = "connected";
     console.log("✅ Persistent screen share started");
-    if (statusId) {
-      fetch("/push_data_", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          data_id: statusId,
-          js_status: "ready",
-        }),
-      });
-    }
+    if (statusId) { sendDataToServer(statusId, { js_status: "ready" }); }
     return { status: "success", message: "Screen share started" };
   } catch (error) {
     streamStatus = "error";
     console.error("Failed to start persistent screen share:", error);
-    if (statusId) {
-      fetch("/push_data_", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          data_id: statusId,
-          js_status: "error",
-          error: error.message,
-        }),
-      });
-    }
+    if (statusId) { sendDataToServer(statusId, { js_status: "error", error: error.message }); }
     return { status: "error", message: error.message };
   }
 }
@@ -138,21 +122,12 @@ async function captureScreenFromStream(dataId) {
     const blob = await streamToBlob(persistentStream);
     const result = await processScreenshotBlob(blob, dataId);
     console.log("Screenshot result:", result);
-    const pushResponse = await fetch("/push_data_", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(result),
-    });
-    if (pushResponse.ok) {
-      console.log("✅ Screenshot data pushed to server");
-    } else {
-      console.log("❌ Failed to push screenshot data");
-    }
+    const pushResponse = await sendDataToServer(dataId, result);
+    if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); }
+		else { console.log("❌ Failed to push screenshot data"); }
   } catch (error) {
     console.error("Screenshot error:", error);
-    await fetch("/push_data_", {
-      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ data_id: dataId, error: error.message }),
-    });
+		sendDataToServer(dataId, { error: error.message });
   }
   console.log("Finished executing screenshot");
 }
