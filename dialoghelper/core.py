@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'curr_dialog', 'find_msgs', 'find_msg_id', 'msg_idx', 'read_msg',
-           'add_html', 'del_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
-           'mk_toollist', 'import_gist', 'tool_info', 'asdict']
+           'add_html', 'del_msg', 'run_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file', 'import_string',
+           'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -94,10 +94,17 @@ def add_html(
 
 # %% ../nbs/00_core.ipynb
 def del_msg(
-    msgid:str=None, # id of message that placement is relative to (if None, uses current message)
+    msgid:str=None, # id of message to delete
+):
+    "Delete a message from the dialog."
+    call_endp('rm_msg_', raiseex=True, msid=msgid)
+
+# %% ../nbs/00_core.ipynb
+def run_msg(
+    msgid:str=None, # id of message to execute
 ):
     "Delete a message from the dialog. Be sure to pass a `sid`, not a `mid`."
-    call_endp('rm_msg_', raiseex=True, msid=msgid)
+    return call_endp('add_runq_', msgid=msgid, api=True)
 
 # %% ../nbs/00_core.ipynb
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
