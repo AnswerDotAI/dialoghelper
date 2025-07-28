@@ -103,7 +103,7 @@ def del_msg(
 def run_msg(
     msgid:str=None, # id of message to execute
 ):
-    "Delete a message from the dialog. Be sure to pass a `sid`, not a `mid`."
+    "Adds a message to the run queue. Use read_msg to see the output once it runs."
     return call_endp('add_runq_', msgid=msgid, api=True)
 
 # %% ../nbs/00_core.ipynb
