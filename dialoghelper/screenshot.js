@@ -7,19 +7,11 @@ let persistentStream = null;
 let streamStatus = "disconnected"; // 'disconnected', 'connecting', 'connected', 'error'
 
 function sendDataToServer(dataId, data) {
-    return fetch('/push_data_', {
+    return fetch('/push_data_blocking_', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({data_id: dataId, ...data})
     });
-}
-
-function sendDataToServerAsync(dataId, data) {
-		return fetch('/push_data_async_', {
-				method: 'POST',
-				headers: {'Content-Type': 'application/json'},
-				body: JSON.stringify({data_id: dataId, ...data})
-		});
 }
 
 async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
@@ -60,8 +52,6 @@ async function waitForGetDisplayMedia(timeout = 30000) {
 
 async function startPersistentScreenShare(statusId = null) {
   try {
-    streamStatus = "connecting";
-    if (statusId) { sendDataToServer(statusId, { js_status: "connecting" }); }
     await waitForGetDisplayMedia();
     persistentStream = await navigator.mediaDevices.getDisplayMedia({
       video: { mediaSource: "screen", displaySurface: "monitor" }, audio: false,
@@ -70,12 +60,11 @@ async function startPersistentScreenShare(statusId = null) {
       console.log("Screen share ended by user");
       stopPersistentScreenShare();
     });
-    streamStatus = "connected";
     console.log("✅ Persistent screen share started");
     if (statusId) { sendDataToServer(statusId, { js_status: "ready" }); }
+		streamStatus = "connected";
     return { status: "success", message: "Screen share started" };
   } catch (error) {
-    streamStatus = "error";
     console.error("Failed to start persistent screen share:", error);
     if (statusId) { sendDataToServer(statusId, { js_status: "error", error: error.message }); }
     return { status: "error", message: error.message };
@@ -117,12 +106,14 @@ async function captureScreenFromStream(dataId) {
   console.log("Executing screenshot from persistent stream");
   try {
     if (!persistentStream || streamStatus !== "connected") {
+			console.log("Stream status:", streamStatus);
+			console.log("Persistent stream:", persistentStream);
       throw new Error("No active screen share. Call startPersistentScreenShare() first.");
     }
     const blob = await streamToBlob(persistentStream);
     const result = await processScreenshotBlob(blob, dataId);
     console.log("Screenshot result:", result);
-    const pushResponse = await sendDataToServer(dataId, result);
+    const pushResponse = await sendDataToServer(dataId, result)
     if (pushResponse.ok) { console.log("✅ Screenshot data pushed to server"); }
 		else { console.log("❌ Failed to push screenshot data"); }
   } catch (error) {
