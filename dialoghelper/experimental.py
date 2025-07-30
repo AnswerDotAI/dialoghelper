@@ -6,22 +6,22 @@
 __all__ = ['iife', 'load_screenshot_js', 'start_screen_share', 'stop_screen_share', 'capture_screen']
 
 # %% ../nbs/01_experimental.ipynb
+import uuid,json
 from importlib import resources
-import uuid
-from fasthtml.common import Div, Script
-import json
+from fasthtml.common import Div,Script
 from claudette import ToolResult
 from .core import *
 from httpx import post as xpost
 
 # %% ../nbs/01_experimental.ipynb
-def _pop_data(data_id, timeout=20, condition=None, fail_msg = "`_pop_data` failed to return a value."):
-  result = xpost('http://localhost:5001/pop_data_blocking_', data={'data_id': data_id}, timeout=timeout)
-  if result.status_code == 200 and result.text.strip():
-      try:
-        if (data := result.json()) and (not condition or condition(data)): return data
-      except json.JSONDecodeError as e: print(f"JSON decode error: {e}")
-  raise RuntimeError(fail_msg)
+def _pop_data(data_id, timeout=20):
+    params = {'data_id': data_id, 'timeout':timeout}
+    result = xpost('http://localhost:5001/pop_data_blocking_', data=params, timeout=timeout+1)
+    if result.status_code==200 and result.text.strip():
+        if (data := result.json()): return data
+#         except json.JSONDecodeError as e: print(f"JSON decode error: {e}")
+        raise RuntimeError("No data received")
+    raise RuntimeError(result.status_code)
 
 # %% ../nbs/01_experimental.ipynb
 def iife(code: str) -> str:
@@ -40,13 +40,14 @@ def load_screenshot_js(force=False, timeout=5):
     "Load screenshot capability and wait for confirmation it's ready."
     global _js_loaded
     if _js_loaded and not force: return
-    print("Loading screenshot.js ...")
+#     print("Loading screenshot.js ...")
     status_id = str(uuid.uuid4())
-    js_content = (resources.files('dialoghelper') / 'screenshot.js').read_text()    
+    js_content = (resources.files('dialoghelper')/'screenshot.js').read_text()    
     iife(js_content + f'sendDataToServer("{status_id}", {{"js_status": "ready"}});')
-    data = _pop_data(status_id, timeout, condition=lambda d: d.get('js_status') == 'ready', fail_msg="Failed to load screenshot.js.")
+    data = _pop_data(status_id, timeout)
+    if (stat:=data.get('js_status'))!='ready': raise RuntimeError(f"Failed to load screenshot.js: {stat}")
     _js_loaded = True
-    print("Screenshot.js loaded and ready")        
+#     print("Screenshot.js loaded and ready")        
 
 # %% ../nbs/01_experimental.ipynb
 _screen_share_active = False
@@ -57,23 +58,23 @@ def start_screen_share(timeout=45):
     load_screenshot_js()
     status_id = str(uuid.uuid4())
     iife(f'startPersistentScreenShare("{status_id}");')
-    print("Requesting screen share permission ...")
-    data = _pop_data(status_id, timeout, condition=lambda d: d.get('js_status') == 'ready', fail_msg="Screen share failed.")
+#     print("Requesting screen share permission ...")
+    data = _pop_data(status_id, timeout)
     js_status = data.get('js_status')
-    if js_status == 'ready':
+    if js_status=='ready':
         _screen_share_active = True
-        print("Screen share started successfully.")
-    elif js_status == 'error': raise RuntimeError(f"Screen share failed: {data.get('error', 'Unknown error')}")
-    elif js_status == 'connecting': raise RuntimeError("Screen share timed out after {timeout} seconds.")
+#         print("Screen share started successfully.")
+    elif js_status=='error': raise RuntimeError(f"Screen share failed: {data.get('error', 'Unknown error')}")
+    elif js_status=='connecting': raise RuntimeError("Screen share timed out after {timeout} seconds.")
 
 # %% ../nbs/01_experimental.ipynb
 def stop_screen_share():
-  "Stop persistent screen sharing session."
-  global _screen_share_active
-  load_screenshot_js()
-  iife('stopPersistentScreenShare();')
-  _screen_share_active = False
-  print("Screen share stopped.")
+    "Stop persistent screen sharing session."
+    global _screen_share_active
+    load_screenshot_js()
+    iife('stopPersistentScreenShare();')
+    _screen_share_active = False
+#     print("Screen share stopped.")
 
 # %% ../nbs/01_experimental.ipynb
 def capture_screen():
@@ -81,13 +82,15 @@ def capture_screen():
     global _screen_share_active
     load_screenshot_js()
     if not _screen_share_active:
-        print("🔄 No active screen share, starting one...")
+#         print("🔄 No active screen share, starting one...")
         result = start_screen_share()
         if not _screen_share_active: raise RuntimeError(f"Failed to start screen share: {result}")
     data_id = str(uuid.uuid4())
     screenshot_code = f'captureScreenFromStream("{data_id}");'
-    print("📸 Capturing from persistent stream...")
+#     print("📸 Capturing from persistent stream...")
     iife(screenshot_code)
-    data = _pop_data(data_id, timeout=5, condition=lambda d: 'img_data' in d and 'img_type' in d, fail_msg="Screenshot capture failed, failed to retrieve data.")
+    data = _pop_data(data_id, timeout=45)
     if 'error' in data: raise RuntimeError(f"Screenshot failed: {data['error']}")
+    if not ('img_data' in data and 'img_type' in data):
+        raise RuntimeError("Screenshot capture failed, failed to retrieve data.")
     return ToolResult(data=data['img_data'], result_type=data['img_type'])
