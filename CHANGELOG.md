@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.28
+
+### Bugs Squashed
+
+- js not in manifest ([#32](https://github.com/AnswerDotAI/dialoghelper/issues/32))
+
+
 ## 0.0.27
 
 ### Bugs Squashed
