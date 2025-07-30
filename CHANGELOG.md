@@ -2,7 +2,7 @@
 
 <!-- do not remove -->
 
-## 0.0.24
+## 0.0.25
 
 ### Bugs Squashed
 
