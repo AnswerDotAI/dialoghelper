@@ -14,7 +14,7 @@ function sendDataToServer(dataId, data) {
     });
 }
 
-async function streamToBlob(stream, maxWidth = 512, maxHeight = 512) {
+async function streamToBlob(stream, maxWidth = 1280, maxHeight = 1024) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.srcObject = stream;
