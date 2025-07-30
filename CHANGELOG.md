@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.29
+
+### New Features
+
+- capture cleanup ([#31](https://github.com/AnswerDotAI/dialoghelper/issues/31))
+
+
 ## 0.0.28
 
 ### Bugs Squashed
