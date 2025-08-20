@@ -1,0 +1,82 @@
+[
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "Re-export asdict:\nsource",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html#gists",
+    "href": "core.html#gists",
+    "title": "dialoghelper",
+    "section": "Gists",
+    "text": "Gists\n\nsource\n\nload_gist\n\n load_gist (gist_id:str)\n\nRetrieve a gist\n\ngistid = 'jph00/e7cfd4ded593e8ef6217e78a0131960c'\ngist = load_gist(gistid)\ngist.html_url\n\n'https://gist.github.com/jph00/e7cfd4ded593e8ef6217e78a0131960c'\n\n\n\nsource\n\n\ngist_file\n\n gist_file (gist_id:str)\n\nGet the first file from a gist\n\ngfile = gist_file(gistid)\nprint(gfile.content[:100]+\"…\")\n\n\"This is a test module which makes some simple tools available.\"\n__all__ = [\"hi\",\"whoami\"]\n\ntestfoo=…\n\n\n\nsource\n\n\nimport_string\n\n import_string (code:str, name:str)\n\n\n\n\n\nType\nDetails\n\n\n\n\ncode\nstr\nCode to import as a module\n\n\nname\nstr\nName of module to create\n\n\n\n\nsource\n\n\nis_usable_tool\n\n is_usable_tool (func:&lt;built-infunctioncallable&gt;)\n\nTrue if the function has a docstring and all parameters have types, meaning that it can be used as an LLM tool.\n\ndef hi(who:str):\n    \"Say hi to `who`\"\n    return f\"Hello {who}\"\n\ndef hi2(who):\n    \"Say hi to `who`\"\n    return f\"Hello {who}\"\n\ndef hi3(who:str):\n    return f\"Hello {who}\"\n\nbye = \"bye\"\n\n\nassert is_usable_tool(hi)\nassert not is_usable_tool(hi2)\nassert not is_usable_tool(hi3)\nassert not is_usable_tool(bye)\n\n\nsource\n\n\nmk_toollist\n\n mk_toollist (syms)\n\n\nMarkdown(mk_toollist([hi]))\n\n\n&hi: Say hi to who\n\n\n\n\nsource\n\n\nimport_gist\n\n import_gist (gist_id:str, mod_name:str=None, add_global:bool=True,\n              import_wildcard:bool=False, create_msg:bool=False)\n\nImport gist directly from string without saving to disk\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\ngist_id\nstr\n\nuser/id or just id of gist to import as a module\n\n\nmod_name\nstr\nNone\nmodule name to create (taken from gist filename if not passed)\n\n\nadd_global\nbool\nTrue\nadd module to caller’s globals?\n\n\nimport_wildcard\nbool\nFalse\nimport all exported symbols to caller’s globals\n\n\ncreate_msg\nbool\nFalse\nAdd a message that lists usable tools\n\n\n\n\nimport_gist(gistid)\nimporttest.testfoo\n\n'testbar'\n\n\n\nimport_gist.__doc__\n\n'Import gist directly from string without saving to disk'\n\n\n\nimport_gist(gistid, import_wildcard=True)\nimporttest.testfoo\n\n'testbar'\n\n\n\nhi(\"Sarah\")\n\n'Hello Sarah'\n\n\n\nimporttest.__all__\n\n['hi', 'whoami']",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html#tool-info",
+    "href": "core.html#tool-info",
+    "title": "dialoghelper",
+    "section": "Tool info",
+    "text": "Tool info\nThis is how we get a superset of tools to include:\n\nsource\n\ntool_info\n\n tool_info ()\n\n\nfor o in _all:\n    s = globals()[o]\n    if s.__name__[0]=='_' or not s.__doc__: continue\n    print(f'- &`{s.__name__}`: {s.__doc__}')\n\n- &`find_var`: Search for var in all frames of the call stack\n- &`curr_dialog`: Get the current dialog info.\n- &`find_msgs`: Find `list[dict]` of messages in current specific dialog that contain the given information. To refer to a message found later, use its `id` field.\n- &`find_msg_id`: Get the message id by searching the call stack for __dialog_id.\n- &`msg_idx`: Get absolute index of message in dialog.\n- &`read_msg`: Get the `Message` object indexed in the current dialog.\n- &`add_html`: Send HTML to the browser to be swapped into the DOM\n- &`del_msg`: Delete a message from the dialog. Be sure to pass a `sid`, not a `mid`.\n- &`add_msg`: Add/update a message to the queue to show after code execution completes.\n- &`update_msg`: Update an existing message. Provide either `msg` OR field key/values to update.\n    Use `content` param to update contents.\n    Only include parameters to update--missing ones will be left unchanged.\n- &`load_gist`: Retrieve a gist\n- &`gist_file`: Get the first file from a gist\n- &`is_usable_tool`: True if the function has a docstring and all parameters have types, meaning that it can be used as an LLM tool.\n- &`import_gist`: Import gist directly from string without saving to disk\n- &`asdict`: Convert `o` to a `dict`, supporting dataclasses, namedtuples, iterables, and `__dict__` attrs.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "experimental.html",
+    "href": "experimental.html",
+    "title": "experimental",
+    "section": "",
+    "text": "source\n\niife\n\n iife (code:str)\n\nWrap javascript code string in an IIFE and execute it via add_html\n\nsource\n\n\nload_screenshot_js\n\n load_screenshot_js (force=False, timeout=5)\n\nLoad screenshot capability and wait for confirmation it’s ready.\n\n# load_screenshot_js()\n\nLoading screenshot.js ...\nScreenshot.js loaded and ready\n\n\n\nsource\n\n\nstart_screen_share\n\n start_screen_share (timeout=45)\n\nStart persistent screen sharing session, waiting for confirmation.\n\n# start_screen_share()\n\n\nsource\n\n\nstop_screen_share\n\n stop_screen_share ()\n\nStop persistent screen sharing session.\n\nsource\n\n\ncapture_screen\n\n capture_screen ()\n\nCapture screenshot, automatically starting screen share if needed.",
+    "crumbs": [
+      "experimental"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "This file will become your README and also the index of your documentation.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#developer-guide",
+    "href": "index.html#developer-guide",
+    "title": "dialoghelper",
+    "section": "Developer Guide",
+    "text": "Developer Guide\nIf you are new to using nbdev here are some useful pointers to get you started.\n\nInstall dialoghelper in Development mode\n# make sure dialoghelper package is installed in development mode\n$ pip install -e .\n\n# make changes under nbs/ directory\n# ...\n\n# compile to have changes apply to dialoghelper\n$ nbdev_prepare",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#usage",
+    "href": "index.html#usage",
+    "title": "dialoghelper",
+    "section": "Usage",
+    "text": "Usage\n\nInstallation\nInstall latest from the GitHub repository:\n$ pip install git+https://github.com/AnswerDotAI/dialoghelper.git\nor from conda\n$ conda install -c AnswerDotAI dialoghelper\nor from pypi\n$ pip install dialoghelper\n\n\nDocumentation\nDocumentation can be found hosted on this GitHub repository’s pages. Additionally you can find package manager specific guidelines on conda and pypi respectively.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "dialoghelper",
+    "section": "How to use",
+    "text": "How to use\nFill me in please! Don’t forget code examples:\n\n1+1\n\n2",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  }
+]
