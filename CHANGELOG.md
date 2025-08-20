@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.30
+
+### New Features
+
+- Updates for multi-kernel ([#33](https://github.com/AnswerDotAI/dialoghelper/issues/33))
+
+
 ## 0.0.29
 
 ### New Features
