@@ -24,7 +24,6 @@ from inspect import currentframe,Parameter,signature
 from httpx import get as xget, post as xpost
 from .core import __all__ as _all
 from IPython.display import display,Markdown
-from fastcore.utils import *
 from shlex import split
 from subprocess import run
 
