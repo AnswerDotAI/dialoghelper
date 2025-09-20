@@ -3,8 +3,8 @@
 # %% auto 0
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog', 'find_msgs', 'msg_idx',
            'read_msg', 'add_html', 'del_msg', 'run_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file',
-           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'run_cmd', 'view', 'create', 'insert',
-           'str_replace', 'tool_info', 'asdict']
+           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'run_cmd', 'rg', 'sed', 'view', 'create',
+           'insert', 'str_replace', 'tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -265,6 +265,16 @@ def import_gist(
 def run_cmd(cmd:str, argstr:str):
     res = run([cmd] + split(argstr), capture_output=True, text=True)
     return res.stdout + '\n' + res.stderr
+
+# %% ../nbs/00_core.ipynb
+def rg(argstr:str):
+    "Run the `rg` command with the args in `argstr` (no need to backslash escape)"
+    return run_cmd('rg', argstr)
+
+# %% ../nbs/00_core.ipynb
+def sed(argstr:str):
+    "Run the `sed` command with the args in `argstr` (e.g for reading a section of a file)"
+    return run_cmd('sed', argstr)
 
 # %% ../nbs/00_core.ipynb
 def view(path:str, view_range:tuple[int,int]=None, nums:bool=False):
