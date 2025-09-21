@@ -2,7 +2,7 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog', 'find_msgs', 'msg_idx',
-           'read_msg', 'add_html', 'del_msg', 'run_msg', 'add_msg', 'update_msg', 'load_gist', 'gist_file',
+           'read_msg', 'add_html', 'del_msg', 'run_msg', 'add_msg', 'update_msg', 'url2note', 'load_gist', 'gist_file',
            'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
@@ -192,6 +192,16 @@ def update_msg(
     return call_endp('add_relative_', dname, placement='update', msgid=msgid, **kwargs)
 
 # %% ../nbs/00_core.ipynb
+def url2note(
+    url:str, # URL to read
+    extract_section:bool=True, # If url has an anchor, return only that section
+    selector:str=None # Select section(s) using BeautifulSoup.select (overrides extract_section)
+):
+    "Read URL as markdown, and add a note below current message with the result"
+    res = read_url(url, as_md=True, extract_section=extract_section, selector=selector)
+    return add_msg(res)
+
+# %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
     "Retrieve a gist"
     api = GhApi()
@@ -270,5 +280,6 @@ def tool_info():
 - &`read_msg`: Get the message indexed in the current dialog.
 - &`del_msg`: Delete a message from the dialog.
 - &`add_msg`: Add/update a message to the queue to show after code execution completes.
-- &`update_msg`: Update an existing message.'''
+- &`update_msg`: Update an existing message.
+- &`url2note`: Read URL as markdown, and add a note below current message with the result'''
     add_msg(cts)
