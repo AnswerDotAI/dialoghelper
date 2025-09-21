@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.31
+
+### New Features
+
+- Add `url2note` ([#35](https://github.com/AnswerDotAI/dialoghelper/issues/35))
+
+
 ## 0.0.30
 
 ### New Features
