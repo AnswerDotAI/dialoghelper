@@ -2,8 +2,9 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog', 'find_msgs', 'msg_idx',
-           'read_msg', 'add_html', 'del_msg', 'run_msg', 'add_msg', 'update_msg', 'url2note', 'load_gist', 'gist_file',
-           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'asdict']
+           'read_msg', 'add_html', 'run_msg', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep',
+           'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
+           'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -107,14 +108,6 @@ def add_html(
     call_endp('add_html_', dname, content=to_xml(content))
 
 # %% ../nbs/00_core.ipynb
-def del_msg(
-    msgid:str=None, # id of message to delete
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    "Delete a message from the dialog."
-    call_endp('rm_msg_', dname, raiseex=True, msid=msgid)
-
-# %% ../nbs/00_core.ipynb
 def run_msg(
     msgid:str=None, # id of message to execute
     dname:str='' # Running dialog to get info for; defaults to current dialog
@@ -149,18 +142,26 @@ def add_msg(
         i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed)
 
 # %% ../nbs/00_core.ipynb
+def del_msg(
+    msgid:str=None, # id of message to delete
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Delete a message from the dialog."
+    call_endp('rm_msg_', dname, raiseex=True, msid=msgid)
+
+# %% ../nbs/00_core.ipynb
 @delegates(add_msg)
 def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
     msgid:str=None, # id of message that placement is relative to (if None, uses current message)
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
+    dname:str='', # Running dialog to get info for; defaults to current dialog
     **kwargs
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
     if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
-    dname = kwargs.pop('dname')
     return call_endp(
         'add_relative_', dname, content=content, placement=placement, msgid=msgid, run=run, **kwargs)
 
@@ -200,6 +201,25 @@ def url2note(
     "Read URL as markdown, and add a note below current message with the result"
     res = read_url(url, as_md=True, extract_section=extract_section, selector=selector)
     return add_msg(res)
+
+# %% ../nbs/00_core.ipynb
+def ast_py(code:str):
+    "Get an SgRoot root node for python `code`"
+    from ast_grep_py import SgRoot
+    return SgRoot(code, "python").root()
+
+# %% ../nbs/00_core.ipynb
+def ast_grep(
+    pattern:str, # ast-grep pattern to search
+    path=".", # path to recursively search for files
+    lang="python" # language to search/scan
+):
+    "Use the `ast-grep` command to find `pattern` in `path`"
+    import json, subprocess
+    cmd = f"ast-grep --pattern '{pattern}' --lang {lang} --json=compact"
+    if path != ".": cmd = f"cd {path} && {cmd}"
+    res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return json.loads(res.stdout) if res.stdout else res.stderr
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
