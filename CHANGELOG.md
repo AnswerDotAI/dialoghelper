@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.32
+
+### New Features
+
+- Add ast grep ([#36](https://github.com/AnswerDotAI/dialoghelper/issues/36))
+
+
 ## 0.0.31
 
 ### New Features
