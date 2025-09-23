@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.33
+
+### New Features
+
+- Add `fc_tool_info` ([#37](https://github.com/AnswerDotAI/dialoghelper/issues/37))
+
+
 ## 0.0.32
 
 ### New Features
