@@ -4,7 +4,7 @@
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog', 'find_msgs', 'msg_idx',
            'read_msg', 'add_html', 'run_msg', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep',
            'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
-           'asdict']
+           'fc_tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -303,3 +303,18 @@ def tool_info():
 - &`update_msg`: Update an existing message.
 - &`url2note`: Read URL as markdown, and add a note below current message with the result'''
     add_msg(cts)
+
+# %% ../nbs/00_core.ipynb
+def fc_tool_info():
+    cts='''Tools available from `fastcore.tools`:
+
+- &`rg`: Run the `rg` command with the args in `argstr` (no need to backslash escape)
+- &`sed`: Run the `sed` command with the args in `argstr` (e.g for reading a section of a file)
+- &`view`: View directory or file contents with optional line range and numbers
+- &`create`: Creates a new file with the given content at the specified path
+- &`insert`: Insert new_str at specified line number
+- &`str_replace`: Replace first occurrence of old_str with new_str in file
+- &`strs_replace`: Replace for each str pair in old_strs,new_strs
+- &`replace_lines`: Replace lines in file using start and end line-numbers'''
+    add_msg(cts)
+    add_msg('from fastcore.tools import *', msg_type='code')
