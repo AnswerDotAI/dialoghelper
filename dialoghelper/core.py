@@ -2,9 +2,9 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog', 'find_msgs', 'msg_idx',
-           'read_msg', 'add_html', 'run_msg', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep',
-           'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
-           'fc_tool_info', 'asdict']
+           'read_msg', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'add_html',
+           'run_msg', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep', 'load_gist', 'gist_file',
+           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
 import json, importlib, linecache
@@ -90,14 +90,55 @@ def msg_idx(
 
 # %% ../nbs/00_core.ipynb
 def read_msg(
-    n:int=-1,     # Message index (if relative, +ve is downwards)
-    msgid=None,  # Message id to find (defaults to current message)
-    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
+    msgid:str,  # Message id to find (defaults to current message)
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
     dname:str='' # Running dialog to get info for; defaults to current dialog
     ):
     "Get the `Message` object indexed in the current dialog."
-    if not msgid: msgid = find_msg_id()
-    return call_endp('read_msg_', dname, json=True, msgid=msgid, n=n, relative=relative)['msg']
+    data = dict(msgid=msgid)
+    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
+    if nums: data['nums'] = nums
+    return call_endp('read_msg_', dname, json=True, **data)
+
+# %% ../nbs/00_core.ipynb
+def msg_insert_line(
+    msgid:str,  # Message id to find (defaults to current message)
+    insert_line: int, # Line number where to insert (0-based indexing)
+    new_str: str, # Text to insert at the specified line
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+    ):
+    "Get the `Message` object indexed in the current dialog."
+    return call_endp('msg_insert_line_', dname, json=True, msgid=msgid, insert_line=insert_line, new_str=new_str)
+
+# %% ../nbs/00_core.ipynb
+def msg_str_replace(
+    msgid:str,  # Message id to find (defaults to current message)
+    old_str: str, # Text to find and replace
+    new_str: str, # Text to replace with
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Get the `Message` object indexed in the current dialog."
+    return call_endp('msg_str_replace_', dname, json=True, msgid=msgid, old_str=old_str, new_str=new_str)
+
+# %% ../nbs/00_core.ipynb
+def msg_strs_replace(
+    msgid:str,  # Message id to find (defaults to current message)
+    old_strs:list[str], # List of strings to find and replace
+    new_strs:list[str], # List of replacement strings (must match length of old_strs)
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    return call_endp('msg_strs_replace_', dname, json=True, msgid=msgid, old_strs=old_strs, new_strs=new_strs)
+
+# %% ../nbs/00_core.ipynb
+def msg_replace_lines(
+    msgid:str,  # Message id to find (defaults to current message)
+    start_line:int, # Starting line number to replace (1-based indexing)
+    end_line:int, # Ending line number to replace (1-based indexing, inclusive)
+    new_content:str, # New content to replace the specified lines
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    return call_endp('msg_replace_lines_', dname, json=True, msgid=msgid, start_line=start_line, end_line=end_line, new_content=new_content)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
