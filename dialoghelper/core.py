@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['Placements', 'empty', 'find_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog', 'find_msgs', 'msg_idx',
-           'read_msg', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'add_html',
-           'run_msg', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep', 'load_gist', 'gist_file',
+           'add_html', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep', 'read_msg', 'run_msg',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'load_gist', 'gist_file',
            'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'asdict']
 
 # %% ../nbs/00_core.ipynb
@@ -89,72 +89,12 @@ def msg_idx(
     return call_endp('msg_idx_', dname, json=True, msgid=msgid)['msgid']
 
 # %% ../nbs/00_core.ipynb
-def read_msg(
-    msgid:str,  # Message id to find (defaults to current message)
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
-    nums:bool=False, # Whether to show line numbers
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-    ):
-    "Get the `Message` object indexed in the current dialog."
-    data = dict(msgid=msgid)
-    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
-    if nums: data['nums'] = nums
-    return call_endp('read_msg_', dname, json=True, **data)
-
-# %% ../nbs/00_core.ipynb
-def msg_insert_line(
-    msgid:str,  # Message id to find (defaults to current message)
-    insert_line: int, # Line number where to insert (0-based indexing)
-    new_str: str, # Text to insert at the specified line
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-    ):
-    "Get the `Message` object indexed in the current dialog."
-    return call_endp('msg_insert_line_', dname, json=True, msgid=msgid, insert_line=insert_line, new_str=new_str)
-
-# %% ../nbs/00_core.ipynb
-def msg_str_replace(
-    msgid:str,  # Message id to find (defaults to current message)
-    old_str: str, # Text to find and replace
-    new_str: str, # Text to replace with
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    "Get the `Message` object indexed in the current dialog."
-    return call_endp('msg_str_replace_', dname, json=True, msgid=msgid, old_str=old_str, new_str=new_str)
-
-# %% ../nbs/00_core.ipynb
-def msg_strs_replace(
-    msgid:str,  # Message id to find (defaults to current message)
-    old_strs:list[str], # List of strings to find and replace
-    new_strs:list[str], # List of replacement strings (must match length of old_strs)
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    return call_endp('msg_strs_replace_', dname, json=True, msgid=msgid, old_strs=old_strs, new_strs=new_strs)
-
-# %% ../nbs/00_core.ipynb
-def msg_replace_lines(
-    msgid:str,  # Message id to find (defaults to current message)
-    start_line:int, # Starting line number to replace (1-based indexing)
-    end_line:int, # Ending line number to replace (1-based indexing, inclusive)
-    new_content:str, # New content to replace the specified lines
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    return call_endp('msg_replace_lines_', dname, json=True, msgid=msgid, start_line=start_line, end_line=end_line, new_content=new_content)
-
-# %% ../nbs/00_core.ipynb
 def add_html(
     content:str, # The HTML to send to the client (generally should include hx-swap-oob)
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Send HTML to the browser to be swapped into the DOM"
     call_endp('add_html_', dname, content=to_xml(content))
-
-# %% ../nbs/00_core.ipynb
-def run_msg(
-    msgid:str=None, # id of message to execute
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    "Adds a message to the run queue. Use read_msg to see the output once it runs."
-    return call_endp('add_runq_', dname, msgid=msgid, api=True)
 
 # %% ../nbs/00_core.ipynb
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
@@ -263,6 +203,69 @@ def ast_grep(
     return json.loads(res.stdout) if res.stdout else res.stderr
 
 # %% ../nbs/00_core.ipynb
+def read_msg(
+    n:int=-1,      # Message index (if relative, +ve is downwards)
+    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
+    msgid:str=None,  # Message id to find (defaults to current message)
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+    ):
+    "Get the `Message` object indexed in the current dialog."
+    if not msgid: msgid = find_msg_id()
+    data = dict(n=n, relative=relative, msgid=msgid)
+    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
+    if nums: data['nums'] = nums
+    return call_endp('read_msg_', dname, json=True, **data)
+
+# %% ../nbs/00_core.ipynb
+def run_msg(
+    msgid:str=None, # id of message to execute
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Adds a message to the run queue. Use read_msg to see the output once it runs."
+    return call_endp('add_runq_', dname, msgid=msgid, api=True)
+
+# %% ../nbs/00_core.ipynb
+def msg_insert_line(
+    msgid:str,  # Message id to edit
+    insert_line: int, # Line number where to insert (0-based indexing)
+    new_str: str, # Text to insert at the specified line
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+    ):
+    "Get the `Message` object indexed in the current dialog."
+    return call_endp('msg_insert_line_', dname, json=True, msgid=msgid, insert_line=insert_line, new_str=new_str)
+
+# %% ../nbs/00_core.ipynb
+def msg_str_replace(
+    msgid:str,  # Message id to edit
+    old_str: str, # Text to find and replace
+    new_str: str, # Text to replace with
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Get the `Message` object indexed in the current dialog."
+    return call_endp('msg_str_replace_', dname, json=True, msgid=msgid, old_str=old_str, new_str=new_str)
+
+# %% ../nbs/00_core.ipynb
+def msg_strs_replace(
+    msgid:str,  # Message id to edit
+    old_strs:list[str], # List of strings to find and replace
+    new_strs:list[str], # List of replacement strings (must match length of old_strs)
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    return call_endp('msg_strs_replace_', dname, json=True, msgid=msgid, old_strs=old_strs, new_strs=new_strs)
+
+# %% ../nbs/00_core.ipynb
+def msg_replace_lines(
+    msgid:str,  # Message id to edit
+    start_line:int, # Starting line number to replace (1-based indexing)
+    end_line:int, # Ending line number to replace (1-based indexing, inclusive)
+    new_content:str, # New content to replace the specified lines
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    return call_endp('msg_replace_lines_', dname, json=True, msgid=msgid, start_line=start_line, end_line=end_line, new_content=new_content)
+
+# %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
     "Retrieve a gist"
     api = GhApi()
@@ -339,10 +342,17 @@ def tool_info():
 - &`find_msgs`: Find messages in current specific dialog that contain the given information.
   - (solveit can often get this id directly from its context, and will not need to use this if the required information is already available to it.)
 - &`read_msg`: Get the message indexed in the current dialog.
+  - To get the exact message use `n=0` and `relative=True` together with `msgid`.
+  - To get a relative message use `n` (relative position index).
+  - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
 - &`del_msg`: Delete a message from the dialog.
 - &`add_msg`: Add/update a message to the queue to show after code execution completes.
 - &`update_msg`: Update an existing message.
-- &`url2note`: Read URL as markdown, and add a note below current message with the result'''
+- &`url2note`: Read URL as markdown, and add a note below current message with the result
+- &`msg_insert_line`: Insert text at a specified line in a message.
+- &`msg_str_replace`: Find and replace text in a message.
+- &`msg_strs_replace`: Find and replace multiple strings in a message.
+- &`msg_replace_lines`: Replace a range of lines in a message with new content.'''
     add_msg(cts)
 
 # %% ../nbs/00_core.ipynb
