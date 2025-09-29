@@ -229,8 +229,8 @@ def run_msg(
 # %% ../nbs/00_core.ipynb
 def msg_insert_line(
     msgid:str,  # Message id to edit
-    insert_line: int, # Line number where to insert (0-based indexing)
-    new_str: str, # Text to insert at the specified line
+    insert_line: int, # The line number after which to insert the text (0 for beginning of file)
+    new_str: str, # The text to insert
     dname:str='' # Running dialog to get info for; defaults to current dialog
     ):
     "Insert text at a specific line number in a message"
@@ -351,10 +351,11 @@ def tool_info():
 - &`add_msg`: Add/update a message to the queue to show after code execution completes.
 - &`update_msg`: Update an existing message.
 - &`url2note`: Read URL as markdown, and add a note below current message with the result
-- &`msg_insert_line`: Insert text at a specified line in a message.
+- &`msg_insert_line`: Insert text at a specific location in a message.
 - &`msg_str_replace`: Find and replace text in a message.
 - &`msg_strs_replace`: Find and replace multiple strings in a message.
-- &`msg_replace_lines`: Replace a range of lines in a message with new content.'''
+- &`msg_replace_lines`: Replace a range of lines in a message with new content.
+  - Always first use `read_msg( msgid=msgid, n=0, relative=True, nums=True)` to view the content with line numbers.'''
     add_msg(cts)
 
 # %% ../nbs/00_core.ipynb
