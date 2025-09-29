@@ -233,7 +233,7 @@ def msg_insert_line(
     new_str: str, # Text to insert at the specified line
     dname:str='' # Running dialog to get info for; defaults to current dialog
     ):
-    "Get the `Message` object indexed in the current dialog."
+    "Insert text at a specific line number in a message"
     return call_endp('msg_insert_line_', dname, json=True, msgid=msgid, insert_line=insert_line, new_str=new_str)
 
 # %% ../nbs/00_core.ipynb
@@ -243,7 +243,7 @@ def msg_str_replace(
     new_str: str, # Text to replace with
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
-    "Get the `Message` object indexed in the current dialog."
+    "Replace first occurrence of old_str with new_str in a message"
     return call_endp('msg_str_replace_', dname, json=True, msgid=msgid, old_str=old_str, new_str=new_str)
 
 # %% ../nbs/00_core.ipynb
@@ -253,6 +253,7 @@ def msg_strs_replace(
     new_strs:list[str], # List of replacement strings (must match length of old_strs)
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
+    "Replace multiple strings simultaneously in a message"
     return call_endp('msg_strs_replace_', dname, json=True, msgid=msgid, old_strs=old_strs, new_strs=new_strs)
 
 # %% ../nbs/00_core.ipynb
@@ -263,6 +264,7 @@ def msg_replace_lines(
     new_content:str, # New content to replace the specified lines
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
+    "Replace a range of lines with new content in a message"
     return call_endp('msg_replace_lines_', dname, json=True, msgid=msgid, start_line=start_line, end_line=end_line, new_content=new_content)
 
 # %% ../nbs/00_core.ipynb
