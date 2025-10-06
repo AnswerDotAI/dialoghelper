@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.35
+
+### New Features
+
+- Text edit tools for msgs ([#38](https://github.com/AnswerDotAI/dialoghelper/pull/38)), thanks to [@KeremTurgutlu](https://github.com/KeremTurgutlu)
+- Add text/bash tools and tests ([#34](https://github.com/AnswerDotAI/dialoghelper/pull/34)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+
 ## 0.0.34
 
 ### New Features
