@@ -53,7 +53,7 @@ def find_dname():
 
 # %% ../nbs/00_core.ipynb
 def find_msg_id():
-    "Get the message id by searching the call stack for __dialog_id."
+    "Get the message id by searching the call stack for __msg_id."
     return find_var('__msg_id')
 
 # %% ../nbs/00_core.ipynb
@@ -105,7 +105,7 @@ def add_msg(
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
     msgid:str=None, # id of message that placement is relative to (if None, uses current message)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
-    output:str='', # For prompts/code, initial output
+    output:str='', # For prompts/code, initial output. Must be .ipynb-compatible JSON
     time_run: str | None = '', # When was message executed
     is_exported: int | None = 0, # Export message to a module?
     skipped: int | None = 0, # Hide message from prompt?
@@ -150,7 +150,7 @@ def _add_msg_unsafe(
 def _umsg(
     content:str|None=None, # Content of the message (i.e the message prompt, code, or note text)
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
-    output:str|None = None, # For prompts/code, the output
+    output:str|None = None, # For prompts/code, the output. Must be .ipynb-compatible JSON
     time_run: str | None = None, # When was message executed
     is_exported: int | None = None, # Export message to a module?
     skipped: int | None = None, # Hide message from prompt?
