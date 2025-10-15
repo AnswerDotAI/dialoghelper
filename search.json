@@ -1,0 +1,92 @@
+[
+  {
+    "objectID": "experimental.html",
+    "href": "experimental.html",
+    "title": "experimental",
+    "section": "",
+    "text": "source\n\niife\n\n iife (code:str)\n\nWrap javascript code string in an IIFE and execute it via add_html\n\nsource\n\n\nload_screenshot_js\n\n load_screenshot_js (force=False, timeout=5)\n\nLoad screenshot capability and wait for confirmation it’s ready.\n\n# load_screenshot_js()\n\nLoading screenshot.js ...\nScreenshot.js loaded and ready\n\n\n\nsource\n\n\nstart_screen_share\n\n start_screen_share (timeout=45)\n\nStart persistent screen sharing session, waiting for confirmation.\n\n# start_screen_share()\n\n\nsource\n\n\nstop_screen_share\n\n stop_screen_share ()\n\nStop persistent screen sharing session.\n\nsource\n\n\ncapture_screen\n\n capture_screen ()\n\nCapture screenshot, automatically starting screen share if needed.",
+    "crumbs": [
+      "experimental"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "This file will become your README and also the index of your documentation.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#developer-guide",
+    "href": "index.html#developer-guide",
+    "title": "dialoghelper",
+    "section": "Developer Guide",
+    "text": "Developer Guide\nIf you are new to using nbdev here are some useful pointers to get you started.\n\nInstall dialoghelper in Development mode\n# make sure dialoghelper package is installed in development mode\n$ pip install -e .\n\n# make changes under nbs/ directory\n# ...\n\n# compile to have changes apply to dialoghelper\n$ nbdev_prepare",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#usage",
+    "href": "index.html#usage",
+    "title": "dialoghelper",
+    "section": "Usage",
+    "text": "Usage\n\nInstallation\nInstall latest from the GitHub repository:\n$ pip install git+https://github.com/AnswerDotAI/dialoghelper.git\nor from conda\n$ conda install -c AnswerDotAI dialoghelper\nor from pypi\n$ pip install dialoghelper\n\n\nDocumentation\nDocumentation can be found hosted on this GitHub repository’s pages. Additionally you can find package manager specific guidelines on conda and pypi respectively.",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "dialoghelper",
+    "section": "How to use",
+    "text": "How to use\nFill me in please! Don’t forget code examples:\n\n1+1\n\n2",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "dialoghelper",
+    "section": "",
+    "text": "from fastcore import tools\nRe-export asdict:\nsource",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html#text-edit",
+    "href": "core.html#text-edit",
+    "title": "dialoghelper",
+    "section": "Text Edit",
+    "text": "Text Edit\n\nsource\n\nmsg_insert_line\n\n msg_insert_line (msgid:str, insert_line:int, new_str:str, dname:str='')\n\nInsert text at a specific line number in a message\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nmsgid\nstr\n\nMessage id to edit\n\n\ninsert_line\nint\n\nThe line number after which to insert the text (0 for beginning of file)\n\n\nnew_str\nstr\n\nThe text to insert\n\n\ndname\nstr\n\nRunning dialog to get info for; defaults to current dialog\n\n\n\n\nmsg_insert_line(_edit_id, 0, 'This should go to the first line')\nmsg_insert_line(_edit_id, 3, 'This should go to the 4th line')\nmsg_insert_line(_edit_id, 5, 'This should go to the last line')\n\n{'success': 'Inserted text after line 5 in message _c3e8e7f8'}\n\n\n\nprint(read_msg(n=0, msgid=_edit_id, nums=True)['msg']['content'])\n\n     1 │ This should go to the first line\n     2 │ This message should be found.\n     3 │ \n     4 │ This should go to the 4th line\n     5 │ This is a multiline message.\n     6 │ This should go to the last line\n\n\n\nsource\n\n\nmsg_str_replace\n\n msg_str_replace (msgid:str, old_str:str, new_str:str, dname:str='')\n\nReplace first occurrence of old_str with new_str in a message\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nmsgid\nstr\n\nMessage id to edit\n\n\nold_str\nstr\n\nText to find and replace\n\n\nnew_str\nstr\n\nText to replace with\n\n\ndname\nstr\n\nRunning dialog to get info for; defaults to current dialog\n\n\n\n\nmsg_str_replace(_edit_id, 'This should go to the first line', 'This should go to the 1st line')\n\n{'success': 'Replaced text in message _c3e8e7f8'}\n\n\n\nprint(read_msg(n=0, msgid=_edit_id, nums=True)['msg']['content'])\n\n     1 │ This should go to the 1st line\n     2 │ This message should be found.\n     3 │ \n     4 │ This should go to the 4th line\n     5 │ This is a multiline message.\n     6 │ This should go to the last line\n\n\n\nsource\n\n\nmsg_strs_replace\n\n msg_strs_replace (msgid:str, old_strs:list[str], new_strs:list[str],\n                   dname:str='')\n\nReplace multiple strings simultaneously in a message\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nmsgid\nstr\n\nMessage id to edit\n\n\nold_strs\nlist\n\nList of strings to find and replace\n\n\nnew_strs\nlist\n\nList of replacement strings (must match length of old_strs)\n\n\ndname\nstr\n\nRunning dialog to get info for; defaults to current dialog\n\n\n\n\nmsg_strs_replace(_edit_id, ['This is a multiline message.', 'This should go to the last line'], ['5th line', 'last line'])\n\n{'success': 'Successfully replaced all the strings in message _c3e8e7f8'}\n\n\n\nprint(read_msg(n=0, msgid=_edit_id, nums=True)['msg']['content'])\n\n     1 │ This should go to the 1st line\n     2 │ This message should be found.\n     3 │ \n     4 │ This should go to the 4th line\n     5 │ 5th line\n     6 │ last line\n\n\n\nsource\n\n\nmsg_replace_lines\n\n msg_replace_lines (msgid:str, start_line:int, end_line:int,\n                    new_content:str, dname:str='')\n\nReplace a range of lines with new content in a message\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\nmsgid\nstr\n\nMessage id to edit\n\n\nstart_line\nint\n\nStarting line number to replace (1-based indexing)\n\n\nend_line\nint\n\nEnding line number to replace (1-based indexing, inclusive)\n\n\nnew_content\nstr\n\nNew content to replace the specified lines\n\n\ndname\nstr\n\nRunning dialog to get info for; defaults to current dialog\n\n\n\n\nmsg_replace_lines(_edit_id, 2, 4,'line 2\\nline 3\\nline 4\\n')\n\n{'success': 'Replaced lines 2 to 4 in message _c3e8e7f8'}\n\n\n\nprint(read_msg(n=0, msgid=_edit_id, nums=True)['msg']['content'])\n\n     1 │ This should go to the 1st line\n     2 │ line 2\n     3 │ line 3\n     4 │ line 4\n     5 │ 5th line\n     6 │ last line\n\n\n\ndel_msg(_edit_id)",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html#gists",
+    "href": "core.html#gists",
+    "title": "dialoghelper",
+    "section": "Gists",
+    "text": "Gists\n\nsource\n\nload_gist\n\n load_gist (gist_id:str)\n\nRetrieve a gist\n\ngistid = 'jph00/e7cfd4ded593e8ef6217e78a0131960c'\ngist = load_gist(gistid)\ngist.html_url\n\n\nsource\n\n\ngist_file\n\n gist_file (gist_id:str)\n\nGet the first file from a gist\n\ngfile = gist_file(gistid)\nprint(gfile.content[:100]+\"…\")\n\n\nsource\n\n\nimport_string\n\n import_string (code:str, name:str)\n\n\n\n\n\nType\nDetails\n\n\n\n\ncode\nstr\nCode to import as a module\n\n\nname\nstr\nName of module to create\n\n\n\n\nsource\n\n\nis_usable_tool\n\n is_usable_tool (func:&lt;built-infunctioncallable&gt;)\n\nTrue if the function has a docstring and all parameters have types, meaning that it can be used as an LLM tool.\n\ndef hi(who:str):\n    \"Say hi to `who`\"\n    return f\"Hello {who}\"\n\ndef hi2(who):\n    \"Say hi to `who`\"\n    return f\"Hello {who}\"\n\ndef hi3(who:str):\n    return f\"Hello {who}\"\n\nbye = \"bye\"\n\n\nassert is_usable_tool(hi)\nassert not is_usable_tool(hi2)\nassert not is_usable_tool(hi3)\nassert not is_usable_tool(bye)\n\n\nsource\n\n\nmk_toollist\n\n mk_toollist (syms)\n\n\nMarkdown(mk_toollist([hi]))\n\n\nsource\n\n\nimport_gist\n\n import_gist (gist_id:str, mod_name:str=None, add_global:bool=True,\n              import_wildcard:bool=False, create_msg:bool=False)\n\nImport gist directly from string without saving to disk\n\n\n\n\n\n\n\n\n\n\nType\nDefault\nDetails\n\n\n\n\ngist_id\nstr\n\nuser/id or just id of gist to import as a module\n\n\nmod_name\nstr\nNone\nmodule name to create (taken from gist filename if not passed)\n\n\nadd_global\nbool\nTrue\nadd module to caller’s globals?\n\n\nimport_wildcard\nbool\nFalse\nimport all exported symbols to caller’s globals\n\n\ncreate_msg\nbool\nFalse\nAdd a message that lists usable tools\n\n\n\n\nimport_gist(gistid)\nimporttest.testfoo\n\n\nimport_gist.__doc__\n\n\nimport_gist(gistid, import_wildcard=True)\nimporttest.testfoo\n\n\nhi(\"Sarah\")\n\n\nimporttest.__all__",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  },
+  {
+    "objectID": "core.html#tool-info",
+    "href": "core.html#tool-info",
+    "title": "dialoghelper",
+    "section": "Tool info",
+    "text": "Tool info\nThis is how we get a superset of tools to include:\n\nsource\n\ntool_info\n\n tool_info ()\n\n\nfor o in _all:\n    s = globals()[o]\n    if s.__name__[0]=='_' or not s.__doc__: continue\n    print(f'- &`{s.__name__}`: {s.__doc__}')\n\n\nsource\n\n\nfc_tool_info\n\n fc_tool_info ()\n\n\nfor o in tools.__all__:\n    s = getattr(tools, o)\n    print(f'- &`{s.__name__}`: {s.__doc__}')",
+    "crumbs": [
+      "dialoghelper"
+    ]
+  }
+]
