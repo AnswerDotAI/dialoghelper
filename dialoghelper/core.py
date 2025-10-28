@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['dh_settings', 'Placements', 'empty', 'find_var', 'set_var', 'call_endp', 'find_dname', 'find_msg_id', 'curr_dialog',
-           'find_msgs', 'msg_idx', 'add_html', 'add_msg', 'del_msg', 'update_msg', 'url2note', 'ast_py', 'ast_grep',
-           'read_msg', 'run_msg', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
+           'msg_idx', 'find_msgs', 'add_html', 'add_msg', 'del_msg', 'update_msg', 'read_msg', 'run_msg', 'url2note',
+           'ast_py', 'ast_grep', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
            'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
            'fc_tool_info']
 
@@ -72,6 +72,15 @@ def curr_dialog(
     if res: return {'name': res['name'], 'mode': res['mode']}
 
 # %% ../nbs/00_core.ipynb
+def msg_idx(
+    msgid=None,  # Message id to find (defaults to current message)
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Get absolute index of message in dialog."
+    if not msgid: msgid = find_msg_id()
+    return call_endp('msg_idx_', dname, json=True, msgid=msgid)['msgid']
+
+# %% ../nbs/00_core.ipynb
 def find_msgs(
     re_pattern:str='', # Optional regex to search for (re.DOTALL+re.MULTILINE is used)
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
@@ -84,15 +93,6 @@ def find_msgs(
     if not include_output:
         for o in res: o.pop('output', None)
     return res
-
-# %% ../nbs/00_core.ipynb
-def msg_idx(
-    msgid=None,  # Message id to find (defaults to current message)
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    "Get absolute index of message in dialog."
-    if not msgid: msgid = find_msg_id()
-    return call_endp('msg_idx_', dname, json=True, msgid=msgid)['msgid']
 
 # %% ../nbs/00_core.ipynb
 def add_html(
@@ -186,6 +186,30 @@ def update_msg(
     return res
 
 # %% ../nbs/00_core.ipynb
+def read_msg(
+    n:int=-1,      # Message index (if relative, +ve is downwards)
+    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
+    msgid:str=None,  # Message id to find (defaults to current message)
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+    ):
+    "Get the `Message` object indexed in the current dialog."
+    if not msgid: msgid = find_msg_id()
+    data = dict(n=n, relative=relative, msgid=msgid)
+    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
+    if nums: data['nums'] = nums
+    return call_endp('read_msg_', dname, json=True, **data)
+
+# %% ../nbs/00_core.ipynb
+def run_msg(
+    msgid:str=None, # id of message to execute
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Adds a message to the run queue. Use read_msg to see the output once it runs."
+    return call_endp('add_runq_', dname, msgid=msgid, api=True)
+
+# %% ../nbs/00_core.ipynb
 def url2note(
     url:str, # URL to read
     extract_section:bool=True, # If url has an anchor, return only that section
@@ -213,30 +237,6 @@ def ast_grep(
     if path != ".": cmd = f"cd {path} && {cmd}"
     res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return json.loads(res.stdout) if res.stdout else res.stderr
-
-# %% ../nbs/00_core.ipynb
-def read_msg(
-    n:int=-1,      # Message index (if relative, +ve is downwards)
-    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
-    msgid:str=None,  # Message id to find (defaults to current message)
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
-    nums:bool=False, # Whether to show line numbers
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-    ):
-    "Get the `Message` object indexed in the current dialog."
-    if not msgid: msgid = find_msg_id()
-    data = dict(n=n, relative=relative, msgid=msgid)
-    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
-    if nums: data['nums'] = nums
-    return call_endp('read_msg_', dname, json=True, **data)
-
-# %% ../nbs/00_core.ipynb
-def run_msg(
-    msgid:str=None, # id of message to execute
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-):
-    "Adds a message to the run queue. Use read_msg to see the output once it runs."
-    return call_endp('add_runq_', dname, msgid=msgid, api=True)
 
 # %% ../nbs/00_core.ipynb
 def msg_insert_line(
