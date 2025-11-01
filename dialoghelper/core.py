@@ -8,7 +8,7 @@ __all__ = ['dh_settings', 'Placements', 'empty', 'find_var', 'set_var', 'call_en
            'fc_tool_info']
 
 # %% ../nbs/00_core.ipynb
-import json, importlib, linecache
+import json,importlib,linecache,re,inspect
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -178,8 +178,8 @@ def update_msg(
     dname:str='', # Running dialog to get info for; defaults to current dialog
     **kwargs):
     """Update an existing message. Provide either `msg` OR field key/values to update.
-    Use `content` param to update contents.
-    Only include parameters to update--missing ones will be left unchanged."""
+    - Use `content` param to update contents.
+    - Only include parameters to update--missing ones will be left unchanged."""
     if not msgid and not msg: raise TypeError("update_msg needs either a dict message or `msgid=`")
     res = call_endp('add_relative_', dname, placement='update', msgid=msgid, **kwargs)
     set_var('__msg_id', res)
@@ -194,7 +194,10 @@ def read_msg(
     nums:bool=False, # Whether to show line numbers
     dname:str='' # Running dialog to get info for; defaults to current dialog
     ):
-    "Get the `Message` object indexed in the current dialog."
+    """Get the message indexed in the current dialog.
+    - To get the exact message use `n=0` and `relative=True` together with `msgid`.
+    - To get a relative message use `n` (relative position index).
+    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
     if not msgid: msgid = find_msg_id()
     data = dict(n=n, relative=relative, msgid=msgid)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
