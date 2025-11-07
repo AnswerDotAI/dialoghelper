@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.36
+
+### New Features
+
+- Add `add_styles` ([#42](https://github.com/AnswerDotAI/dialoghelper/issues/42))
+- Set `__msg_id` in `add_var` et al ([#41](https://github.com/AnswerDotAI/dialoghelper/issues/41))
+
+
 ## 0.0.35
 
 ### New Features
