@@ -27,14 +27,14 @@ def iife(code: str) -> str:
 
 # %% ../nbs/01_experimental.ipynb
 def start_share():
-    iife((resources.files('dialoghelper')/'js.js').read_text())
+    iife((resources.files('dialoghelper')/'screenshot.js').read_text())
     iife('await setupVideoStream();')
 
 # %% ../nbs/01_experimental.ipynb
 def capture_screen():
     'Capture screenshot, automatically starting screen share if needed.'
     idx = uuid.uuid4()
-    iife(f"send('{idx}', {{img_data: await getScreenshot()}});")
+    iife(f"pushData('{idx}', {{img_data: await getScreenshot()}});")
     time.sleep(0.5)
     d = dict2obj(xpost('http://localhost:5001/pop_data_blocking_', data={'data_id': idx}).json())
     if 'img_data' in d: return ToolResponse([{'type': 'image_url', 'image_url': d.img_data}])
