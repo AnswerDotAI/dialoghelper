@@ -2,8 +2,8 @@
 
 # %% auto 0
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'call_endp', 'find_dname',
-           'find_msg_id', 'curr_dialog', 'msg_idx', 'find_msgs', 'add_html', 'add_msg', 'del_msg', 'update_msg',
-           'read_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep', 'msg_insert_line', 'msg_str_replace',
+           'find_msg_id', 'curr_dialog', 'msg_idx', 'find_msgs', 'add_html', 'read_msg', 'add_msg', 'del_msg',
+           'update_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep', 'msg_insert_line', 'msg_str_replace',
            'msg_strs_replace', 'msg_replace_lines', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
            'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
 
@@ -127,6 +127,25 @@ def add_html(
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
 
 # %% ../nbs/00_core.ipynb
+def read_msg(
+    n:int=-1,      # Message index (if relative, +ve is downwards)
+    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
+    msgid:str=None,  # Message id to find (defaults to current message)
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+    ):
+    """Get the message indexed in the current dialog.
+    - To get the exact message use `n=0` and `relative=True` together with `msgid`.
+    - To get a relative message use `n` (relative position index).
+    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
+    if not msgid: msgid = find_msg_id()
+    data = dict(n=n, relative=relative, msgid=msgid)
+    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
+    if nums: data['nums'] = nums
+    return call_endp('read_msg_', dname, json=True, **data)
+
+# %% ../nbs/00_core.ipynb
 def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
@@ -205,25 +224,6 @@ def update_msg(
     res = call_endp('add_relative_', dname, placement='update', msgid=msgid, **kwargs)
     set_var('__msg_id', res)
     return res
-
-# %% ../nbs/00_core.ipynb
-def read_msg(
-    n:int=-1,      # Message index (if relative, +ve is downwards)
-    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
-    msgid:str=None,  # Message id to find (defaults to current message)
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
-    nums:bool=False, # Whether to show line numbers
-    dname:str='' # Running dialog to get info for; defaults to current dialog
-    ):
-    """Get the message indexed in the current dialog.
-    - To get the exact message use `n=0` and `relative=True` together with `msgid`.
-    - To get a relative message use `n` (relative position index).
-    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
-    if not msgid: msgid = find_msg_id()
-    data = dict(n=n, relative=relative, msgid=msgid)
-    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
-    if nums: data['nums'] = nums
-    return call_endp('read_msg_', dname, json=True, **data)
 
 # %% ../nbs/00_core.ipynb
 def run_msg(
