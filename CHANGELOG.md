@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.37
+
+### New Features
+
+- simplify screen cap ([#43](https://github.com/AnswerDotAI/dialoghelper/pull/43)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+
 ## 0.0.36
 
 ### New Features
