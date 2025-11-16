@@ -17,11 +17,14 @@ started.
 # make sure dialoghelper package is installed in development mode
 $ pip install -e .
 
+# install fasthtml
+$ pip install python-fasthtml
+
 # make changes under nbs/ directory
 # ...
 
 # compile to have changes apply to dialoghelper
-$ nbdev_prepare
+$ nbdev_export
 ```
 
 ## Usage
