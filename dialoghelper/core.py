@@ -221,7 +221,7 @@ def update_msg(
     - Use `content` param to update contents.
     - Only include parameters to update--missing ones will be left unchanged."""
     if not msgid and not msg: raise TypeError("update_msg needs either a dict message or `msgid=`")
-    res = call_endp('add_relative_', dname, placement='update', msgid=msgid, **kwargs)
+    res = call_endp('update_msg_', dname, msgid=msgid, **kwargs)
     set_var('__msg_id', res)
     return res
 
