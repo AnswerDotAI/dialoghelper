@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.38
+
+### New Features
+
+- Use new `update_msg_` API ([#45](https://github.com/AnswerDotAI/dialoghelper/issues/45))
+
+
 ## 0.0.37
 
 ### New Features
