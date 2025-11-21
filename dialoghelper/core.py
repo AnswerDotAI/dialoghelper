@@ -80,7 +80,7 @@ def find_dname():
 
 # %% ../nbs/00_core.ipynb
 def find_msg_id():
-    "Get the message id by searching the call stack for __dialog_id."
+    "Get the message id by searching the call stack for __msg_id."
     return find_var('__msg_id')
 
 # %% ../nbs/00_core.ipynb
@@ -139,7 +139,7 @@ def read_msg(
     - To get the exact message use `n=0` and `relative=True` together with `msgid`.
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
-    if not msgid: msgid = find_msg_id()
+    if relative and not msgid: msgid = find_msg_id()
     data = dict(n=n, relative=relative, msgid=msgid)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
     if nums: data['nums'] = nums
@@ -151,7 +151,7 @@ def add_msg(
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
     msgid:str=None, # id of message that placement is relative to (if None, uses current message)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
-    output:str='', # For prompts/code, initial output
+    output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
     is_exported: int | None = 0, # Export message to a module?
     skipped: int | None = 0, # Hide message from prompt?
@@ -200,7 +200,7 @@ def _add_msg_unsafe(
 def _umsg(
     content:str|None=None, # Content of the message (i.e the message prompt, code, or note text)
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
-    output:str|None = None, # For prompts/code, the output
+    output:str|None = None, # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = None, # When was message executed
     is_exported: int | None = None, # Export message to a module?
     skipped: int | None = None, # Hide message from prompt?
