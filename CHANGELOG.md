@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.39
+
+### New Features
+
+- add timeout ([#46](https://github.com/AnswerDotAI/dialoghelper/pull/46)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+### Bugs Squashed
+
+- `relative=False` is not working in `read_msg()`
+
+
 ## 0.0.38
 
 ### New Features
