@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.40
+
+- Rename `dialog.experimental` to `dialog.capture`
+
+
 ## 0.0.39
 
 ### New Features
