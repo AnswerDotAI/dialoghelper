@@ -41,9 +41,4 @@ d = { 'settings': { 'branch': 'main',
                                    'dialoghelper.core.tool_info': ('core.html#tool_info', 'dialoghelper/core.py'),
                                    'dialoghelper.core.update_msg': ('core.html#update_msg', 'dialoghelper/core.py'),
                                    'dialoghelper.core.url2note': ('core.html#url2note', 'dialoghelper/core.py')},
-            'dialoghelper.db_dc': {},
-            'dialoghelper.experimental': { 'dialoghelper.experimental.capture_screen': ( 'experimental.html#capture_screen',
-                                                                                         'dialoghelper/experimental.py'),
-                                           'dialoghelper.experimental.iife': ('experimental.html#iife', 'dialoghelper/experimental.py'),
-                                           'dialoghelper.experimental.start_share': ( 'experimental.html#start_share',
-                                                                                      'dialoghelper/experimental.py')}}}
+            'dialoghelper.db_dc': {}}}
