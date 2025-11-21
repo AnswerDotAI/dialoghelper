@@ -31,11 +31,11 @@ def start_share():
     iife('await setupVideoStream();')
 
 # %% ../nbs/01_experimental.ipynb
-def capture_screen():
+def capture_screen(timeout:int=15):
     'Capture screenshot, automatically starting screen share if needed.'
     idx = uuid.uuid4()
     iife(f"pushData('{idx}', {{img_data: await getScreenshot()}});")
     time.sleep(0.5)
-    d = dict2obj(xpost('http://localhost:5001/pop_data_blocking_', data={'data_id': idx}).json())
+    d = dict2obj(xpost('http://localhost:5001/pop_data_blocking_', data={'data_id': idx, 'timeout': timeout}).json())
     if 'img_data' in d: return ToolResponse([{'type': 'image_url', 'image_url': d.img_data}])
     else: return f'Capture failed: {d.error}'
