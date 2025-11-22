@@ -12,9 +12,9 @@ from fasthtml.common import Div,Script
 from httpx import post as xpost
 from importlib import resources
 from lisette.core import *
-import PIL.Image
+from io import BytesIO
 
-import base64,json,time
+import base64,json,time,PIL.Image
 
 # %% ../nbs/01_capture.ipynb
 def setup_share():
