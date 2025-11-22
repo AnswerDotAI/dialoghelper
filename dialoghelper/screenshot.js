@@ -1,9 +1,4 @@
-async function setupVideoStream() {
-    vstream = await navigator.mediaDevices.getDisplayMedia();
-    window.vtrack = vstream.getVideoTracks()[0];
-}
-
-async function getScreenshot(maxWidth = 1280, maxHeight = 1024) {
+window.getScreenshot = async (maxWidth = 1280, maxHeight = 1024) => {
     if (window?.vtrack) {
         const cap = new ImageCapture(window.vtrack);
         const img = await cap.grabFrame();
@@ -20,14 +15,12 @@ async function getScreenshot(maxWidth = 1280, maxHeight = 1024) {
     }
 }
 
-function pushData(dataId, data) {
-    return fetch('/push_data_blocking_', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({data_id: dataId, ...data})
-    });
-}
+document.body.addEventListener('shareScreen', async (e) => {
+    vstream = await navigator.mediaDevices.getDisplayMedia();
+    window.vtrack = vstream.getVideoTracks()[0];
+});
 
-window.setupVideoStream = setupVideoStream;
-window.getScreenshot = getScreenshot;
-window.pushData = pushData;
+document.body.addEventListener('captureScreen', async (e) => {
+    pushData(e.detail.idx, {img_data: await getScreenshot()});
+});
+

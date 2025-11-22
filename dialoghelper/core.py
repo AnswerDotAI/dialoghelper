@@ -2,10 +2,10 @@
 
 # %% auto 0
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'call_endp', 'find_dname',
-           'find_msg_id', 'curr_dialog', 'msg_idx', 'find_msgs', 'add_html', 'read_msg', 'add_msg', 'del_msg',
-           'update_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep', 'msg_insert_line', 'msg_str_replace',
-           'msg_strs_replace', 'msg_replace_lines', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
-           'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
+           'find_msg_id', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'find_msgs',
+           'add_html', 'read_msg', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'load_gist', 'gist_file',
+           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect
@@ -24,7 +24,7 @@ from inspect import currentframe,Parameter,signature
 from httpx import get as xget, post as xpost
 from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
-from fasthtml.common import Safe
+from fasthtml.common import Safe,Script,Div
 
 # %% ../nbs/00_core.ipynb
 md_cls_d = {
@@ -100,6 +100,32 @@ def msg_idx(
     "Get absolute index of message in dialog."
     if not msgid: msgid = find_msg_id()
     return call_endp('msg_idx_', dname, json=True, msgid=msgid)['msgid']
+
+# %% ../nbs/00_core.ipynb
+def add_scr(scr, oob='beforeend:#js-script'):
+    "Swap a script element to the end of the js-script element"
+    if isinstance(scr,str): scr = Script(scr)
+    add_html(Div(scr, hx_swap_oob=oob))
+
+# %% ../nbs/00_core.ipynb
+def iife(code: str) -> str:
+    "Wrap javascript code string in an IIFE and execute it via `add_html`"
+    add_scr(f'''
+(async () => {{
+{code}
+}})();
+''')
+
+# %% ../nbs/00_core.ipynb
+def pop_data(idx, timeout=15):
+    url = 'http://localhost:5001/pop_data_blocking_'
+    return dict2obj(xpost(url, data={'data_id': idx, 'timeout': timeout}).json())
+
+# %% ../nbs/00_core.ipynb
+def fire_event(evt:str, id, data=None):
+    params = f"'{evt}'"
+    if data is not None: params += f", {json.dumps(data)}"
+    add_html(Script(f"htmx.trigger(document.body, {params});", id=id, hx_swap_oob='true'))
 
 # %% ../nbs/00_core.ipynb
 def find_msgs(
