@@ -13,7 +13,7 @@ from httpx import post as xpost
 from importlib import resources
 from lisette.core import *
 
-import base64,json,time,uuid
+import base64,json,time
 
 # %% ../nbs/01_capture.ipynb
 def setup_share():
@@ -26,9 +26,7 @@ def start_share(): fire_event('shareScreen')
 # %% ../nbs/01_capture.ipynb
 def capture_screen(timeout=15):
     "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
-    idx = uuid.uuid4()
-    fire_event('captureScreen', data={'idx': str(idx)})
-    d = pop_data(idx, timeout)
+    d = event_get('captureScreen', timeout)
     if 'img_data' in d: return d.img_data
     else: raise Exception(f'Capture failed: {d.error}')
 

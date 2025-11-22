@@ -2,13 +2,13 @@
 
 # %% auto 0
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'call_endp', 'find_dname',
-           'find_msg_id', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'find_msgs',
-           'add_html', 'read_msg', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep',
-           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'load_gist', 'gist_file',
-           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
+           'find_msg_id', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get',
+           'find_msgs', 'add_html', 'read_msg', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
+           'ast_grep', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'load_gist',
+           'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
 
 # %% ../nbs/00_core.ipynb
-import json,importlib,linecache,re,inspect
+import json,importlib,linecache,re,inspect,uuid
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -126,6 +126,15 @@ def fire_event(evt:str, data=None):
     params = f"'{evt}'"
     if data is not None: params += f", {json.dumps(data)}"
     add_html(Script(f"htmx.trigger(document.body, {params});", id='js-event', hx_swap_oob='true'))
+
+# %% ../nbs/00_core.ipynb
+def event_get(evt:str, timeout=15, data=None):
+    "Call `fire_event` and then `pop_data` to get a response"
+    idx = uuid.uuid4()
+    if not data: data = {}
+    data['idx'] = str(idx)
+    fire_event(evt, data=data)
+    return pop_data(idx, timeout)
 
 # %% ../nbs/00_core.ipynb
 def find_msgs(
