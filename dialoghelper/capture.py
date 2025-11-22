@@ -12,6 +12,7 @@ from fasthtml.common import Div,Script
 from httpx import post as xpost
 from importlib import resources
 from lisette.core import *
+import PIL.Image
 
 import base64,json,time
 
@@ -24,15 +25,21 @@ def setup_share():
 def start_share(): fire_event('shareScreen')
 
 # %% ../nbs/01_capture.ipynb
-def capture_screen(timeout=15):
-    "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
+def _capture_screen(timeout=15):
     d = event_get('captureScreen', timeout)
     if 'img_data' in d: return d.img_data
     else: raise Exception(f'Capture failed: {d.error}')
 
 # %% ../nbs/01_capture.ipynb
+def capture_screen(timeout=15):
+    "Capture the screen as a PIL image."
+    res = _capture_screen()
+    data = base64.b64decode(res.split(',')[1])
+    return PIL.Image.open(BytesIO(data))
+
+# %% ../nbs/01_capture.ipynb
 def capture_tool(timeout:int=15):
     "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
-    try: d = capture_screen(timeout)
+    try: d = _capture_screen(timeout)
     except Exception as e: return f'Capture failed: {e}'
     return ToolResponse([{'type': 'image_url', 'image_url': d}])
