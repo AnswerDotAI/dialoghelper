@@ -19,17 +19,15 @@ import base64,json,time,uuid
 def setup_share():
     "Setup screen sharing"
     iife((resources.files('dialoghelper')/'screenshot.js').read_text())
-    add_scr(Div(id='share-screen', style='display:none;'))
-    add_scr(Div(id='capture-screen', style='display:none;'))
 
 # %% ../nbs/01_capture.ipynb
-def start_share(): fire_event('shareScreen', id='share-screen')
+def start_share(): fire_event('shareScreen')
 
 # %% ../nbs/01_capture.ipynb
 def capture_screen(timeout=15):
     "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
     idx = uuid.uuid4()
-    fire_event('captureScreen', 'share-screen', data={'idx': str(idx)})
+    fire_event('captureScreen', data={'idx': str(idx)})
     d = pop_data(idx, timeout)
     if 'img_data' in d: return d.img_data
     else: raise Exception(f'Capture failed: {d.error}')

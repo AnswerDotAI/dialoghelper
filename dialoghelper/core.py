@@ -122,10 +122,10 @@ def pop_data(idx, timeout=15):
     return dict2obj(xpost(url, data={'data_id': idx, 'timeout': timeout}).json())
 
 # %% ../nbs/00_core.ipynb
-def fire_event(evt:str, id, data=None):
+def fire_event(evt:str, data=None):
     params = f"'{evt}'"
     if data is not None: params += f", {json.dumps(data)}"
-    add_html(Script(f"htmx.trigger(document.body, {params});", id=id, hx_swap_oob='true'))
+    add_html(Script(f"htmx.trigger(document.body, {params});", id='js-event', hx_swap_oob='true'))
 
 # %% ../nbs/00_core.ipynb
 def find_msgs(
