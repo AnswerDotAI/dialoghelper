@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.43
+
+### New Features
+
+- add `event_get` ([#48](https://github.com/AnswerDotAI/dialoghelper/issues/48))
+
+
 ## 0.0.42
 
 ### New Features
