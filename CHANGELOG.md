@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.44
+
+### New Features
+
+- `capture_screen` returns a PIL image ([#49](https://github.com/AnswerDotAI/dialoghelper/issues/49))
+
+
 ## 0.0.43
 
 ### New Features
