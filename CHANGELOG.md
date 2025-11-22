@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.41
+
+### New Features
+
+- Add `add_scr`, `pop_data`, and `fire_event` ([#47](https://github.com/AnswerDotAI/dialoghelper/issues/47))
+
+
 ## 0.0.40
 
 - Rename `dialog.experimental` to `dialog.capture`
