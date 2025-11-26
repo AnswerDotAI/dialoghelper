@@ -272,11 +272,15 @@ def run_msg(
 def url2note(
     url:str, # URL to read
     extract_section:bool=True, # If url has an anchor, return only that section
-    selector:str=None # Select section(s) using BeautifulSoup.select (overrides extract_section)
+    selector:str=None, # Select section(s) using BeautifulSoup.select (overrides extract_section)
+    ai_img:bool=True, # Make images visible to the AI
+    split_re:str=r'(?=^#{1,6} .+)' # Regex to split content into multiple notes, set to False for single note
 ):
-    "Read URL as markdown, and add a note below current message with the result"
-    res = read_url(url, as_md=True, extract_section=extract_section, selector=selector)
+    "Read URL as markdown, and add note(s) below current message with the result"
+    res = read_url(url, as_md=True, extract_section=extract_section, selector=selector, ai_img=ai_img)
+    if split_re: return [add_msg(s) for s in re.split(split_re, res, flags=re.MULTILINE) if s.strip()]
     return add_msg(res)
+
 
 # %% ../nbs/00_core.ipynb
 def ast_py(code:str):
