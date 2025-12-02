@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.46
+
+### New Features
+
+- Add `dname` to `dh_settings` ([#51](https://github.com/AnswerDotAI/dialoghelper/issues/51))
+- enhance url2note ([#50](https://github.com/AnswerDotAI/dialoghelper/pull/50)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.0.45
 
 ### New Features
