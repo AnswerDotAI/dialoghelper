@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.47
+
+### New Features
+
+- Add `dialoghelper.inspecttools` ([#52](https://github.com/AnswerDotAI/dialoghelper/issues/52))
+
+
 ## 0.0.46
 
 ### New Features
