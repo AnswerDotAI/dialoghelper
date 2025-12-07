@@ -32,11 +32,12 @@ _last = None
 def resolve(
     sym: str  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]" or "_last" for previous result
 ):
-    """Resolve a dotted symbol string to its Python object, with optional [n] indexing.
-    Sets global `_last` to the resolved object for chaining.
-    Supports "_last" to reference the result of the previous tool call.
-    Example: resolve("sympy.sets.sets.Interval") -> <class 'sympy.sets.sets.Interval'>
-    Example: resolve("mylist[2]") -> third element of mylist"""
+    """Resolve a dotted symbol string to its Python object, with optional [n] indexing. Sets global `_last` to the resolved object for chaining. Past `"_last"` to reference the result of the previous tool call.
+
+    Examples:
+
+    - `resolve("sympy.sets.sets.Interval")` -> `<class 'sympy.sets.sets.Interval'>`
+    - `resolve("mylist[2]")` -> third element of mylist"""
     global _last
     if sym == '_last': return _last
     parts = re.split(r'\.(?![^\[]*\])', sym)
@@ -57,11 +58,12 @@ def symsrc(
     sym: str  # Dotted symbol path or "_last" for previous result
 ):
     """Get the source code for a symbol.
+
     Examples:
-    - symsrc("sympy.sets.sets.Interval") -> source code of Interval class
-    - symsrc("_last") -> source of object from previous tool call
-    Common patterns:
-    - For dispatchers or registries of callables: getnth("module.dispatcher.funcs", n) then symsrc("_last")"""
+
+    - `symsrc("sympy.sets.sets.Interval")` -> source code of Interval class
+    - `symsrc("_last")` -> source of object from previous tool call
+    - For dispatchers or registries of callables: `getnth("module.dispatcher.funcs", n) then symsrc("_last")`"""
     return inspect.getsource(resolve(sym))
 
 # %% ../nbs/02_inspecttools.ipynb
@@ -69,16 +71,18 @@ def gettype(
     sym: str  # Dotted symbol path or "_last" for previous result
 ):
     """Get the type of a symbol and set `_last`.
-    Example: gettype("sympy.sets.sets.Interval") -> <class 'type'>
-    Example: gettype("_last") -> type of previous result"""
+
+    Examples:
+
+    - `gettype("sympy.sets.sets.Interval")` -> `<class 'type'>`
+    - `gettype("_last")` -> type of previous result"""
     return type(resolve(sym))
 
 # %% ../nbs/02_inspecttools.ipynb
 def getdir(
     sym: str  # Dotted symbol path or "_last" for previous result
 ):
-    """Get dir() listing of a symbol's attributes and set `_last`.
-    Example: getdir("sympy.Interval") -> ['__add__', '__and__', ...]"""
+    """Get dir() listing of a symbol's attributes and set `_last`. E.g: `getdir("sympy.Interval")` -> `['__add__', '__and__', ...]`"""
     return dir(resolve(sym))
 
 # %% ../nbs/02_inspecttools.ipynb
@@ -86,8 +90,11 @@ def getval(
     sym: str  # Dotted symbol path or "_last" for previous result
 ):
     """Get repr of a symbol's value and set `_last`.
-    Example: getval("sympy.sets.sets.Interval") -> "<class 'sympy.sets.sets.Interval'>"
-    Example: getval("some_dict.keys") -> dict_keys([...])"""
+
+    Examples:
+    
+    - `getval("sympy.sets.sets.Interval")` -> `<class 'sympy.sets.sets.Interval'>`
+    - `getval("some_dict.keys")` -> `dict_keys([...])`"""
     return repr(resolve(sym))
 
 # %% ../nbs/02_inspecttools.ipynb
@@ -95,14 +102,16 @@ def getnth(
     sym: str,  # Dotted symbol path to a dict or object with .values()
     n: int     # Index into the values (0-based)
 ):
-    """Get the nth value from a dict (or any object with .values()).
-    Sets `_last` so you can chain with symsrc("_last") etc.
-    Example: getnth("dispatcher.funcs", 12) -> 13th registered function
-    Example: getnth("dispatcher.funcs", 0); symsrc("_last") -> source of first handler"""
+    """Get the nth value from a dict (or any object with .values()). Sets `_last` so you can chain with `symsrc("_last")` etc.
+
+    Examples:
+    
+    - `getnth("dispatcher.funcs", 12)` -> 13th registered function
+    - `getnth("dispatcher.funcs", 0); symsrc("_last")` -> source of first handler"""
     global _last
     _last = list(resolve(sym).values())[n]
     return _last
 
 # %% ../nbs/02_inspecttools.ipynb
 def inspect_tool_info():
-    add_msg('Tools available from `dialoghelper.inspecttools`: &`[symsrc,gettype,getdir,doimport,getval,getnth]`')
+    add_msg('Tools available from inspecttools: &`[symsrc,gettype,getdir,doimport,getval,getnth]`')
