@@ -78,7 +78,8 @@ def find_msg_id():
 def call_endp(path, dname='', json=False, raiseex=False, **data):
     if not dname: dname = find_dname()
     data['dlg_name'] = dname
-    res = xpost(f'http://localhost:{dh_settings["port"]}/{path}', data=data)
+    headers = {'Accept': 'application/json'} if json else {}
+    res = xpost(f'http://localhost:{dh_settings["port"]}/{path}', data=data, headers=headers)
     if raiseex: res.raise_for_status()
     try: return res.json() if json else res.text
     except Exception as e: return str(e)
@@ -211,7 +212,7 @@ def del_msg(
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Delete a message from the dialog."
-    call_endp('rm_msg_', dname, raiseex=True, msid=msgid)
+    return call_endp('rm_msg_', dname, raiseex=True, msid=msgid, json=True)
 
 # %% ../nbs/00_core.ipynb
 @delegates(add_msg)
