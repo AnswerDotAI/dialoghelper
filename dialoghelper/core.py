@@ -4,8 +4,8 @@
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id',
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
            'add_html', 'read_msg', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep',
-           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'load_gist', 'gist_file',
-           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist',
+           'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -308,9 +308,14 @@ def msg_insert_line(
     insert_line: int, # The line number after which to insert the text (0 for beginning of file)
     new_str: str, # The text to insert
     dname:str='' # Running dialog to get info for; defaults to current dialog
-    ):
+):
     "Insert text at a specific line number in a message"
-    return call_endp('msg_insert_line_', dname, json=True, msgid=msgid, insert_line=insert_line, new_str=new_str)
+    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    lines = content.splitlines()
+    if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
+    lines.insert(insert_line, new_str)
+    update_msg(msgid=msgid, content='\n'.join(lines), dname=dname)
+    return {'success': f'Inserted text after line {insert_line} in message {msgid}'}
 
 # %% ../nbs/00_core.ipynb
 def msg_str_replace(
@@ -320,7 +325,12 @@ def msg_str_replace(
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Replace first occurrence of old_str with new_str in a message"
-    return call_endp('msg_str_replace_', dname, json=True, msgid=msgid, old_str=old_str, new_str=new_str)
+    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    count = content.count(old_str)
+    if count == 0: return {'error': f"Text not found in message: {repr(old_str)}"}
+    if count > 1: return {'error': f"Multiple matches found ({count}) for text: {repr(old_str)}"}
+    update_msg(msgid=msgid, content=content.replace(old_str, new_str, 1), dname=dname)
+    return {'success': f'Replaced text in message {msgid}'}
 
 # %% ../nbs/00_core.ipynb
 def msg_strs_replace(
@@ -330,18 +340,62 @@ def msg_strs_replace(
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Replace multiple strings simultaneously in a message"
-    return call_endp('msg_strs_replace_', dname, json=True, msgid=msgid, old_strs=old_strs, new_strs=new_strs)
+    if not isinstance(old_strs, list): return {'error': f"`old_strs` should be a list[str] but got {type(old_strs)}"}
+    if not isinstance(new_strs, list): return {'error': f"`new_strs` should be a list[str] but got {type(new_strs)}"}
+    if len(old_strs) != len(new_strs): return {'error': f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs"}
+    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    for idx, (old_str, new_str) in enumerate(zip(old_strs, new_strs)):
+        count = content.count(old_str)
+        if count == 0: return {'error': f"Text not found in message at index {idx}: {repr(old_str)}"}
+        if count > 1: return {'error': f"Multiple matches ({count}) found at index {idx} for: {repr(old_str)}"}
+        content = content.replace(old_str, new_str, 1)
+    update_msg(msgid=msgid, content=content, dname=dname)
+    return {'success': f'Successfully replaced all the strings in message {msgid}'}
+
+# %% ../nbs/00_core.ipynb
+def _norm_lines(n:int, start:int, end:int=None):
+    "Normalize and validate line range. Returns (start, end) or error dict."
+    if end is None: end = start
+    if end < 0: end = n + end + 1
+    if not (1 <= start <= n): return {'error': f'Invalid start line {start}. Valid range: 1-{n}'}
+    if not (start <= end <= n): return {'error': f'Invalid end line {end}. Valid range: {start}-{n}'}
+    return start, end
 
 # %% ../nbs/00_core.ipynb
 def msg_replace_lines(
     msgid:str,  # Message id to edit
     start_line:int, # Starting line number to replace (1-based indexing)
-    end_line:int, # Ending line number to replace (1-based indexing, inclusive)
-    new_content:str, # New content to replace the specified lines
+    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
+    new_content:str='', # New content to replace the specified lines
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Replace a range of lines with new content in a message"
-    return call_endp('msg_replace_lines_', dname, json=True, msgid=msgid, start_line=start_line, end_line=end_line, new_content=new_content)
+    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    lines = content.splitlines(keepends=True)
+    res = _norm_lines(len(lines), start_line, end_line)
+    if isinstance(res, dict): return res
+    start_line, end_line = res
+    if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
+    lines[start_line-1:end_line] = [new_content] if new_content else []
+    update_msg(msgid=msgid, content=''.join(lines), dname=dname)
+    return {'success': f'Replaced lines {start_line} to {end_line} in message {msgid}'}
+
+# %% ../nbs/00_core.ipynb
+def msg_del_lines(
+    msgid:str,  # Message id to edit
+    start_line:int, # Starting line number to delete (1-based indexing)
+    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+):
+    "Delete a range of lines from a message"
+    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    lines = content.splitlines(keepends=True)
+    res = _norm_lines(len(lines), start_line, end_line)
+    if isinstance(res, dict): return res
+    start_line, end_line = res
+    del lines[start_line-1:end_line]
+    update_msg(msgid=msgid, content=''.join(lines), dname=dname)
+    return {'success': f'Deleted lines {start_line} to {end_line} in message {msgid}'}
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
