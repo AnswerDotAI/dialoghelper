@@ -118,8 +118,7 @@ def iife(code: str) -> str:
 
 # %% ../nbs/00_core.ipynb
 def pop_data(idx, timeout=15):
-    url = 'http://localhost:5001/pop_data_blocking_'
-    return dict2obj(xpost(url, data={'data_id': idx, 'timeout': timeout}).json())
+    return dict2obj(call_endp('pop_data_blocking_', data_id=idx, timeout=timeout, json=True))
 
 # %% ../nbs/00_core.ipynb
 def fire_event(evt:str, data=None):
