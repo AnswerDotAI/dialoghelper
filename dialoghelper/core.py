@@ -74,6 +74,10 @@ def find_msg_id():
     "Get the message id by searching the call stack for __msg_id."
     return find_var('__msg_id')
 
+def _diff_dialog(pred, err):
+    "Raise ValueError if targeting a different dialog and `pred` is True"
+    if 'dname' in dh_settings and pred: raise ValueError(err)
+
 # %% ../nbs/00_core.ipynb
 def call_endp(path, dname='', json=False, raiseex=False, **data):
     if not dname: dname = find_dname()
@@ -99,6 +103,7 @@ def msg_idx(
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Get absolute index of message in dialog."
+    _diff_dialog(not msgid, "`msgid` parameter must be provided when target dialog is different")
     if not msgid: msgid = find_msg_id()
     return call_endp('msg_idx_', dname, json=True, msgid=msgid)['msgid']
 
@@ -174,6 +179,7 @@ def read_msg(
     - To get the exact message use `n=0` and `relative=True` together with `msgid`.
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
+    _diff_dialog(relative and not msgid, "`msgid` parameter must be provided, or use `relative=False` with `n`, when target dialog is different")
     if relative and not msgid: msgid = find_msg_id()
     data = dict(n=n, relative=relative, msgid=msgid)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
@@ -197,6 +203,7 @@ def add_msg(
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Add/update a message to the queue to show after code execution completes."
+    _diff_dialog(placement not in ('at_start','at_end') and not msgid, "`msgid` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")
     if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, msgid=msgid, msg_type=msg_type, output=output,
@@ -225,6 +232,7 @@ def _add_msg_unsafe(
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
+    _diff_dialog(placement not in ('at_start','at_end') and not msgid, "`msgid` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
     if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, msgid=msgid, run=run, **kwargs)
