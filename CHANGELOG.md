@@ -2,6 +2,20 @@
 
 <!-- do not remove -->
 
+## 0.0.48
+
+### New Features
+
+- Do text edit api stuff locally; add `msg_del_lines` ([#57](https://github.com/AnswerDotAI/dialoghelper/issues/57))
+- Add json header to calls; use in `del_msg` ([#56](https://github.com/AnswerDotAI/dialoghelper/issues/56))
+- handle `find_msg_id` when target dlg different ([#54](https://github.com/AnswerDotAI/dialoghelper/pull/54)), thanks to [@KeremTurgutlu](https://github.com/KeremTurgutlu)
+
+### Bugs Squashed
+
+- use `call_endp` to pop ([#55](https://github.com/AnswerDotAI/dialoghelper/pull/55)), thanks to [@ncoop57](https://github.com/ncoop57)
+- handle `find_msg_id` when target dlg different ([#54](https://github.com/AnswerDotAI/dialoghelper/pull/54)), thanks to [@KeremTurgutlu](https://github.com/KeremTurgutlu)
+
+
 ## 0.0.47
 
 ### New Features
