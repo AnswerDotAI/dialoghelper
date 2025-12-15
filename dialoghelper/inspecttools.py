@@ -77,7 +77,7 @@ def showsrc(
     "Create a note to show the user (and following LLM prompts) the source of `sym`, following `symsrc` rules"
     res = symsrc(sym)
     add_msg(f'```python\n{res}\n```')
-    return 'Message has been added to dialog successfully'
+    return {'success': 'Message has been added to dialog successfully'}
 
 # %% ../nbs/02_inspecttools.ipynb
 def gettype(
@@ -137,7 +137,7 @@ def run_code_interactive(
     IMPORTANT: This tool is TERMINAL - after calling it, you MUST stop all tool usage 
     and wait for user response. Never call additional tools after this one."""
     add_msg('# Please run this:\n'+code, msg_type='code')
-    return "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."
+    return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
 
 # %% ../nbs/02_inspecttools.ipynb
 def inspect_tool_info():

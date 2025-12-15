@@ -85,7 +85,7 @@ def call_endp(path, dname='', json=False, raiseex=False, **data):
     headers = {'Accept': 'application/json'} if json else {}
     res = xpost(f'http://localhost:{dh_settings["port"]}/{path}', data=data, headers=headers)
     if raiseex: res.raise_for_status()
-    try: return res.json() if json else res.text
+    try: return dict2obj(res.json()) if json else res.text
     except Exception as e: return str(e)
 
 # %% ../nbs/00_core.ipynb
@@ -162,6 +162,7 @@ def add_html(
 ):
     "Send HTML to the browser to be swapped into the DOM"
     call_endp('add_html_', dname, content=to_xml(content))
+    return {'success': 'Content added to DOM'}
 
 # %% ../nbs/00_core.ipynb
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
