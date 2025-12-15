@@ -70,4 +70,5 @@ d = { 'settings': { 'branch': 'main',
                                            'dialoghelper.inspecttools.showsrc': ( 'inspecttools.html#showsrc',
                                                                                   'dialoghelper/inspecttools.py'),
                                            'dialoghelper.inspecttools.symsrc': ( 'inspecttools.html#symsrc',
-                                                                                 'dialoghelper/inspecttools.py')}}}
+                                                                                 'dialoghelper/inspecttools.py')},
+            'dialoghelper.stdtools': {}}}
