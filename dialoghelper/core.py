@@ -472,40 +472,11 @@ def import_gist(
 
 # %% ../nbs/00_core.ipynb
 def tool_info():
-    cts='''Tools available from `dialoghelper`:
-
-- &`curr_dialog`: Get the current dialog info.
-- &`msg_idx`: Get absolute index of message in dialog.
-- &`add_html`: Send HTML to the browser to be swapped into the DOM using hx-swap-oob.
-- &`find_msg_id`: Get the current message id.
-- &`find_msgs`: Find messages in current specific dialog that contain the given information.
-  - (solveit can often get this id directly from its context, and will not need to use this if the required information is already available to it.)
-- &`read_msg`: Get the message indexed in the current dialog.
-  - To get the exact message use `n=0` and `relative=True` together with `msgid`.
-  - To get a relative message use `n` (relative position index).
-  - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
-- &`del_msg`: Delete a message from the dialog.
-- &`add_msg`: Add/update a message to the queue to show after code execution completes.
-- &`update_msg`: Update an existing message.
-- &`url2note`: Read URL as markdown, and add a note below current message with the result
-- &`msg_insert_line`: Insert text at a specific location in a message.
-- &`msg_str_replace`: Find and replace text in a message.
-- &`msg_strs_replace`: Find and replace multiple strings in a message.
-- &`msg_replace_lines`: Replace a range of lines in a message with new content.
-  - Always first use `read_msg( msgid=msgid, n=0, relative=True, nums=True)` to view the content with line numbers.'''
+    cts='''Tools available from dialoghelper: &`[curr_dialog, msg_idx, add_html, find_msg_id, find_msgs, read_msg, del_msg, add_msg, update_msg, msg_insert_line, msg_str_replace, msg_strs_replace, msg_replace_lines]`'''
     add_msg(cts)
 
 # %% ../nbs/00_core.ipynb
 def fc_tool_info():
-    cts='''Tools available from `fastcore.tools`:
-
-- &`rg`: Run the `rg` command with the args in `argstr` (no need to backslash escape)
-- &`sed`: Run the `sed` command with the args in `argstr` (e.g for reading a section of a file)
-- &`view`: View directory or file contents with optional line range and numbers
-- &`create`: Creates a new file with the given content at the specified path
-- &`insert`: Insert new_str at specified line number
-- &`str_replace`: Replace first occurrence of old_str with new_str in file
-- &`strs_replace`: Replace for each str pair in old_strs,new_strs
-- &`replace_lines`: Replace lines in file using start and end line-numbers'''
+    cts='''Tools available from fastcore.tools: &`[rg, sed, view, create, insert, str_replace, strs_replace, replace_lines]`'''
     add_msg(cts)
     add_msg('from fastcore.tools import *', msg_type='code')
