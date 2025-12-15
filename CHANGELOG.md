@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.49
+
+### New Features
+
+- Wrap `dict2obj` around json results ([#59](https://github.com/AnswerDotAI/dialoghelper/issues/59))
+- Add `run_code_interactive` and `showsrc` and improve other inspecttools ([#58](https://github.com/AnswerDotAI/dialoghelper/issues/58))
+
+
 ## 0.0.48
 
 ### New Features
