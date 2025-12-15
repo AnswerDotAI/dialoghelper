@@ -191,7 +191,7 @@ def read_msg(
 def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
-    msgid:str=None, # id of message that placement is relative to (if None, uses current message)
+    msgid:str=None, # id of message that placement is relative to (if None, uses current message; note: each add_msg updates "current" to the newly created message)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
