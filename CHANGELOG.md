@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.50
+
+### New Features
+
+- Add `dialoghelper.stdtools` ([#60](https://github.com/AnswerDotAI/dialoghelper/issues/60))
+
+
 ## 0.0.49
 
 ### New Features
