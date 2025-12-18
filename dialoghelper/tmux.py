@@ -7,6 +7,7 @@ __all__ = ['default_tmux_lines', 'shell_ret', 'set_default_history', 'pane', 'li
            'list_sessions', 'sessions', 'flatten_dict', 'tmux_tool_info']
 
 # %% ../nbs/03_tmux.ipynb
+from .core import add_msg
 from fastcore.utils import *
 from toolslm.funccall import *
 import subprocess
