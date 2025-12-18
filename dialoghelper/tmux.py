@@ -119,4 +119,5 @@ def flatten_dict(d, parent_key='', sep='//'):
 
 # %% ../nbs/03_tmux.ipynb
 def tmux_tool_info():
+    "Add a the message below, showing the available tools, to Solveit"
     add_msg("dialoghelper.tmux tools: &`[pane, list_panes, panes, list_windows, windows, list_sessions, sessions]`")
