@@ -3,9 +3,10 @@
 # %% auto 0
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id',
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
-           'add_html', 'read_msg', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py', 'ast_grep',
-           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist',
-           'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info']
+           'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
+           'ast_grep', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
+           'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
+           'fc_tool_info']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -186,6 +187,16 @@ def read_msg(
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
     if nums: data['nums'] = nums
     return call_endp('read_msg_', dname, json=True, **data)
+
+# %% ../nbs/00_core.ipynb
+def read_msgid(
+    msgid:str,  # Message id to find
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
+    dname:str='' # Running dialog to get info for; defaults to current dialog
+    ):
+    """Get message `msgid`. Shortcut for `read_msg(n=0, relative=True, msgid=msgid...)`."""
+    return read_msg(0, msgid=msgid, view_range=view_range, nums=nums, dname=dname)
 
 # %% ../nbs/00_core.ipynb
 def add_msg(
