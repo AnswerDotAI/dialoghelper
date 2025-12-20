@@ -9,13 +9,26 @@ __all__ = ['default_tmux_lines', 'shell_ret', 'set_default_history', 'pane', 'li
 # %% ../nbs/03_tmux.ipynb
 from .core import add_msg
 from fastcore.utils import *
+from fastcore.meta import delegates
 from toolslm.funccall import *
 import subprocess
 
 # %% ../nbs/03_tmux.ipynb
-def shell_ret(*args, capture_output=True, text=True, shell=True, ret=True, **kwargs):
-    "Shortcut for `subprocess.run(shell=True)`"
-    o = subprocess.run(*args, shell=shell, text=text, capture_output=capture_output, **kwargs)
+def _ssh(
+    host:str=None,     # Optional SSH Host
+    ip:str=None,       # Optional SSH IP
+    user:str=None,     # Optional SSH user
+    keyfile:str=None   # Optional SSH keyfile
+): pass
+
+# %% ../nbs/03_tmux.ipynb
+@delegates(_ssh)
+def shell_ret(cmd, capture_output=True, text=True, ret=True, **kwargs):
+    "Run shell command locally or over ssh (use host for alias, or ip/user/keyfile)"
+    host, ip, user, keyfile = kwargs.pop('host', None), kwargs.pop('ip', None), kwargs.pop('user', None), kwargs.pop('keyfile', None)
+    if host: cmd = f"echo '{cmd}' | ssh -A {host} 'bash -ls'"
+    elif ip: cmd = f"echo '{cmd}' | ssh {f'-i {keyfile} ' if keyfile else ''}-A {user}@{ip} 'bash -ls'"
+    o = subprocess.run(cmd, shell=True, text=text, capture_output=capture_output, **kwargs)
     return (o.stdout or o.stderr) if ret else o
 
 # %% ../nbs/03_tmux.ipynb
@@ -27,11 +40,13 @@ def set_default_history(n:int):
     default_tmux_lines = n
 
 # %% ../nbs/03_tmux.ipynb
+@delegates(shell_ret)
 def pane(
     n:int=None, # Number of scrollback lines to capture, in addition to visible area (None uses default_tmux_lines, which is 500 if not otherwise set)
     pane:int=None,     # Pane number to capture from
     session:str=None,  # Session name to target
-    window:int=None    # Window number to target
+    window:int=None,   # Window number to target
+    **kwargs
 ):
     'Grab the tmux history in plain text'
     if n is None: n = default_tmux_lines
@@ -40,73 +55,87 @@ def pane(
     if pane is not None: target = f'{target}.{pane}' if target else f'.{pane}'
     cmd = f'tmux capture-pane -p -S -{n}'
     if target: cmd += f' -t {target}'
-    return shell_ret(cmd).strip()
+    return shell_ret(cmd, **kwargs).strip()
 
 # %% ../nbs/03_tmux.ipynb
+@delegates(shell_ret)
 def list_panes(
     session:str=None,  # Session name to list panes from
-    window:int=None    # Window number to list panes from
+    window:int=None,   # Window number to list panes from
+    **kwargs
 ):
     'List panes for a session/window (or current if none specified)'
     target = session or ''
     if window is not None: target = f'{target}:{window}' if target else f':{window}'
     cmd = f'tmux list-panes{" -t " + target if target else ""}'
-    return shell_ret(cmd)
+    return shell_ret(cmd, **kwargs)
 
 # %% ../nbs/03_tmux.ipynb
-def _pane_data(line, n, session, window):
+@delegates(shell_ret)
+def _pane_data(line, n, session, window, **kwargs):
     pane_num = int(line.split(':')[0])
-    return (pane_num, pane(n=n, pane=pane_num, session=session, window=window))
+    return (pane_num, pane(n=n, pane=pane_num, session=session, window=window, **kwargs))
 
+@delegates(shell_ret)
 def panes(
     session:str=None,  # Session name to target
     window:int=None,   # Window number to target
-    n:int=None         # Number of scrollback lines to capture
+    n:int=None,        # Number of scrollback lines to capture
+    **kwargs
 ):
     'Grab history from all panes in a session/window'
     if n is None: n = default_tmux_lines
-    panes_info = list_panes(session=session, window=window).strip().split('\n')
-    return dict(_pane_data(line, n, session, window) for line in panes_info)
+    panes_info = list_panes(session=session, window=window, **kwargs).strip().split('\n')
+    return dict(_pane_data(line, n, session, window, **kwargs) for line in panes_info)
 
 # %% ../nbs/03_tmux.ipynb
+@delegates(shell_ret)
 def list_windows(
-    session:str=None  # Session name to list windows from
+    session:str=None,  # Session name to list windows from
+    **kwargs
 ):
     'List all windows in a session'
     cmd = f'tmux list-windows{" -t " + session if session else ""}'
-    return shell_ret(cmd)
+    return shell_ret(cmd, **kwargs)
 
 # %% ../nbs/03_tmux.ipynb
-def _window_data(line, n, session):
+@delegates(shell_ret)
+def _window_data(line, n, session, **kwargs):
     parts = line.split(':')
     win_num = int(parts[0])
     win_name = parts[1].split('[')[0].strip().rstrip('*-')
-    return (f'{win_num}:{win_name}', panes(session=session, window=win_num, n=n))
+    return (f'{win_num}:{win_name}', panes(session=session, window=win_num, n=n, **kwargs))
 
+@delegates(shell_ret)
 def windows(
     session:str=None,  # Session name to target
-    n:int=None         # Number of scrollback lines to capture
+    n:int=None,        # Number of scrollback lines to capture
+    **kwargs
 ):
     'Grab history from all panes in all windows of a session'
-    windows_info = list_windows(session).strip().split('\n')
-    return dict(_window_data(line, n, session) for line in windows_info)
+    windows_info = list_windows(session, **kwargs).strip().split('\n')
+    return dict(_window_data(line, n, session, **kwargs) for line in windows_info)
 
 # %% ../nbs/03_tmux.ipynb
-def list_sessions():
+@delegates(shell_ret)
+def list_sessions(**kwargs):
     'List all tmux sessions'
-    return shell_ret('tmux list-sessions')
+    return shell_ret('tmux list-sessions', **kwargs)
 
 # %% ../nbs/03_tmux.ipynb
-def _session_data(line, n):
+@delegates(shell_ret)
+def _session_data(line, n, **kwargs):
     session_name = line.split(':')[0]
-    return (session_name, windows(session=session_name, n=n))
+    return (session_name, windows(session=session_name, n=n, **kwargs))
 
+@delegates(shell_ret)
 def sessions(
-    n:int=None  # Number of scrollback lines to capture
+    n:int=None,        # Number of scrollback lines to capture
+    **kwargs
 ):
     'Grab history from all panes in all windows of all sessions'
-    sessions_info = list_sessions().strip().split('\n')
-    return dict(_session_data(line, n) for line in sessions_info)
+    sessions_info = list_sessions(**kwargs).strip().split('\n')
+    return dict(_session_data(line, n, **kwargs) for line in sessions_info)
 
 # %% ../nbs/03_tmux.ipynb
 def flatten_dict(d, parent_key='', sep='//'):
