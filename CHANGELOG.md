@@ -2,6 +2,19 @@
 
 <!-- do not remove -->
 
+## 0.0.51
+
+### New Features
+
+- add ssh option to tmux ([#66](https://github.com/AnswerDotAI/dialoghelper/pull/66)), thanks to [@KeremTurgutlu](https://github.com/KeremTurgutlu)
+- Add dialoghelper.tmux ([#64](https://github.com/AnswerDotAI/dialoghelper/issues/64))
+- Improvements to `capture_screen` ([#63](https://github.com/AnswerDotAI/dialoghelper/pull/63)), thanks to [@curtis-allan](https://github.com/curtis-allan)
+
+### Bugs Squashed
+
+- fix import ([#65](https://github.com/AnswerDotAI/dialoghelper/pull/65)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+
 ## 0.0.50
 
 ### New Features
