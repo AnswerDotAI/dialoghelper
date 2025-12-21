@@ -5,8 +5,8 @@ __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
            'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
            'ast_grep', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
-           'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
-           'fc_tool_info']
+           'bash', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist',
+           'tool_info', 'fc_tool_info']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -26,6 +26,7 @@ from httpx import get as xget, post as xpost
 from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
+from safecmd import *
 
 # %% ../nbs/00_core.ipynb
 md_cls_d = {
@@ -415,6 +416,14 @@ def msg_del_lines(
     del lines[start_line-1:end_line]
     update_msg(msgid=msgid, content=''.join(lines), dname=dname)
     return {'success': f'Deleted lines {start_line} to {end_line} in message {msgid}'}
+
+# %% ../nbs/00_core.ipynb
+def bash(cmd:str): # The command to run - all shell features like pipes and subcommands are supported
+    """Run a bash shell command line safely and return the output. `cmd` is parsed and all calls are checked against an allow-list.
+    If the command is not allowed, STOP and inform the user of the command run and error details; so they can decide whether to whitelist
+    it or run it themselves. The default allow-list includes most standard unix commands and git subcommands that do not change state or are easily reverted. All operators are supported (including `;`, `&&`, `||`, pipes, and subshells), except output redirection."""
+    try: return {'success': safe_run(cmd)}
+    except PermissionError as e: return {'error': e}
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
