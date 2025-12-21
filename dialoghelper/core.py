@@ -5,8 +5,8 @@ __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
            'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
            'ast_grep', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
-           'bash', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist',
-           'tool_info', 'fc_tool_info']
+           'bash', 'add_allowed_cmds', 'add_allowed_ops', 'rm_allowed_cmds', 'rm_allowed_ops', 'load_gist', 'gist_file',
+           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'is_tool']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -27,6 +27,7 @@ from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
 from safecmd import *
+from safecmd.core import _split_set,_split_specs
 
 # %% ../nbs/00_core.ipynb
 md_cls_d = {
@@ -418,12 +419,53 @@ def msg_del_lines(
     return {'success': f'Deleted lines {start_line} to {end_line} in message {msgid}'}
 
 # %% ../nbs/00_core.ipynb
-def bash(cmd:str): # The command to run - all shell features like pipes and subcommands are supported
+def bash(
+    cmd:str,  # Bash command string to execute - all shell features like pipes and subcommands are supported
+    rm_cmds:str=None,  # Temp remove these commands from allow list
+    rm_ops:str=None  # Temp remove these operators from allow list
+): # dict with 'success' or 'error' key; value is stdout+stderr for success, or error message otherwise
     """Run a bash shell command line safely and return the output. `cmd` is parsed and all calls are checked against an allow-list.
     If the command is not allowed, STOP and inform the user of the command run and error details; so they can decide whether to whitelist
-    it or run it themselves. The default allow-list includes most standard unix commands and git subcommands that do not change state or are easily reverted. All operators are supported (including `;`, `&&`, `||`, pipes, and subshells), except output redirection."""
-    try: return {'success': safe_run(cmd)}
+    it or run it themselves. The default allow-list includes most standard unix commands and git subcommands that do not change state or are easily reverted.
+    All operators are supported (including `;`, `&&`, `||`, pipes, and subshells), except output redirection.
+    rm_ params are comma-separated strs."""
+    try: return {'success': safe_run(cmd, rm_cmds=rm_cmds, rm_ops=rm_ops)}
     except PermissionError as e: return {'error': e}
+
+# %% ../nbs/00_core.ipynb
+def _unsafe_bash(
+    cmd:str,  # Bash command string to execute - all shell features like pipes and subcommands are supported
+    cmds:str=None,  # Allowed commands; defaults to ok_cmds; DO NOT USE without upfront user permission
+    ops:str=None,  # Allowed operators; defaults to ok_ops; DO NOT USE without upfront user permission
+    add_cmds:str=None,  # Temp add these commands to allow list; DO NOT USE without upfront user permission
+    add_ops:str=None,  # Temp add these operators to allow list; DO NOT USE without upfront user permission
+    rm_cmds:str=None,  # Temp remove these commands from allow list
+    rm_ops:str=None,  # Temp remove these operators from allow list
+): # dict with 'success' or 'error' key; value is stdout+stderr for success, or error message otherwise
+    """Run a bash shell command line safely and return the output. `cmd` is parsed and all calls are checked against an allow-list.
+    If the command is not allowed, STOP and inform the user of the command run and error details; so they can decide whether to whitelist
+    it or run it themselves.
+    The default allow-list includes most standard unix commands and git subcommands that do not change state or are easily reverted. All operators are supported (including `;`, `&&`, `||`, pipes, and subshells), except output redirection.
+    cmds/ops and add_/rm_ params are comma-separated strs."""
+    try: return {'success': safe_run(cmd, cmds, ops, add_cmds=add_cmds, add_ops=add_ops, rm_cmds=rm_cmds, rm_ops=rm_ops)}
+    except PermissionError as e: return {'error': e}
+
+# %% ../nbs/00_core.ipynb
+def add_allowed_cmds(cmds):
+    "Add comma-separated `cmds` to the allow list; (this can not be used as an LLM tool)"
+    ok_cmds.update(_split_specs(cmds))
+
+def add_allowed_ops(ops):
+    "Add comma-separated `ops` to the allow list; (this can not be used as an LLM tool)"
+    ok_ops.update(_split_set(ops))
+
+def rm_allowed_cmds(cmds:str):
+    "Remove comma-separated `cmds` from the allow list"
+    ok_cmds.difference_update({CmdSpec(c) for c in _split_set(cmds)})
+
+def rm_allowed_ops(ops):
+    "Remove comma-separated `ops` from the allow list"
+    ok_ops.difference_update(_split_set(ops))
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
@@ -501,3 +543,9 @@ def fc_tool_info():
     cts='''Tools available from fastcore.tools: &`[rg, sed, view, create, insert, str_replace, strs_replace, replace_lines]`'''
     add_msg(cts)
     add_msg('from fastcore.tools import *', msg_type='code')
+
+# %% ../nbs/00_core.ipynb
+def is_tool(o):
+    "Check if `o` is a valid tool (has name, docstring, and all params have type annotations)"
+    if not hasattr(o, '__name__') or o.__name__[0]=='_' or not o.__doc__: return False
+    return is_usable_tool(o)
