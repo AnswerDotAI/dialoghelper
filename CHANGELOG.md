@@ -2,14 +2,7 @@
 
 <!-- do not remove -->
 
-## 0.0.52
-
-### New Features
-
-- Add `bash()` ([#67](https://github.com/AnswerDotAI/dialoghelper/issues/67))
-
-
-## 0.0.51
+## 0.0.54
 
 ### New Features
 
