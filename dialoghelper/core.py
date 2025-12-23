@@ -275,7 +275,9 @@ def update_msg(
     """Update an existing message. Provide either `msg` OR field key/values to update.
     - Use `content` param to update contents.
     - Only include parameters to update--missing ones will be left unchanged."""
-    if not msgid and not msg: raise TypeError("update_msg needs either a dict message or `msgid=`")
+    if msg: kwargs |= msg.get('msg', msg)
+    if not msgid: msgid = kwargs.pop('id', None)
+    if not msgid: raise TypeError("update_msg needs either a dict message with and id, or `msgid=`")
     res = call_endp('update_msg_', dname, msgid=msgid, **kwargs)
     set_var('__msg_id', res)
     return res
