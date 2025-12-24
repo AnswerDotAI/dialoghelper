@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.55
+
+### New Features
+
+- Add `get_repo` ([#70](https://github.com/AnswerDotAI/dialoghelper/issues/70))
+
+### Bugs Squashed
+
+- `msg` param to `update_msg` does nothing ([#69](https://github.com/AnswerDotAI/dialoghelper/issues/69))
+
+
 ## 0.0.54
 
 ### New Features
