@@ -4,9 +4,9 @@
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id',
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
            'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
-           'ast_grep', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
-           'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
-           'fc_tool_info', 'is_tool']
+           'ast_grep', 'get_repo', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
+           'msg_del_lines', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist',
+           'tool_info', 'fc_tool_info', 'is_tool']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -26,6 +26,7 @@ from httpx import get as xget, post as xpost
 from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
+from toolslm.xml import repo2ctx
 
 # %% ../nbs/00_core.ipynb
 md_cls_d = {
@@ -324,13 +325,25 @@ def ast_grep(
     return json.loads(res.stdout) if res.stdout else res.stderr
 
 # %% ../nbs/00_core.ipynb
+def get_repo(
+    owner:str,  # GitHub repo owner
+    repo:str,   # GitHub repo name
+    exts=('py','md','ipynb'),
+    out=False, # Include notebook cell outputs?
+    prefix=False, # Include Anthropic's suggested prose intro?
+    **kwargs
+):
+    res = repo2ctx(owner, repo, exts=exts, out=out, prefix=prefix, **kwargs)
+    return add_msg(res, msg_type='raw');
+
+# %% ../nbs/00_core.ipynb
 def msg_insert_line(
     msgid:str,  # Message id to edit
     insert_line: int, # The line number after which to insert the text (0 for beginning of file)
     new_str: str, # The text to insert
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
-    "Insert text at a specific line number in a message"
+    "Insert text at a specific line number in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers."
     content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
     lines = content.splitlines()
     if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
@@ -390,7 +403,8 @@ def msg_replace_lines(
     new_content:str='', # New content to replace the specified lines
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
-    "Replace a range of lines with new content in a message"
+    """Replace a range of lines with new content in a message.
+    Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers."""
     content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
     lines = content.splitlines(keepends=True)
     res = _norm_lines(len(lines), start_line, end_line)
@@ -408,7 +422,7 @@ def msg_del_lines(
     end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
-    "Delete a range of lines from a message"
+    "Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers."
     content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
     lines = content.splitlines(keepends=True)
     res = _norm_lines(len(lines), start_line, end_line)
