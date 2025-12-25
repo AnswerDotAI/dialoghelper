@@ -285,11 +285,11 @@ def update_msg(
 
 # %% ../nbs/00_core.ipynb
 def run_msg(
-    msgid:str=None, # id of message to execute
+    msgids:str=None, # Comma-separated ids of message(s) to execute
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
     "Adds a message to the run queue. Use read_msg to see the output once it runs."
-    return call_endp('add_runq_', dname, msgid=msgid, api=True)
+    return call_endp('add_runq_', dname, msgids=msgids, api=True)
 
 # %% ../nbs/00_core.ipynb
 def url2note(
@@ -297,7 +297,7 @@ def url2note(
     extract_section:bool=True, # If url has an anchor, return only that section
     selector:str=None, # Select section(s) using BeautifulSoup.select (overrides extract_section)
     ai_img:bool=True, # Make images visible to the AI
-    split_re:str=r'(?=^#{1,6} .+)' # Regex to split content into multiple notes, set to False for single note
+    split_re:str='' # Regex to split content into multiple notes, set to '' for single note
 ):
     "Read URL as markdown, and add note(s) below current message with the result"
     res = read_url(url, as_md=True, extract_section=extract_section, selector=selector, ai_img=ai_img)
