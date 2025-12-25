@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.56
+
+### Bugs Squashed
+
+- `run_msg` now requires `msgids` ([#71](https://github.com/AnswerDotAI/dialoghelper/issues/71))
+
+
 ## 0.0.55
 
 ### New Features
