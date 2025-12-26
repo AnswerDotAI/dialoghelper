@@ -151,7 +151,10 @@ def find_msgs(
     include_output:bool=True, # Include output in returned dict?
     dname:str='' # Running dialog to get info for; defaults to current dialog
 ):
-    "Find `list[dict]` of messages in current specific dialog that contain the given information. Call with no args to see the full dialog. To refer to a message found later, use its `id` field."
+    """Find `list[dict]` of messages in current specific dialog that contain the given information. Call with no args to see the full dialog.
+    Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message -- instead use `read_msgid`.
+    Note that LLM chat history only includes messages above the current prompt, whereas `find_msgs` can access *all* messages.
+    To refer to a message found later, use its `id` field."""
     res = call_endp('find_msgs_', dname, json=True, re_pattern=re_pattern, msg_type=msg_type, limit=limit)['msgs']
     if not include_output:
         for o in res: o.pop('output', None)
@@ -196,7 +199,7 @@ def read_msgid(
     nums:bool=False, # Whether to show line numbers
     dname:str='' # Running dialog to get info for; defaults to current dialog
     ):
-    """Get message `msgid`. Shortcut for `read_msg(n=0, relative=True, msgid=msgid...)`."""
+    """Get message `msgid`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results."""
     return read_msg(0, msgid=msgid, view_range=view_range, nums=nums, dname=dname)
 
 # %% ../nbs/00_core.ipynb
