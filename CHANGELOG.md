@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.57
+
+### New Features
+
+- Add `get_folder` ([#74](https://github.com/AnswerDotAI/dialoghelper/issues/74))
+- Improve docstrings ([#73](https://github.com/AnswerDotAI/dialoghelper/issues/73))
+
+
 ## 0.0.56
 
 ### Bugs Squashed
