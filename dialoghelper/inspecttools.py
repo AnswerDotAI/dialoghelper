@@ -40,16 +40,18 @@ def resolve(
     - `resolve("sympy.sets.sets.Interval")` -> `<class 'sympy.sets.sets.Interval'>`
     - `resolve("mylist[2]")` -> third element of mylist"""
     global _last
-    if sym == '_last': return _last
-    parts = re.split(r'\.(?![^\[]*\])', sym)
+    if (sym := sym.strip()) == '_last': return _last
     g = _find_frame_dict('__msg_id')
+    if match := re.match(r'^(\w+)\[(\d+)\]$', sym):
+        attr, idx = match.groups()
+        parts, _last = ['_last'], _last[int(idx)] if attr == '_last' else g[attr][int(idx)]
+    else: parts = re.split(r'\.(?![^\[]*\])', sym)
     obj = _last if parts[0] == '_last' else g[parts[0]]
     for part in parts[1:]:
         match = re.match(r'(\w+)\[(\d+)\]$', part)
         if match:
             attr, idx = match.groups()
-            obj = getattr(obj, attr)
-            obj = obj[int(idx)]
+            obj = getattr(obj, attr)[int(idx)]
         else: obj = getattr(obj, part)
     _last = obj
     return obj

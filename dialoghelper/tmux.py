@@ -23,7 +23,7 @@ def _ssh(
 
 # %% ../nbs/03_tmux.ipynb
 @delegates(_ssh)
-def shell_ret(cmd, capture_output=True, text=True, ret=True, **kwargs):
+def shell_ret(cmd:str, capture_output: bool=True, text: bool=True, ret: bool=True, **kwargs):
     "Run shell command locally or over ssh (use host for alias, or ip/user/keyfile)"
     host, ip, user, keyfile = kwargs.pop('host', None), kwargs.pop('ip', None), kwargs.pop('user', None), kwargs.pop('keyfile', None)
     if host: cmd = f"echo '{cmd}' | ssh -A {host} 'bash -ls'"
