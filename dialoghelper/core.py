@@ -333,11 +333,13 @@ def ctx_folder(
     path:Path='.',  # Path to collect
     types:str|list='py,doc',  # list or comma-separated str of ext types from: py, js, java, c, cpp, rb, r, ex, sh, web, doc, cfg
     out=False, # Include notebook cell outputs?
+    raw=True, # Add raw message, or note?
     **kwargs
 ):
     "Convert folder to XML context and place in a new message"
     res = folder2ctx(path, types=types, out=out, **kwargs)
-    return add_msg(res, msg_type='raw')
+    if not raw: res = f'```\n{res}\n```'
+    return add_msg(res, msg_type='raw' if raw else 'note')
 
 # %% ../nbs/00_core.ipynb
 @delegates(repo2ctx)
@@ -346,11 +348,13 @@ def ctx_repo(
     repo:str,   # GitHub repo name
     types:str|list='py,doc',  # list or comma-separated str of ext types from: py, js, java, c, cpp, rb, r, ex, sh, web, doc, cfg
     out=False, # Include notebook cell outputs?
+    raw=True, # Add raw message, or note?
     **kwargs
 ):
     "Convert GitHub repo to XML context and place in a new message"
-    res = repo2ctx(owner, repo, out=out, **kwargs)
-    return add_msg(res, msg_type='raw')
+    res = repo2ctx(owner, repo, out=out, types=types, **kwargs)
+    if not raw: res = f'```\n{res}\n```'
+    return add_msg(res, msg_type='raw' if raw else 'note')
 
 # %% ../nbs/00_core.ipynb
 @delegates(sym2file)
