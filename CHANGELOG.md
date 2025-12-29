@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.59
+
+### New Features
+
+- Add `raw` param to ctx funcs ([#78](https://github.com/AnswerDotAI/dialoghelper/issues/78))
+
+
 ## 0.0.58
 
 ### New Features
