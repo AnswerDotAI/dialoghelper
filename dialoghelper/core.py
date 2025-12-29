@@ -4,9 +4,9 @@
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id',
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
            'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
-           'ast_grep', 'get_folder', 'get_repo', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'load_gist', 'gist_file', 'import_string', 'is_usable_tool',
-           'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'is_tool']
+           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'msg_insert_line',
+           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist', 'gist_file',
+           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'is_tool']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -26,7 +26,7 @@ from httpx import get as xget, post as xpost
 from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
-from toolslm.xml import repo2ctx,folder2ctx
+from toolslm.xml import *
 
 # %% ../nbs/00_core.ipynb
 md_cls_d = {
@@ -329,7 +329,7 @@ def ast_grep(
 
 # %% ../nbs/00_core.ipynb
 @delegates(folder2ctx)
-def get_folder(
+def ctx_folder(
     path:Path='.',  # Path to collect
     types:str|list='py,doc',  # list or comma-separated str of ext types from: py, js, java, c, cpp, rb, r, ex, sh, web, doc, cfg
     out=False, # Include notebook cell outputs?
@@ -337,11 +337,11 @@ def get_folder(
 ):
     "Convert folder to XML context and place in a new message"
     res = folder2ctx(path, types=types, out=out, **kwargs)
-    return add_msg(res, msg_type='raw');
+    return add_msg(res, msg_type='raw')
 
 # %% ../nbs/00_core.ipynb
 @delegates(repo2ctx)
-def get_repo(
+def ctx_repo(
     owner:str,  # GitHub repo owner
     repo:str,   # GitHub repo name
     types:str|list='py,doc',  # list or comma-separated str of ext types from: py, js, java, c, cpp, rb, r, ex, sh, web, doc, cfg
@@ -350,7 +350,29 @@ def get_repo(
 ):
     "Convert GitHub repo to XML context and place in a new message"
     res = repo2ctx(owner, repo, out=out, **kwargs)
-    return add_msg(res, msg_type='raw');
+    return add_msg(res, msg_type='raw')
+
+# %% ../nbs/00_core.ipynb
+@delegates(sym2file)
+def ctx_symfile(sym):
+    "Add note with filepath and contents for a symbol's source file"
+    return add_msg(sym2file(sym), msg_type='note');
+
+# %% ../nbs/00_core.ipynb
+@delegates(sym2folderctx)
+def ctx_symfolder(
+    sym, # Symbol to get folder context from
+    **kwargs):
+    "Add raw message with folder context for a symbol's source file location"
+    return add_msg(sym2folderctx(sym, **kwargs), msg_type='raw');
+
+# %% ../nbs/00_core.ipynb
+@delegates(sym2folderctx)
+def ctx_sympkg(
+    sym, # Symbol to get folder context from
+    **kwargs):
+    "Add raw message with repo context for a symbol's root package"
+    return add_msg(sym2pkgctx(sym, **kwargs), msg_type='raw');
 
 # %% ../nbs/00_core.ipynb
 def msg_insert_line(
