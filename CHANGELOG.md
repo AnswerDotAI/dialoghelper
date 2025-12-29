@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.58
+
+### New Features
+
+- Add wrappers for sym ctx toolslm funcs ([#77](https://github.com/AnswerDotAI/dialoghelper/issues/77))
+
+
 ## 0.0.57
 
 ### New Features
