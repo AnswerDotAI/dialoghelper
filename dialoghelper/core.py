@@ -20,7 +20,6 @@ from fastcore.xml import to_xml
 from fastcore.utils import *
 from fastcore.meta import delegates
 from ghapi.all import *
-from fastlite import *
 from fastcore.xtras import asdict
 from inspect import currentframe,Parameter,signature
 from httpx import get as xget, post as xpost
