@@ -70,8 +70,9 @@ dh_settings = {'port':5001}
 # %% ../nbs/00_core.ipynb
 def find_dname(dname=None):
     "Get the message id by searching the call stack for __dialog_id."
-    dname = dname.removesuffix('.ipynb')
-    if dname and dname.startswith('/'): return dname[1:]
+    if dname:
+        dname = dname.removesuffix('.ipynb')
+        if dname.startswith('/'): return dname[1:]
     curr = dh_settings.get('dname', find_var('__dialog_name'))
     if not dname: return curr
     p = Path(curr).parent
