@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.60
+
+### New Features
+
+- Handle relative dname param ([#79](https://github.com/AnswerDotAI/dialoghelper/issues/79))
+
+
 ## 0.0.59
 
 ### New Features
