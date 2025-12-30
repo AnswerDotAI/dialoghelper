@@ -2,9 +2,16 @@
 
 <!-- do not remove -->
 
-## 0.0.62
+## 0.0.61
 
+### New Features
 
+- Remove unneeded fastlite and claudette deps ([#81](https://github.com/AnswerDotAI/dialoghelper/issues/81))
+- Add type annotations to `shell_ret` for proper `is_usable_tool` report ([#72](https://github.com/AnswerDotAI/dialoghelper/pull/72)), thanks to [@civvic](https://github.com/civvic)
+
+### Bugs Squashed
+
+- Fix resolve() to handle direct list indexing ([#76](https://github.com/AnswerDotAI/dialoghelper/pull/76)), thanks to [@civvic](https://github.com/civvic)
 
 
 ## 0.0.60
