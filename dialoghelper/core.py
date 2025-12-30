@@ -370,7 +370,6 @@ def ctx_repo(
     return add_msg(res, msg_type='raw' if raw else 'note')
 
 # %% ../nbs/00_core.ipynb
-@delegates(sym2file)
 def ctx_symfile(sym):
     "Add note with filepath and contents for a symbol's source file"
     return add_msg(sym2file(sym), msg_type='note');
