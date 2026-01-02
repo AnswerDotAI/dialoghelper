@@ -3,10 +3,11 @@
 # %% auto 0
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'empty', 'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id',
            'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event', 'event_get', 'find_msgs',
-           'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'url2note', 'ast_py',
-           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'msg_insert_line',
-           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist', 'gist_file',
-           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'is_tool']
+           'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg',
+           'url2note', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist',
+           'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info',
+           'is_tool']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -306,6 +307,27 @@ def run_msg(
 ):
     "Adds a message to the run queue. Use read_msg to see the output once it runs."
     return call_endp('add_runq_', dname, msgids=msgids, api=True)
+
+# %% ../nbs/00_core.ipynb
+def copy_msg(
+    msgids:str=None, # Comma-separated ids of message(s) to copy
+    cut:bool=False, # Cut message(s)? (If not, copies)
+    dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
+):
+    "Add `msgids` to clipboard."
+    msgid,*_ = msgids.split(',')
+    res = call_endp('msg_clipboard_', dname, msgids=msgids, msgid=msgid, cmd='cut' if cut else 'copy')
+    return {'success':'complete'}
+
+# %% ../nbs/00_core.ipynb
+def paste_msg(
+    msgid:str=None, # Message id to paste next to
+    after:bool=True, # Paste after msgid? (If not, pastes before)
+    dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
+):
+    "Paste clipboard msg(s) after/before the current selected msg (msgid)."
+    res = call_endp('msg_paste_', dname, msgid=msgid, after=after)
+    return {'success':'complete'}
 
 # %% ../nbs/00_core.ipynb
 def url2note(
