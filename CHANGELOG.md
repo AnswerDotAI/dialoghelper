@@ -2,7 +2,11 @@
 
 <!-- do not remove -->
 
-## 0.0.63
+## 0.1.0
+
+### Breaking Changes
+
+- `msgid` param is now called `id`; `msgids` param is now called `ids`
 
 ### New Features
 
