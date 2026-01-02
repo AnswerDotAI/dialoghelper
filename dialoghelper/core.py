@@ -90,9 +90,10 @@ def _diff_dialog(pred, err):
     if 'dname' in dh_settings and pred: raise ValueError(err)
 
 # %% ../nbs/00_core.ipynb
-def call_endp(path, dname='', json=False, raiseex=False, **data):
+def call_endp(path, dname='', json=False, raiseex=False, id=None, **data):
     dname = find_dname(dname)
     data['dlg_name'] = dname
+    if id: data['id_'] = id
     headers = {'Accept': 'application/json'} if json else {}
     res = xpost(f'http://localhost:{dh_settings["port"]}/{path}', data=data, headers=headers)
     if raiseex: res.raise_for_status()
@@ -110,13 +111,13 @@ def curr_dialog(
 
 # %% ../nbs/00_core.ipynb
 def msg_idx(
-    msgid=None,  # Message id to find (defaults to current message)
+    id=None,  # Message id to find (defaults to current message)
     dname:str='' # Dialog to get message index from; defaults to current dialog
 ):
     """Get absolute index of message in dialog."""
-    _diff_dialog(not msgid, "`msgid` parameter must be provided when target dialog is different")
-    if not msgid: msgid = find_msg_id()
-    return call_endp('msg_idx_', dname, json=True, msgid=msgid)['msgid']
+    _diff_dialog(not id, "`id` parameter must be provided when target dialog is different")
+    if not id: id = find_msg_id()
+    return call_endp('msg_idx_', dname, json=True, id=id)['idx']
 
 # %% ../nbs/00_core.ipynb
 def add_scr(scr, oob='beforeend:#js-script'):
@@ -162,9 +163,9 @@ def find_msgs(
 ):
     """Find `list[dict]` of messages in requested dialog that contain the given information. Call with no args to see the full dialog. Often it is more efficient to call once with no `re_pattern` to see the whole dialog at once, so you can then use the full context from then on.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension.
-    Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message -- instead use `read_msgid`.
+    Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `read_msgid`.
     Note that LLM chat history only includes messages above the current prompt, whereas `find_msgs` can access *all* messages.
-    To refer to a message found later, use its `id` field."""
+    To refer to a found message from code or tools, use its `id` field."""
     res = call_endp('find_msgs_', dname, json=True, re_pattern=re_pattern, msg_type=msg_type, limit=limit)['msgs']
     if not include_output:
         for o in res: o.pop('output', None)
@@ -186,39 +187,39 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 def read_msg(
     n:int=-1,      # Message index (if relative, +ve is downwards)
     relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
-    msgid:str=None,  # Message id to find (defaults to current message)
+    id:str=None,  # Message id to find (defaults to current message)
     view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
     nums:bool=False, # Whether to show line numbers
     dname:str='' # Dialog to get info for; defaults to current dialog
     ):
     """Get the message indexed in the current dialog.
-    - To get the exact message use `n=0` and `relative=True` together with `msgid`.
+    - To get the exact message use `n=0` and `relative=True` together with `id`.
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    _diff_dialog(relative and not msgid, "`msgid` parameter must be provided, or use `relative=False` with `n`, when target dialog is different")
-    if relative and not msgid: msgid = find_msg_id()
-    data = dict(n=n, relative=relative, msgid=msgid)
+    _diff_dialog(relative and not id, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different")
+    if relative and not id: id = find_msg_id()
+    data = dict(n=n, relative=relative, id=id)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
     if nums: data['nums'] = nums
     return call_endp('read_msg_', dname, json=True, **data)
 
 # %% ../nbs/00_core.ipynb
 def read_msgid(
-    msgid:str,  # Message id to find
+    id:str,  # Message id to find
     view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
     nums:bool=False, # Whether to show line numbers
     dname:str='' # Dialog to get message from; defaults to current dialog
     ):
-    """Get message `msgid`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
+    """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    return read_msg(0, msgid=msgid, view_range=view_range, nums=nums, dname=dname)
+    return read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
 
 # %% ../nbs/00_core.ipynb
 def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
-    msgid:str=None, # id of message that placement is relative to (if None, uses current message; note: each add_msg updates "current" to the newly created message)
+    id:str=None, # id of message that placement is relative to (if None, uses current message; note: each add_msg updates "current" to the newly created message)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
@@ -232,10 +233,10 @@ def add_msg(
 ):
     """Add/update a message to the queue to show after code execution completes.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    _diff_dialog(placement not in ('at_start','at_end') and not msgid, "`msgid` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")
-    if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
+    _diff_dialog(placement not in ('at_start','at_end') and not id, "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")
+    if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
-        'add_relative_', dname, content=content, placement=placement, msgid=msgid, msg_type=msg_type, output=output,
+        'add_relative_', dname, content=content, placement=placement, id=id, msg_type=msg_type, output=output,
         time_run=time_run, is_exported=is_exported, skipped=skipped, pinned=pinned,
         i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed)
     set_var('__msg_id', res)
@@ -243,28 +244,28 @@ def add_msg(
 
 # %% ../nbs/00_core.ipynb
 def del_msg(
-    msgid:str=None, # id of message to delete
+    id:str=None, # id of message to delete
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     "Delete a message from the dialog."
-    return call_endp('rm_msg_', dname, raiseex=True, msid=msgid, json=True)
+    return call_endp('rm_msg_', dname, raiseex=True, msid=id, json=True)
 
 # %% ../nbs/00_core.ipynb
 @delegates(add_msg)
 def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
-    msgid:str=None, # id of message that placement is relative to (if None, uses current message)
+    id:str=None, # id of message that placement is relative to (if None, uses current message)
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
     **kwargs
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
-    _diff_dialog(placement not in ('at_start','at_end') and not msgid, "`msgid` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
-    if placement not in ('at_start','at_end') and not msgid: msgid = find_msg_id()
+    _diff_dialog(placement not in ('at_start','at_end') and not id, "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
+    if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
-        'add_relative_', dname, content=content, placement=placement, msgid=msgid, run=run, **kwargs)
+        'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
     set_var('__msg_id', res)
     return res
 
@@ -285,7 +286,7 @@ def _umsg(
 # %% ../nbs/00_core.ipynb
 @delegates(_umsg)
 def update_msg(
-    msgid:str=None, # id of message to update (if None, uses current message)
+    id:str=None, # id of message to update (if None, uses current message)
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     dname:str='', # Dialog to get info for; defaults to current dialog
     **kwargs):
@@ -294,48 +295,48 @@ def update_msg(
     - Only include parameters to update--missing ones will be left unchanged.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
     if msg: kwargs |= msg.get('msg', msg)
-    if not msgid: msgid = kwargs.pop('id', None)
-    if not msgid: raise TypeError("update_msg needs either a dict message with and id, or `msgid=`")
-    res = call_endp('update_msg_', dname, msgid=msgid, **kwargs)
+    if not id: id = kwargs.pop('id', None)
+    if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
+    res = call_endp('update_msg_', dname, id=id, **kwargs)
     set_var('__msg_id', res)
     return res
 
 # %% ../nbs/00_core.ipynb
 def run_msg(
-    msgids:str=None, # Comma-separated ids of message(s) to execute
+    ids:str=None, # Comma-separated ids of message(s) to execute
     dname:str='' # Running dialog to get info for; defaults to current dialog. (Note dialog *must* be running for this function)
 ):
     "Adds a message to the run queue. Use read_msg to see the output once it runs."
-    return call_endp('add_runq_', dname, msgids=msgids, api=True)
+    return call_endp('add_runq_', dname, ids=ids, api=True)
 
 # %% ../nbs/00_core.ipynb
 def copy_msg(
-    msgids:str=None, # Comma-separated ids of message(s) to copy
+    ids:str=None, # Comma-separated ids of message(s) to copy
     cut:bool=False, # Cut message(s)? (If not, copies)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
 ):
-    "Add `msgids` to clipboard."
-    msgid,*_ = msgids.split(',')
-    res = call_endp('msg_clipboard_', dname, msgids=msgids, msgid=msgid, cmd='cut' if cut else 'copy')
+    "Add `ids` to clipboard."
+    id,*_ = ids.split(',')
+    res = call_endp('msg_clipboard_', dname, ids=ids, id=id, cmd='cut' if cut else 'copy')
     return {'success':'complete'}
 
 # %% ../nbs/00_core.ipynb
 def paste_msg(
-    msgid:str=None, # Message id to paste next to
-    after:bool=True, # Paste after msgid? (If not, pastes before)
+    id:str=None, # Message id to paste next to
+    after:bool=True, # Paste after id? (If not, pastes before)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
 ):
-    "Paste clipboard msg(s) after/before the current selected msg (msgid)."
-    res = call_endp('msg_paste_', dname, msgid=msgid, after=after)
+    "Paste clipboard msg(s) after/before the current selected msg (id)."
+    res = call_endp('msg_paste_', dname, id=id, after=after)
     return {'success':'complete'}
 
 # %% ../nbs/00_core.ipynb
 def toggle_header(
-    msgid:str, # id of markdown header note message to toggle collapsed state
+    id:str, # id of markdown header note message to toggle collapsed state
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
 ):
-    "Toggle collapsed header state for `msgid`"
-    res = call_endp('toggle_header_collapse_', dname, msgid=msgid)
+    "Toggle collapsed header state for `id`"
+    res = call_endp('toggle_header_collapse_', dname, id=id)
     return {'success':'complete'}
 
 # %% ../nbs/00_core.ipynb
@@ -423,39 +424,39 @@ def ctx_sympkg(
 
 # %% ../nbs/00_core.ipynb
 def msg_insert_line(
-    msgid:str,  # Message id to edit
-    insert_line: int, # The line number after which to insert the text (0 for beginning of file)
+    id:str,  # Message id to edit
+    insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
     new_str: str, # The text to insert
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     """Insert text at a specific line number in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    content = read_msg(n=0, id=id, dname=dname)['content']
     lines = content.splitlines()
     if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
     lines.insert(insert_line, new_str)
-    update_msg(msgid=msgid, content='\n'.join(lines), dname=dname)
-    return {'success': f'Inserted text after line {insert_line} in message {msgid}'}
+    update_msg(id=id, content='\n'.join(lines), dname=dname)
+    return {'success': f'Inserted text after line {insert_line} in message {id}'}
 
 # %% ../nbs/00_core.ipynb
 def msg_str_replace(
-    msgid:str,  # Message id to edit
+    id:str,  # Message id to edit
     old_str: str, # Text to find and replace
     new_str: str, # Text to replace with
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     """Replace first occurrence of old_str with new_str in a message.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    content = read_msg(n=0, id=id, dname=dname)['content']
     count = content.count(old_str)
     if count == 0: return {'error': f"Text not found in message: {repr(old_str)}"}
     if count > 1: return {'error': f"Multiple matches found ({count}) for text: {repr(old_str)}"}
-    update_msg(msgid=msgid, content=content.replace(old_str, new_str, 1), dname=dname)
-    return {'success': f'Replaced text in message {msgid}'}
+    update_msg(id=id, content=content.replace(old_str, new_str, 1), dname=dname)
+    return {'success': f'Replaced text in message {id}'}
 
 # %% ../nbs/00_core.ipynb
 def msg_strs_replace(
-    msgid:str,  # Message id to edit
+    id:str,  # Message id to edit
     old_strs:list[str], # List of strings to find and replace
     new_strs:list[str], # List of replacement strings (must match length of old_strs)
     dname:str='' # Dialog to get info for; defaults to current dialog
@@ -465,14 +466,14 @@ def msg_strs_replace(
     if not isinstance(old_strs, list): return {'error': f"`old_strs` should be a list[str] but got {type(old_strs)}"}
     if not isinstance(new_strs, list): return {'error': f"`new_strs` should be a list[str] but got {type(new_strs)}"}
     if len(old_strs) != len(new_strs): return {'error': f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs"}
-    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    content = read_msg(n=0, id=id, dname=dname)['content']
     for idx, (old_str, new_str) in enumerate(zip(old_strs, new_strs)):
         count = content.count(old_str)
         if count == 0: return {'error': f"Text not found in message at index {idx}: {repr(old_str)}"}
         if count > 1: return {'error': f"Multiple matches ({count}) found at index {idx} for: {repr(old_str)}"}
         content = content.replace(old_str, new_str, 1)
-    update_msg(msgid=msgid, content=content, dname=dname)
-    return {'success': f'Successfully replaced all the strings in message {msgid}'}
+    update_msg(id=id, content=content, dname=dname)
+    return {'success': f'Successfully replaced all the strings in message {id}'}
 
 # %% ../nbs/00_core.ipynb
 def _norm_lines(n:int, start:int, end:int=None):
@@ -485,7 +486,7 @@ def _norm_lines(n:int, start:int, end:int=None):
 
 # %% ../nbs/00_core.ipynb
 def msg_replace_lines(
-    msgid:str,  # Message id to edit
+    id:str,  # Message id to edit
     start_line:int, # Starting line number to replace (1-based indexing)
     end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
     new_content:str='', # New content to replace the specified lines
@@ -494,33 +495,33 @@ def msg_replace_lines(
     """Replace a range of lines with new content in a message.
     Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    content = read_msg(n=0, id=id, dname=dname)['content']
     lines = content.splitlines(keepends=True)
     res = _norm_lines(len(lines), start_line, end_line)
     if isinstance(res, dict): return res
     start_line, end_line = res
     if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
     lines[start_line-1:end_line] = [new_content] if new_content else []
-    update_msg(msgid=msgid, content=''.join(lines), dname=dname)
-    return {'success': f'Replaced lines {start_line} to {end_line} in message {msgid}'}
+    update_msg(id=id, content=''.join(lines), dname=dname)
+    return {'success': f'Replaced lines {start_line} to {end_line} in message {id}'}
 
 # %% ../nbs/00_core.ipynb
 def msg_del_lines(
-    msgid:str,  # Message id to edit
+    id:str,  # Message id to edit
     start_line:int, # Starting line number to delete (1-based indexing)
     end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     """Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, msgid=msgid, dname=dname)['msg']['content']
+    content = read_msg(n=0, id=id, dname=dname)['content']
     lines = content.splitlines(keepends=True)
     res = _norm_lines(len(lines), start_line, end_line)
     if isinstance(res, dict): return res
     start_line, end_line = res
     del lines[start_line-1:end_line]
-    update_msg(msgid=msgid, content=''.join(lines), dname=dname)
-    return {'success': f'Deleted lines {start_line} to {end_line} in message {msgid}'}
+    update_msg(id=id, content=''.join(lines), dname=dname)
+    return {'success': f'Deleted lines {start_line} to {end_line} in message {id}'}
 
 # %% ../nbs/00_core.ipynb
 def load_gist(gist_id:str):
