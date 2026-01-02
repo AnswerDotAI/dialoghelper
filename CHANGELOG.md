@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.63
+
+### New Features
+
+- Support updated solveit API ([#84](https://github.com/AnswerDotAI/dialoghelper/issues/84))
+- Add `toggle_header` ([#83](https://github.com/AnswerDotAI/dialoghelper/issues/83))
+
+
 ## 0.0.62
 
 ### New Features
