@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.62
+
+### New Features
+
+- Add copy/paste msgs ([#82](https://github.com/AnswerDotAI/dialoghelper/issues/82))
+
+
 ## 0.0.61
 
 ### New Features
