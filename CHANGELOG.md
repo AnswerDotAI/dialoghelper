@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.1
+
+### New Features
+
+- Add mermaid ([#85](https://github.com/AnswerDotAI/dialoghelper/issues/85))
+
+
 ## 0.1.0
 
 ### Breaking Changes
