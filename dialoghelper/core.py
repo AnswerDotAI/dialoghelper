@@ -157,6 +157,10 @@ def event_get(evt:str, timeout=15, data=None):
 def find_msgs(
     re_pattern:str='', # Optional regex to search for (re.DOTALL+re.MULTILINE is used)
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
+    use_case:bool=False, # Use case-sensitive matching?
+    use_regex:bool=True, # Use regex matching?
+    only_err:bool=False, # Only return messages that have errors?
+    only_chg:bool=False, # Only return messages that have changed vs git HEAD?
     limit:int=None, # Optionally limit number of returned items
     include_output:bool=True, # Include output in returned dict?
     dname:str='' # Dialog to get info for; defaults to current dialog
@@ -166,7 +170,8 @@ def find_msgs(
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `read_msgid`.
     Note that LLM chat history only includes messages above the current prompt, whereas `find_msgs` can access *all* messages.
     To refer to a found message from code or tools, use its `id` field."""
-    res = call_endp('find_msgs_', dname, json=True, re_pattern=re_pattern, msg_type=msg_type, limit=limit)['msgs']
+    res = call_endp('find_msgs_', dname, json=True, re_pattern=re_pattern, msg_type=msg_type, limit=limit,
+                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg)['msgs']
     if not include_output:
         for o in res: o.pop('output', None)
     return res
