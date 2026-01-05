@@ -405,10 +405,12 @@ def ctx_folder(
     types:str|list='py,doc',  # list or comma-separated str of ext types from: py, js, java, c, cpp, rb, r, ex, sh, web, doc, cfg
     out=False, # Include notebook cell outputs?
     raw=True, # Add raw message, or note?
+    exts:str|list=None, # list or comma-separated str of exts to include (overrides `types`)
     **kwargs
 ):
     "Convert folder to XML context and place in a new message"
-    res = folder2ctx(path, types=types, out=out, **kwargs)
+    if exts: types=None
+    res = folder2ctx(path, types=types, out=out, exts=exts, **kwargs)
     if not raw: res = f'```\n{res}\n```'
     return add_msg(res, msg_type='raw' if raw else 'note')
 
@@ -418,12 +420,14 @@ def ctx_repo(
     owner:str,  # GitHub repo owner
     repo:str,   # GitHub repo name
     types:str|list='py,doc',  # list or comma-separated str of ext types from: py, js, java, c, cpp, rb, r, ex, sh, web, doc, cfg
+    exts:str|list=None, # list or comma-separated str of exts to include (overrides `types`)
     out=False, # Include notebook cell outputs?
     raw=True, # Add raw message, or note?
     **kwargs
 ):
     "Convert GitHub repo to XML context and place in a new message"
-    res = repo2ctx(owner, repo, out=out, types=types, **kwargs)
+    res = repo2ctx(owner, repo, out=out, types=types, exts=exts, **kwargs)
+    if exts: types=None
     if not raw: res = f'```\n{res}\n```'
     return add_msg(res, msg_type='raw' if raw else 'note')
 
