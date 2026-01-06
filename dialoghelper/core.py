@@ -346,7 +346,7 @@ else {
         window.mermaid = m.default;
         window.mermaid.run();
         htmx.onLoad(elt => {
-            if (elt.matches('div.mermaid') || htmx.findAll(elt, 'div.mermaid')) window.mermaid.run();
+            if (elt.matches('div.mermaid, pre.mermaid') || htmx.findAll(elt, 'div.mermaid, pre.mermaid')) window.mermaid.run();
         });
     });
 }""" % mermaid_url, type="module")
