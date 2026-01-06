@@ -626,7 +626,7 @@ def tool_info():
 
 # %% ../nbs/00_core.ipynb
 def fc_tool_info():
-    cts='''Tools available from fastcore.tools: &`[rg, sed, view, create, insert, str_replace, strs_replace, replace_lines]`'''
+    cts='''Tools available from fastcore.tools: &`[rg, sed, view, create, insert, str_replace, strs_replace, replace_lines, move_lines]`'''
     add_msg(cts)
     add_msg('from fastcore.tools import *', msg_type='code')
 
