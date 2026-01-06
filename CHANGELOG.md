@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.1.3
+
+### New Features
+
+- Add `move_lines` ([#89](https://github.com/AnswerDotAI/dialoghelper/issues/89))
+- Add sym manipulation tools for strings and lists ([#86](https://github.com/AnswerDotAI/dialoghelper/pull/86)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+
 ## 0.1.2
 
 ### New Features
