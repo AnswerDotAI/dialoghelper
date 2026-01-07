@@ -70,16 +70,16 @@ dh_settings = {'port':5001}
 
 # %% ../nbs/00_core.ipynb
 def find_dname(dname=None):
-    "Get the message id by searching the call stack for __dialog_id."
+    "Get the dialog name by searching the call stack for __dialog_id, and resolving `dname` if supplied."
     if dname:
         dname = dname.removesuffix('.ipynb')
-        if dname.startswith('/'): return dname[1:]
+        if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', find_var('__dialog_name'))
-    if not dname: return curr
+    if not dname: return '/'+curr
     p = Path(curr).parent
     res = normpath((p/dname))
     assert '../' not in res, "Path traversal not permitted"
-    return res
+    return '/'+res
 
 def find_msg_id():
     "Get the message id by searching the call stack for __msg_id."
@@ -91,7 +91,7 @@ def _diff_dialog(pred, err):
 
 # %% ../nbs/00_core.ipynb
 def call_endp(path, dname='', json=False, raiseex=False, id=None, **data):
-    dname = find_dname(dname)
+    dname = find_dname(dname).strip('/')
     data['dlg_name'] = dname
     if id: data['id_'] = id
     headers = {'Accept': 'application/json'} if json else {}
