@@ -167,7 +167,7 @@ def find_msgs(
     include_meta:bool=True, # Include all additional message metadata
     as_xml:bool=False, # Use concise unescaped XML output format
     nums:bool=False, # Show line numbers?
-    trunc_out:bool=False, # Middle-out truncate code output to 500 characters?
+    trunc_out:bool=False, # Middle-out truncate code output to 100 characters?
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     """Find `list[dict]` of messages in requested dialog that contain the given information. Call with no args to see the full dialog. Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
@@ -185,7 +185,7 @@ def view_dlg(
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
     nums:bool=False, # Whether to show line numbers
     include_output:bool=False, # Include output in returned dict?
-    trunc_out:bool=True, # Middle-out truncate code output to 500 characters (only applies if `include_output`)?
+    trunc_out:bool=True, # Middle-out truncate code output to 100 characters (only applies if `include_output`)?
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     "Concise XML view of all messages (optionally filtered by type), not including metadata."
