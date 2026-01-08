@@ -3,11 +3,12 @@
 # %% auto 0
 __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'empty', 'add_styles', 'find_var', 'set_var', 'find_dname',
            'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event',
-           'event_get', 'find_msgs', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg', 'update_msg',
-           'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note', 'ast_py',
-           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'msg_insert_line',
-           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist', 'gist_file',
-           'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info', 'is_tool']
+           'event_get', 'find_msgs', 'view_dlg', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg',
+           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
+           'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist',
+           'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info',
+           'is_tool']
 
 # %% ../nbs/00_core.ipynb
 import json,importlib,linecache,re,inspect,uuid
@@ -114,7 +115,7 @@ def msg_idx(
     id=None,  # Message id to find (defaults to current message)
     dname:str='' # Dialog to get message index from; defaults to current dialog
 ):
-    """Get absolute index of message in dialog."""
+    "Get absolute index of message in dialog."
     _diff_dialog(not id, "`id` parameter must be provided when target dialog is different")
     if not id: id = find_msg_id()
     return call_endp('msg_idx_', dname, json=True, id=id)['idx']
@@ -163,18 +164,29 @@ def find_msgs(
     only_chg:bool=False, # Only return messages that have changed vs git HEAD?
     limit:int=None, # Optionally limit number of returned items
     include_output:bool=True, # Include output in returned dict?
+    include_meta:bool=True, # Include all additional message metadata
+    as_xml:bool=False, # Use concise unescaped XML output format
+    nums:bool=False, # Whether to show line numbers
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
-    """Find `list[dict]` of messages in requested dialog that contain the given information. Call with no args to see the full dialog. Often it is more efficient to call once with no `re_pattern` to see the whole dialog at once, so you can then use the full context from then on.
+    """Find `list[dict]` of messages in requested dialog that contain the given information. Call with no args to see the full dialog. Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension.
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `read_msgid`.
     Note that LLM chat history only includes messages above the current prompt, whereas `find_msgs` can access *all* messages.
     To refer to a found message from code or tools, use its `id` field."""
-    res = call_endp('find_msgs_', dname, json=True, re_pattern=re_pattern, msg_type=msg_type, limit=limit,
-                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg)['msgs']
-    if not include_output:
-        for o in res: o.pop('output', None)
-    return res
+    res = call_endp('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit,
+                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg,
+                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums)
+    return res if as_xml else dict2obj(loads(res)['msgs'])
+
+# %% ../nbs/00_core.ipynb
+def view_dlg(
+    msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
+    nums:bool=False, # Whether to show line numbers
+    dname:str='' # Dialog to get info for; defaults to current dialog
+):
+    "Concise XML view of all messages (optionally filtered by type), not including outputs or metadata."
+    return find_msgs(msg_type=msg_type, dname=dname, include_meta=False, include_output=False, as_xml=True, nums=nums)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
@@ -252,7 +264,7 @@ def del_msg(
     id:str=None, # id of message to delete
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
-    "Delete a message from the dialog."
+    "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     return call_endp('rm_msg_', dname, raiseex=True, msid=id, json=True)
 
 # %% ../nbs/00_core.ipynb
@@ -265,7 +277,7 @@ def _add_msg_unsafe(
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
     **kwargs
 ):
-    """Add/update a message to the queue to show after code execution completes, and optionally run it. Be sure to pass a `sid` (stable id) not a `mid` (which is used only for sorting, and can change).
+    """Add/update a message to the queue to show after code execution completes, and optionally run it.
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
     _diff_dialog(placement not in ('at_start','at_end') and not id, "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
@@ -621,7 +633,7 @@ def import_gist(
 
 # %% ../nbs/00_core.ipynb
 def tool_info():
-    cts='''Tools available from dialoghelper: &`[curr_dialog, msg_idx, add_html, find_msg_id, find_msgs, read_msg, del_msg, add_msg, update_msg, msg_insert_line, msg_str_replace, msg_strs_replace, msg_replace_lines]`'''
+    cts='''Tools available from dialoghelper: &`[curr_dialog, view_dlg, msg_idx, find_msgs, read_msg, del_msg, add_msg, update_msg, msg_insert_line, msg_str_replace, msg_strs_replace, msg_replace_lines]`'''
     add_msg(cts)
 
 # %% ../nbs/00_core.ipynb
