@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.6
+
+### New Features
+
+- Add `view_dlg` for concise XML dialog output; extend `find_msgs` with XML/metadata options ([#90](https://github.com/AnswerDotAI/dialoghelper/issues/90))
+
+
 ## 0.1.5
 
 ### New Features
