@@ -166,7 +166,8 @@ def find_msgs(
     include_output:bool=True, # Include output in returned dict?
     include_meta:bool=True, # Include all additional message metadata
     as_xml:bool=False, # Use concise unescaped XML output format
-    nums:bool=False, # Whether to show line numbers
+    nums:bool=False, # Show line numbers?
+    trunc_out:bool=False, # Middle-out truncate code output to 500 characters?
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     """Find `list[dict]` of messages in requested dialog that contain the given information. Call with no args to see the full dialog. Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
@@ -176,17 +177,20 @@ def find_msgs(
     To refer to a found message from code or tools, use its `id` field."""
     res = call_endp('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg,
-                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums)
+                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out)
     return res if as_xml else dict2obj(loads(res)['msgs'])
 
 # %% ../nbs/00_core.ipynb
 def view_dlg(
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
     nums:bool=False, # Whether to show line numbers
+    include_output:bool=False, # Include output in returned dict?
+    trunc_out:bool=True, # Middle-out truncate code output to 500 characters (only applies if `include_output`)?
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
-    "Concise XML view of all messages (optionally filtered by type), not including outputs or metadata."
-    return find_msgs(msg_type=msg_type, dname=dname, include_meta=False, include_output=False, as_xml=True, nums=nums)
+    "Concise XML view of all messages (optionally filtered by type), not including metadata."
+    return find_msgs(msg_type=msg_type, dname=dname, as_xml=True, nums=nums,
+        include_meta=False, include_output=include_output, trunc_out=trunc_out)
 
 # %% ../nbs/00_core.ipynb
 def add_html(
