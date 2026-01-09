@@ -4,12 +4,13 @@
 
 # %% auto 0
 __all__ = ['doimport', 'resolve', 'symsrc', 'showsrc', 'gettype', 'getdir', 'getval', 'getnth', 'symlen', 'symslice', 'symsearch',
-           'symset', 'run_code_interactive', 'inspect_tool_info']
+           'symset', 'run_code_interactive', 'tracetool', 'inspect_tool_info']
 
 # %% ../nbs/02_inspecttools.ipynb
-import inspect, re
+import inspect, re, sys, ast, builtins
 from importlib import import_module
 from . import add_msg
+from tracefunc import tracefunc
 
 # %% ../nbs/02_inspecttools.ipynb
 def _find_frame_dict(var:str):
@@ -179,5 +180,20 @@ def run_code_interactive(
     return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
 
 # %% ../nbs/02_inspecttools.ipynb
+_builtins = set(dir(builtins))
+
+def _collapse(v): return v[0] if len(v) > 0 and all(x == v[0] for x in v) else v
+def _process(vars): return {k: _collapse(v) for k,v in vars.items() if k not in _builtins}
+
+def tracetool(
+    sym: str,  # Dotted symbol path to callable or "_last" for previous result
+    args: list=None,  # Positional args (JSON values passed directly)
+    kwargs: dict=None  # Keyword args (JSON values passed directly)
+) -> dict:  # Dict, in source code order, mapping source snippets to (hit_count, variables); unchanged vars collapsed to single tuple
+    "Trace execution of callable at `sym` with given args/kwargs. Variables are captured AFTER each line executes."
+    d = tracefunc(resolve(sym), *(args or []), **(kwargs or {}))
+    return {src: (hits, _process(vars)) for src, (hits, vars) in d.items()}
+
+# %% ../nbs/02_inspecttools.ipynb
 def inspect_tool_info():
-    add_msg('Tools available from inspecttools: &`[symsrc,showsrc,gettype,getdir,doimport,getval,getnth,symlen,symslice,symsearch,symset,run_code_interactive]`')
+    add_msg('Tools available from inspecttools: &`[symsrc,showsrc,gettype,getdir,doimport,getval,getnth,symlen,symslice,symsearch,symset,run_code_interactive,tracetool]`')
