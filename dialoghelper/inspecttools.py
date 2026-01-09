@@ -4,10 +4,10 @@
 
 # %% auto 0
 __all__ = ['doimport', 'resolve', 'symsrc', 'showsrc', 'gettype', 'getdir', 'getval', 'getnth', 'symlen', 'symslice', 'symsearch',
-           'symset', 'run_code_interactive', 'tracetool', 'inspect_tool_info']
+           'symset', 'run_code_interactive', 'tracetool', 'fmt_trace', 'inspect_tool_info']
 
 # %% ../nbs/02_inspecttools.ipynb
-import inspect, re, sys, ast, builtins
+import inspect, re, sys, ast, builtins, os
 from importlib import import_module
 from . import add_msg
 
@@ -184,15 +184,57 @@ _builtins = set(dir(builtins))
 def _collapse(v): return v[0] if len(v) > 0 and all(x == v[0] for x in v) else v
 def _process(vars): return {k: _collapse(v) for k,v in vars.items() if k not in _builtins}
 
+# %% ../nbs/02_inspecttools.ipynb
 def tracetool(
-    sym: str,  # Dotted symbol path to callable or "_last" for previous result
-    args: list=None,  # Positional args (JSON values passed directly)
-    kwargs: dict=None  # Keyword args (JSON values passed directly)
-) -> dict:  # Dict, in source code order, mapping source snippets to (hit_count, variables); unchanged vars collapsed to single tuple
-    "Trace execution of callable at `sym` with given args/kwargs. Variables are captured AFTER each line executes."
+    sym: str,  # Dotted symbol path of callable to run
+    args: list=None,  # Positional args for callable (JSON values passed directly)
+    kwargs: dict=None,  # Keyword args for callable (JSON values passed directly)
+    target_func: str=None  # Dotted symbol path of function to trace (defaults to sym)
+)->list[tuple[str, dict[str, tuple[int, dict[str, tuple|list]]]]]:  # List of (stack_str,trace_dict); trace_dict maps source snippets to (hit_count, variables), unchanged vars collapsed to single tuple
+    """
+    Trace execution using sys.monitoring (Python 3.12+), returning a list of per-call traces.
+
+    Return:
+    - list of length <= 10
+    - one element per call to `target_func` (including recursion)
+    - each element is: (stack_str, trace_dict)
+        stack_str: call stack string (filtered so `fn` is the shallowest frame shown)
+        trace_dict: {
+        "<source snippet for AST-line>": ( hit_count, { "var": [ (type_name, truncated_repr), ... up to 10 ], ... } ),
+        ...}
+
+    Semantics:
+    - "Line" means an AST-level line: separate statements (even if on one physical line via `;`).
+    - Compound statements are keyed by their header only.
+    - Unchanged variables → `('type', 'repr')` tuple, changed variables → `[('type', 'repr'), ...]` list.
+    - Comprehensions are treated as a line node and are monitored, including inside the comprehension frame, with per-iteration snapshots.
+    - Snapshots are recorded after each line finishes, so assignments show updated values.
+    """
     from tracefunc import tracefunc
-    d = tracefunc(resolve(sym), *(args or []), **(kwargs or {}))
-    return {src: (hits, _process(vars)) for src, (hits, vars) in d.items()}
+    target = resolve(target_func) if target_func else None
+    traces = tracefunc(resolve(sym), *(args or []), target_func=target, **(kwargs or {}))
+    return [(stack, {src: (hits, _process(vars)) for src, (hits, vars) in d.items()}) for stack, d in traces]
+
+# %% ../nbs/02_inspecttools.ipynb
+def fmt_trace(traces):
+    "Format tracetool output as markdown"
+    def fmt_val(val):
+        if isinstance(val, tuple): return f"`{val[1]}`"
+        return " → ".join(f"`{v[1]}`" for v in val)
+    def fmt_vars(vars):
+        if not vars: return ''
+        return '<br>'.join(f"`{k}`: {fmt_val(v)}" for k, v in vars.items())
+    def fmt_line(src, hits, vars):
+        src_short = src.split('\n')[0][:60]
+        if len(src.split('\n')[0]) > 60: src_short += '...'
+        return f"| `{src_short}` | {hits} | {fmt_vars(vars)} |"
+    parts = []
+    for stack, trace in traces:
+        if stack: parts.append(f"**Stack:**\n```\n{stack}\n```\n")
+        parts.append("| Source | Hits | Variables |\n|--------|------|-----------|")
+        parts.extend(fmt_line(src, hits, vars) for src, (hits, vars) in trace.items() if hits > 0)
+        parts.append("")
+    return '\n'.join(parts)
 
 # %% ../nbs/02_inspecttools.ipynb
 def inspect_tool_info():
