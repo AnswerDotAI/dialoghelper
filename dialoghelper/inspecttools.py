@@ -33,7 +33,8 @@ _last = None
 def resolve(
     sym: str  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]" or "_last" for previous result
 ):
-    """Resolve a dotted symbol string to its Python object, with optional [n] indexing. Sets global `_last` to the resolved object for chaining. Pass `"_last"` to reference the result of the previous tool call.
+    """Resolve a dotted symbol string to its Python object, with optional [n] indexing. Sets global `_last` to the resolved object for chaining.
+    Pass `"_last"` to reference the result of the previous tool call.
 
     Examples:
 
@@ -131,24 +132,38 @@ def getnth(
     return _last
 
 # %% ../nbs/02_inspecttools.ipynb
-def symlen(sym:str):
-    'Returns the length of the given symbol'
+def symlen(
+    sym: str  # Dotted symbol path or "_last" for previous result
+):
+    "Returns the length of the given symbol"
     return len(resolve(sym))
 
 # %% ../nbs/02_inspecttools.ipynb
-def symslice(sym:str, start:int, end:int):
-    'Returns the contents of the symbol from the given start to the end.'
+def symslice(
+    sym: str,   # Dotted symbol path or "_last" for previous result
+    start: int, # Starting index for slice
+    end: int    # Ending index for slice
+):
+    "Returns the contents of the symbol from the given start to the end."
     try: return resolve(sym)[start:end]
-    except Exception as e: return f'An exception occurred: {e}'
+    except Exception as e: return f'Error: {e}'
 
 # %% ../nbs/02_inspecttools.ipynb
-def symsearch(sym:str, term:str, mode='exact', flags:int=0):
-    "Search symbol: exact mode returns (item, index) tuples; regex mode returns (match, start, end) tuples"
-    if mode=='exact': return str([(x, i) for i, x in enumerate(resolve(sym)) if x == term])
-    else: return str([(m.group(), m.start(), m.end()) for m in re.finditer(term, resolve(sym), flags)])
+def symsearch(
+    sym:str,      # Dotted symbol path or "_last" for previous result
+    term:str,     # Search term (exact string or regex pattern)
+    regex:bool=True,  # If True, regex search; if False, exact match
+    flags:int=0   # Regex flags (e.g., re.IGNORECASE)
+):
+    """Search contents of symbol, which is assumed to be str for regex, or iterable for non-regex.
+    Regex mode returns (match, start, end) tuples; otherwise returns (item, index) tuples"""
+    if regex: return str([(m.group(), m.start(), m.end()) for m in re.finditer(term, resolve(sym), flags)])
+    else: return str([(x, i) for i, x in enumerate(resolve(sym)) if x == term])
 
 # %% ../nbs/02_inspecttools.ipynb
-def symset(val:str):
+def symset(
+    val: str  # Value to assign to _ai_sym
+):
     "Set _ai_sym to the given value"
     _find_frame_dict('__msg_id')['_ai_sym'] = val
 

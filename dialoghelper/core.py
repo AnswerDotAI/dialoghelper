@@ -188,7 +188,7 @@ def view_dlg(
     trunc_out:bool=True, # Middle-out truncate code output to 100 characters (only applies if `include_output`)?
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
-    "Concise XML view of all messages (optionally filtered by type), not including metadata."
+    "Concise XML view of all messages (optionally filtered by type), not including metadata. Often it is more efficient to call this to see the whole dialog at once (including line numbers if needed), instead of running `find_msgs` or `read_msg` multiple times."
     return find_msgs(msg_type=msg_type, dname=dname, as_xml=True, nums=nums,
         include_meta=False, include_output=include_output, trunc_out=trunc_out)
 
@@ -214,6 +214,7 @@ def read_msg(
     dname:str='' # Dialog to get info for; defaults to current dialog
     ):
     """Get the message indexed in the current dialog.
+    NB: Messages in the current dialog above the current message are *already* visible; use this only when you need line numbers for editing operations, or for messages not in the current dialog or below the current message.
     - To get the exact message use `n=0` and `relative=True` together with `id`.
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
@@ -403,11 +404,21 @@ def ast_py(code:str):
 
 # %% ../nbs/00_core.ipynb
 def ast_grep(
-    pattern:str, # ast-grep pattern to search
-    path=".", # path to recursively search for files
-    lang="python" # language to search/scan
-):
-    "Use the `ast-grep` command to find `pattern` in `path`"
+    pattern:str, # ast-grep pattern to search, e.g "post($A, data=$B, $$$)"
+    path:str=".", # path to recursively search for files
+    lang:str="python" # language to search/scan
+): # json format from calling `ast-grep --json=compact
+    """Use `ast-grep` to find code patterns by AST structure (not text).
+    
+    Pattern syntax:
+    - $VAR captures single nodes, $$$ captures multiple
+    - Match structure directly: `def $FUNC($$$)` finds any function; `class $CLASS` finds classes regardless of inheritance
+    - DON'T include `:` - it's concrete syntax, not AST structure
+    - Whitespace/formatting ignored - matches structural equivalence
+    
+    Examples: `import $MODULE` (find imports); `$OBJ.$METHOD($$$)` (find method calls); `await $EXPR` (find await expressions)
+    
+    Useful for: Refactoring—find all uses of deprecated APIs or changed signatures; Security review—locate SQL queries, file operations, eval calls; Code exploration—understand how libraries are used across codebase; Pattern analysis—find async functions, error handlers, decorators; Better than regex—handles multi-line code, nested structures, respects syntax"""
     import json, subprocess
     cmd = f"ast-grep --pattern '{pattern}' --lang {lang} --json=compact"
     if path != ".": cmd = f"cd {path} && {cmd}"
