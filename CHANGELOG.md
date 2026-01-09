@@ -2,6 +2,16 @@
 
 <!-- do not remove -->
 
+## 0.1.7
+
+### New Features
+
+- Add `fmt_trace` markdown formatter ([#94](https://github.com/AnswerDotAI/dialoghelper/issues/94))
+- Add `tracetool` ([#93](https://github.com/AnswerDotAI/dialoghelper/issues/93))
+- Improve docstrings and parameter annotations; change symsearch to use regex:bool flag ([#92](https://github.com/AnswerDotAI/dialoghelper/issues/92))
+- Add `trunc_out` ([#91](https://github.com/AnswerDotAI/dialoghelper/issues/91))
+
+
 ## 0.1.6
 
 ### New Features
