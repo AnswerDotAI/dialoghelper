@@ -10,7 +10,6 @@ __all__ = ['doimport', 'resolve', 'symsrc', 'showsrc', 'gettype', 'getdir', 'get
 import inspect, re, sys, ast, builtins
 from importlib import import_module
 from . import add_msg
-from tracefunc import tracefunc
 
 # %% ../nbs/02_inspecttools.ipynb
 def _find_frame_dict(var:str):
@@ -191,6 +190,7 @@ def tracetool(
     kwargs: dict=None  # Keyword args (JSON values passed directly)
 ) -> dict:  # Dict, in source code order, mapping source snippets to (hit_count, variables); unchanged vars collapsed to single tuple
     "Trace execution of callable at `sym` with given args/kwargs. Variables are captured AFTER each line executes."
+    from tracefunc import tracefunc
     d = tracefunc(resolve(sym), *(args or []), **(kwargs or {}))
     return {src: (hits, _process(vars)) for src, (hits, vars) in d.items()}
 
