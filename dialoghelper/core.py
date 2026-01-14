@@ -169,11 +169,11 @@ def find_msgs(
     nums:bool=False, # Show line numbers?
     trunc_out:bool=False, # Middle-out truncate code output to 100 characters?
     dname:str='' # Dialog to get info for; defaults to current dialog
-):
-    """Find `list[dict]` of messages in requested dialog that contain the given information. Call with no args to see the full dialog. Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
+)->list[dict]: # Messages in requested dialog that contain the given information
+    """Call with no args to see the full dialog. Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension.
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `read_msgid`.
-    Note that LLM chat history only includes messages above the current prompt, whereas `find_msgs` can access *all* messages.
+    Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code or tools, use its `id` field."""
     res = call_endp('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg,
