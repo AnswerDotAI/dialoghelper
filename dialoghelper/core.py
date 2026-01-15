@@ -179,7 +179,10 @@ def find_msgs(
     res = call_endp('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out, trunc_in=trunc_in)
-    return res if as_xml else dict2obj(loads(res)['msgs'])
+    if as_xml: return res
+    res = loads(res)
+    if 'error' in res: return res
+    return dict2obj(res['msgs'])
 
 # %% ../nbs/00_core.ipynb
 def view_dlg(
