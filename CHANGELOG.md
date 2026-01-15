@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.9
+
+### New Features
+
+- Add `trunc_in` param to `find_msgs` and `view_dlg` ([#95](https://github.com/AnswerDotAI/dialoghelper/pull/95)), thanks to [@erikgaas](https://github.com/erikgaas)
+
+
 ## 0.1.8
 
 ### New Features
