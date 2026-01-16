@@ -275,7 +275,7 @@ def del_msg(
     dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
-    return call_endp('rm_msg_', dname, raiseex=True, msid=id, json=True)
+    return call_endp('rm_msg_', dname, raiseex=True, msid=id, json=False)
 
 # %% ../nbs/00_core.ipynb
 @delegates(add_msg)
