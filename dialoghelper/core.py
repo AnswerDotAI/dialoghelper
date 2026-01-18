@@ -5,10 +5,10 @@ __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'empty', 'add
            'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event',
            'event_get', 'find_msgs', 'view_dlg', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
-           'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg',
-           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'load_gist',
-           'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info', 'fc_tool_info',
-           'is_tool']
+           'create_dialog', 'rm_dialog', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
+           'ctx_sympkg', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
+           'load_gist', 'gist_file', 'import_string', 'is_usable_tool', 'mk_toollist', 'import_gist', 'tool_info',
+           'fc_tool_info', 'is_tool']
 
 # %% ../nbs/00_core.ipynb #e881cda4
 import json,importlib,linecache,re,inspect,uuid
@@ -406,6 +406,22 @@ def url2note(
     if split_re: return [add_msg(s) for s in re.split(split_re, res, flags=re.MULTILINE) if s.strip()]
     return add_msg(res)
 
+
+# %% ../nbs/00_core.ipynb #f26259cf
+def create_dialog(
+    name:str, # Name/path of the new dialog (relative to current dialog's folder, or absolute if starts with '/')
+):
+    "Create a new dialog"
+    name = find_dname(name).lstrip('/')
+    return call_endp('create_dialog_', name=name, api=True, json=True)
+
+# %% ../nbs/00_core.ipynb #e393f14b
+def rm_dialog(
+    name:str, # Name/path of the dialog to delete (relative to current dialog's folder, or absolute if starts with '/')
+):
+    "Delete a dialog (or folder) and associated records"
+    name = find_dname(name).lstrip('/')
+    return call_endp('rm_dialog_', name=name, sess='{}', api=True, json=True)
 
 # %% ../nbs/00_core.ipynb #9adf1cbb
 def ast_py(code:str):
