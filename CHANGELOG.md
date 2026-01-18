@@ -2,6 +2,18 @@
 
 <!-- do not remove -->
 
+## 0.1.10
+
+### New Features
+
+- Improve symsrc with linecache fallback, add SymbolNotFound exception, rename doimport to importmodule ([#99](https://github.com/AnswerDotAI/dialoghelper/issues/99))
+- Handle error responses in `find_msgs` ([#96](https://github.com/AnswerDotAI/dialoghelper/issues/96))
+
+### Bugs Squashed
+
+- Use json=False for `del_msg` to match `rm_msg_` response ([#97](https://github.com/AnswerDotAI/dialoghelper/pull/97)), thanks to [@erikgaas](https://github.com/erikgaas)
+
+
 ## 0.1.9
 
 ### New Features
