@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.13
+
+### New Features
+
+- Add `create_dialog` and `rm_dialog` helper functions ([#101](https://github.com/AnswerDotAI/dialoghelper/issues/101))
+
+
 ## 0.1.12
 
 ### New Features
