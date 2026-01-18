@@ -186,12 +186,12 @@ def find_msgs(
 
 # %% ../nbs/00_core.ipynb #9ff2a38e
 def view_dlg(
+    dname:str='', # Dialog to get info for; defaults to current dialog
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
     nums:bool=False, # Whether to show line numbers
     include_output:bool=False, # Include output in returned dict?
     trunc_out:bool=True, # Middle-out truncate code output to 100 characters (only applies if `include_output`)?
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
-    dname:str='' # Dialog to get info for; defaults to current dialog
 ):
     "Concise XML view of all messages (optionally filtered by type), not including metadata. Often it is more efficient to call this to see the whole dialog at once (including line numbers if needed), instead of running `find_msgs` or `read_msg` multiple times."
     return find_msgs(msg_type=msg_type, dname=dname, as_xml=True, nums=nums,
