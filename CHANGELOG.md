@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.12
+
+### New Features
+
+- Add ids filter to `find_msgs` ([#100](https://github.com/AnswerDotAI/dialoghelper/issues/100))
+
+
 ## 0.1.11
 
 ### New Features
