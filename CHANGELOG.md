@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.15
+
+### Bugs Squashed
+
+- Fix _diff_dialog to check explicit dname parameter ([#102](https://github.com/AnswerDotAI/dialoghelper/issues/102))
+
+
 ## 0.1.14
 
 ### New Features
