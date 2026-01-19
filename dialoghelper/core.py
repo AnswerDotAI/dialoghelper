@@ -86,9 +86,10 @@ def find_msg_id():
     "Get the message id by searching the call stack for __msg_id."
     return find_var('__msg_id')
 
-def _diff_dialog(pred, err):
+def _diff_dialog(pred, dname, err):
     "Raise ValueError if targeting a different dialog and `pred` is True"
-    if 'dname' in dh_settings and pred: raise ValueError(err)
+    if not pred: return
+    if dname or ('dname' in dh_settings): raise ValueError(err)
 
 # %% ../nbs/00_core.ipynb #96bc23d8
 def call_endp(path, dname='', json=False, raiseex=False, id=None, **data):
@@ -116,7 +117,7 @@ def msg_idx(
     dname:str='' # Dialog to get message index from; defaults to current dialog
 ):
     "Get absolute index of message in dialog."
-    _diff_dialog(not id, "`id` parameter must be provided when target dialog is different")
+    _diff_dialog(not id, dname, "`id` parameter must be provided when target dialog is different")
     if not id: id = find_msg_id()
     return call_endp('msg_idx_', dname, json=True, id=id)['idx']
 
@@ -230,7 +231,7 @@ def read_msg(
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    _diff_dialog(relative and not id, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different")
+    _diff_dialog(relative and not id, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different")
     if relative and not id: id = find_msg_id()
     data = dict(n=n, relative=relative, id=id)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
@@ -251,7 +252,7 @@ def read_msgid(
 # %% ../nbs/00_core.ipynb #3ad14786
 def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
-    placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
+    placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message; note: each add_msg updates "current" to the newly created message)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
@@ -262,11 +263,12 @@ def add_msg(
     o_collapsed: int | None = 0, # Collapse output?
     heading_collapsed: int | None = 0, # Collapse heading section?
     pinned: int | None = 0, # Pin to context?
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='' # Dialog to get info for; defaults to current dialog. If passed, `placement` must be 'at_start' or 'at_end'
 ):
     """Add/update a message to the queue to show after code execution completes.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    _diff_dialog(placement not in ('at_start','at_end') and not id, "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")
+    _diff_dialog(placement not in ('at_start','at_end') and not id, dname,
+        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, id=id, msg_type=msg_type, output=output,
@@ -287,7 +289,7 @@ def del_msg(
 @delegates(add_msg)
 def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
-    placement:str='add_after', # Can be 'add_after', 'add_before', 'at_start', 'at_end'
+    placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message)
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
@@ -295,7 +297,8 @@ def _add_msg_unsafe(
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
-    _diff_dialog(placement not in ('at_start','at_end') and not id, "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
+    _diff_dialog(placement not in ('at_start','at_end') and not id, dname,
+        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
