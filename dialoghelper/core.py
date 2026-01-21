@@ -284,7 +284,7 @@ def add_msg(
         'add_relative_', dname, content=content, placement=placement, id=id, msg_type=msg_type, output=output,
         time_run=time_run, is_exported=is_exported, skipped=skipped, pinned=pinned,
         i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed)
-    set_var('__msg_id', res)
+    if not dname: set_var('__msg_id', res)
     return res
 
 # %% ../nbs/00_core.ipynb #f1ee1903
@@ -313,7 +313,7 @@ def _add_msg_unsafe(
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
-    set_var('__msg_id', res)
+    if not dname: set_var('__msg_id', res)
     return res
 
 # %% ../nbs/00_core.ipynb #023dcb74
@@ -346,7 +346,7 @@ def update_msg(
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
     res = call_endp('update_msg_', dname, id=id, **kwargs)
-    set_var('__msg_id', res)
+    if notdname: set_var('__msg_id', res)
     return res
 
 # %% ../nbs/00_core.ipynb #316bd7a0
