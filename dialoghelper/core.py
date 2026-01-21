@@ -5,10 +5,10 @@ __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'add_styles',
            'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event',
            'event_get', 'find_msgs', 'view_dlg', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
-           'create_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
-           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
-           'import_gist', 'update_gist']
+           'create_dialog', 'rm_dialog', 'run_code_interactive', 'msg_insert_line', 'msg_str_replace',
+           'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py',
+           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
+           'import_string', 'mk_toollist', 'import_gist', 'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
 import json,importlib,linecache,re,inspect,uuid
@@ -426,6 +426,7 @@ def url2note(
 
 
 # %% ../nbs/00_core.ipynb #f26259cf
+@llmtool
 def create_dialog(
     name:str, # Name/path of the new dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
@@ -452,6 +453,201 @@ def run_code_interactive(
     and wait for user response. Never call additional tools after this one."""
     add_msg('# Please run this:\n'+code, msg_type='code')
     return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
+
+# %% ../nbs/00_core.ipynb #ceb1ad3b
+@llmtool
+def msg_insert_line(
+    id:str,  # Message id to edit
+    insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
+    new_str: str, # The text to insert
+    dname:str='' # Dialog to get info for; defaults to current dialog
+):
+    """Insert text at a specific line number in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
+    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
+    content = read_msg(n=0, id=id, dname=dname)['content']
+    lines = content.splitlines()
+    if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
+    lines.insert(insert_line, new_str)
+    update_msg(id=id, content='\n'.join(lines), dname=dname)
+    return {'success': f'Inserted text after line {insert_line} in message {id}'}
+
+# %% ../nbs/00_core.ipynb #8568202a
+@llmtool
+def msg_str_replace(
+    id:str,  # Message id to edit
+    old_str: str, # Text to find and replace
+    new_str: str, # Text to replace with
+    dname:str='' # Dialog to get info for; defaults to current dialog
+):
+    """Replace first occurrence of old_str with new_str in a message.
+    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
+    content = read_msg(n=0, id=id, dname=dname)['content']
+    count = content.count(old_str)
+    if count == 0: return {'error': f"Text not found in message: {repr(old_str)}"}
+    if count > 1: return {'error': f"Multiple matches found ({count}) for text: {repr(old_str)}"}
+    update_msg(id=id, content=content.replace(old_str, new_str, 1), dname=dname)
+    return {'success': f'Replaced text in message {id}'}
+
+# %% ../nbs/00_core.ipynb #983ce14a
+@llmtool
+def msg_strs_replace(
+    id:str,  # Message id to edit
+    old_strs:list[str], # List of strings to find and replace
+    new_strs:list[str], # List of replacement strings (must match length of old_strs)
+    dname:str='' # Dialog to get info for; defaults to current dialog
+):
+    """Replace multiple strings simultaneously in a message.
+    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
+    if not isinstance(old_strs, list): return {'error': f"`old_strs` should be a list[str] but got {type(old_strs)}"}
+    if not isinstance(new_strs, list): return {'error': f"`new_strs` should be a list[str] but got {type(new_strs)}"}
+    if len(old_strs) != len(new_strs): return {'error': f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs"}
+    content = read_msg(n=0, id=id, dname=dname)['content']
+    for idx, (old_str, new_str) in enumerate(zip(old_strs, new_strs)):
+        count = content.count(old_str)
+        if count == 0: return {'error': f"Text not found in message at index {idx}: {repr(old_str)}"}
+        if count > 1: return {'error': f"Multiple matches ({count}) found at index {idx} for: {repr(old_str)}"}
+        content = content.replace(old_str, new_str, 1)
+    update_msg(id=id, content=content, dname=dname)
+    return {'success': f'Successfully replaced all the strings in message {id}'}
+
+# %% ../nbs/00_core.ipynb #7b11e714
+def _norm_lines(n:int, start:int, end:int=None):
+    "Normalize and validate line range. Returns (start, end) or error dict."
+    if end is None: end = start
+    if end < 0: end = n + end + 1
+    if not (1 <= start <= n): return {'error': f'Invalid start line {start}. Valid range: 1-{n}'}
+    if not (start <= end <= n): return {'error': f'Invalid end line {end}. Valid range: {start}-{n}'}
+    return start, end
+
+# %% ../nbs/00_core.ipynb #1002423f
+@llmtool
+def msg_replace_lines(
+    id:str,  # Message id to edit
+    start_line:int, # Starting line number to replace (1-based indexing)
+    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
+    new_content:str='', # New content to replace the specified lines
+    dname:str='' # Dialog to get info for; defaults to current dialog
+):
+    """Replace a range of lines with new content in a message.
+    Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
+    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
+    content = read_msg(n=0, id=id, dname=dname)['content']
+    lines = content.splitlines(keepends=True)
+    res = _norm_lines(len(lines), start_line, end_line)
+    if isinstance(res, dict): return res
+    start_line, end_line = res
+    if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
+    lines[start_line-1:end_line] = [new_content] if new_content else []
+    update_msg(id=id, content=''.join(lines), dname=dname)
+    return {'success': f'Replaced lines {start_line} to {end_line} in message {id}'}
+
+# %% ../nbs/00_core.ipynb #cbd87701
+@llmtool
+def msg_del_lines(
+    id:str,  # Message id to edit
+    start_line:int, # Starting line number to delete (1-based indexing)
+    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
+    dname:str='' # Dialog to get info for; defaults to current dialog
+):
+    """Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
+    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
+    content = read_msg(n=0, id=id, dname=dname)['content']
+    lines = content.splitlines(keepends=True)
+    res = _norm_lines(len(lines), start_line, end_line)
+    if isinstance(res, dict): return res
+    start_line, end_line = res
+    del lines[start_line-1:end_line]
+    update_msg(id=id, content=''.join(lines), dname=dname)
+    return {'success': f'Deleted lines {start_line} to {end_line} in message {id}'}
+
+# %% ../nbs/00_core.ipynb #5cafdc5a
+@llmtool
+def dialoghelper_explain_dialog_editing(
+)->str: # Detailed documention on dialoghelper dialog editing
+    "Call this to get a detailed explanation of how dialog editing is done in dialoghelper. Always use if doing anything non-trivial, or if dialog editing has not previously occured in this session"
+    return """# dialoghelper dialog editing functionality
+
+This guide consolidates understanding of how dialoghelper tools work together. Individual tool schemas are already in context—this adds architectural insight and usage patterns.
+
+## Core Concepts
+
+**Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's runtime data path (with leading `/`). The `.ipynb` extension is never included.
+
+**Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). The current executing message's id is in `__msg_id`. Tools use `id` for targeting; `find_msg_id()` retrieves current.
+
+**Implicit state**: After `add_msg`/`update_msg`, `__msg_id` is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
+
+## Tool Workflow Patterns
+
+### Reading dialog state
+- `view_dlg` — fastest way to see entire dialog structure with line numbers for editing
+- `find_msgs` — search with regex, filter by type/errors/changes
+- `read_msg` — navigate relative to current message
+- `read_msgid` — direct access when you have the id
+
+**Key insight**: Messages above the current prompt are already in LLM context. Use read tools only for: (1) getting line numbers for edits, (2) accessing messages below current prompt, (3) accessing other dialogs.
+
+### Modifying dialogs
+- `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
+- `update_msg` — partial updates; only pass fields to change
+- `del_msg` — use sparingly, only when explicitly requested
+`copy_msg` → `paste_msg` — for moving/duplicating messages within running dialogs.
+
+## Non-decorated Functions Worth Knowing
+
+There are additional functions available that can be added to fenced blocks, or the user may add as tools; they are not included in schemas by default.
+
+**Browser integration:**
+- `add_html(content)` — inject HTML with `hx-swap-oob` into live browser DOM
+- `iife(code)` — execute JavaScript immediately in browser
+- `fire_event(evt, data)` / `event_get(evt)` — trigger/await browser events
+
+**Content helpers:**
+- `url2note(url, ...)` — fetch URL as markdown, add as note message
+- `mermaid(code)` / `enable_mermaid()` — render mermaid diagrams
+- `add_styles(s)` — apply solveit's MonsterUI styling to HTML
+
+**Dangerous (not exposed by default):**
+- `_add_msg_unsafe(content, run=True, ...)` — add AND execute message (code or prompt)
+- `run_msg(ids)` — queue messages for execution
+- `rm_dialog(name)` — delete entire dialog
+
+## Important Patterns
+
+### Key Principles
+
+1. **Always re-read before editing.** Past tool call results in chat history are TRUNCATED. Never rely on line numbers from earlier in the conversation—call `read_msgid(id, nums=True)` immediately before any edit operation.
+
+2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
+
+3. **Don't guess when tools fail.** If a tool call returns an error, STOP and ask for clarification. Do not retry with guessed parameters.
+
+4. **Verify after complex edits.** After significant changes, re-read the affected region to confirm the edit worked as expected before proceeding.
+
+### Typical Workflow
+
+```
+1. read_msgid(id, nums=True)           # Get current state with line numbers
+2. Identify lines to change
+3. msg_replace_lines(...) or msg_str_replace(...)  # Make edit
+4. If more edits needed: re-read, then repeat from step 2
+```
+
+### Tool Selection
+
+- **`msg_replace_lines`**: Best for replacing/inserting contiguous blocks. Use `view_range` on read to focus on the area.
+- **`msg_str_replace`**: Best for targeted single-string replacements when you know the exact text.
+- **`msg_strs_replace`**: Best for multiple independent replacements in one call.
+- **`msg_insert_line`**: Best for adding new content without replacing existing lines.
+- **`msg_del_lines`**: Best for removing content.
+
+### Common Mistakes to Avoid
+
+- Using line numbers from a truncated earlier result
+- Making multiple edits without re-reading between them
+- Guessing line numbers when a view_range was truncated
+- Always call `read_msgid(id, nums=True)` first to get accurate line numbers
+- String-based tools (`msg_str_replace`, `msg_strs_replace`) fail if the search string appears zero or multiple times—use exact unique substrings."""
 
 # %% ../nbs/00_core.ipynb #9adf1cbb
 def ast_py(code:str):
@@ -536,112 +732,6 @@ def ctx_sympkg(
     **kwargs):
     "Add raw message with repo context for a symbol's root package"
     return add_msg(sym2pkgctx(sym, **kwargs), msg_type='raw');
-
-# %% ../nbs/00_core.ipynb #c4f0c88d
-@llmtool
-def msg_insert_line(
-    id:str,  # Message id to edit
-    insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
-    new_str: str, # The text to insert
-    dname:str='' # Dialog to get info for; defaults to current dialog
-):
-    """Insert text at a specific line number in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
-    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    lines = content.splitlines()
-    if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
-    lines.insert(insert_line, new_str)
-    update_msg(id=id, content='\n'.join(lines), dname=dname)
-    return {'success': f'Inserted text after line {insert_line} in message {id}'}
-
-# %% ../nbs/00_core.ipynb #aacdc043
-@llmtool
-def msg_str_replace(
-    id:str,  # Message id to edit
-    old_str: str, # Text to find and replace
-    new_str: str, # Text to replace with
-    dname:str='' # Dialog to get info for; defaults to current dialog
-):
-    """Replace first occurrence of old_str with new_str in a message.
-    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    count = content.count(old_str)
-    if count == 0: return {'error': f"Text not found in message: {repr(old_str)}"}
-    if count > 1: return {'error': f"Multiple matches found ({count}) for text: {repr(old_str)}"}
-    update_msg(id=id, content=content.replace(old_str, new_str, 1), dname=dname)
-    return {'success': f'Replaced text in message {id}'}
-
-# %% ../nbs/00_core.ipynb #cf3609ad
-@llmtool
-def msg_strs_replace(
-    id:str,  # Message id to edit
-    old_strs:list[str], # List of strings to find and replace
-    new_strs:list[str], # List of replacement strings (must match length of old_strs)
-    dname:str='' # Dialog to get info for; defaults to current dialog
-):
-    """Replace multiple strings simultaneously in a message.
-    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    if not isinstance(old_strs, list): return {'error': f"`old_strs` should be a list[str] but got {type(old_strs)}"}
-    if not isinstance(new_strs, list): return {'error': f"`new_strs` should be a list[str] but got {type(new_strs)}"}
-    if len(old_strs) != len(new_strs): return {'error': f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs"}
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    for idx, (old_str, new_str) in enumerate(zip(old_strs, new_strs)):
-        count = content.count(old_str)
-        if count == 0: return {'error': f"Text not found in message at index {idx}: {repr(old_str)}"}
-        if count > 1: return {'error': f"Multiple matches ({count}) found at index {idx} for: {repr(old_str)}"}
-        content = content.replace(old_str, new_str, 1)
-    update_msg(id=id, content=content, dname=dname)
-    return {'success': f'Successfully replaced all the strings in message {id}'}
-
-# %% ../nbs/00_core.ipynb #be645d1b
-def _norm_lines(n:int, start:int, end:int=None):
-    "Normalize and validate line range. Returns (start, end) or error dict."
-    if end is None: end = start
-    if end < 0: end = n + end + 1
-    if not (1 <= start <= n): return {'error': f'Invalid start line {start}. Valid range: 1-{n}'}
-    if not (start <= end <= n): return {'error': f'Invalid end line {end}. Valid range: {start}-{n}'}
-    return start, end
-
-# %% ../nbs/00_core.ipynb #fd2f2107
-@llmtool
-def msg_replace_lines(
-    id:str,  # Message id to edit
-    start_line:int, # Starting line number to replace (1-based indexing)
-    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
-    new_content:str='', # New content to replace the specified lines
-    dname:str='' # Dialog to get info for; defaults to current dialog
-):
-    """Replace a range of lines with new content in a message.
-    Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
-    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    lines = content.splitlines(keepends=True)
-    res = _norm_lines(len(lines), start_line, end_line)
-    if isinstance(res, dict): return res
-    start_line, end_line = res
-    if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
-    lines[start_line-1:end_line] = [new_content] if new_content else []
-    update_msg(id=id, content=''.join(lines), dname=dname)
-    return {'success': f'Replaced lines {start_line} to {end_line} in message {id}'}
-
-# %% ../nbs/00_core.ipynb #70353f98
-@llmtool
-def msg_del_lines(
-    id:str,  # Message id to edit
-    start_line:int, # Starting line number to delete (1-based indexing)
-    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
-    dname:str='' # Dialog to get info for; defaults to current dialog
-):
-    """Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
-    If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    lines = content.splitlines(keepends=True)
-    res = _norm_lines(len(lines), start_line, end_line)
-    if isinstance(res, dict): return res
-    start_line, end_line = res
-    del lines[start_line-1:end_line]
-    update_msg(id=id, content=''.join(lines), dname=dname)
-    return {'success': f'Deleted lines {start_line} to {end_line} in message {id}'}
 
 # %% ../nbs/00_core.ipynb #eb4c6bf4
 def load_gist(gist_id:str):
