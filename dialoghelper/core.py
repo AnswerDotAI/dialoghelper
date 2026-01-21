@@ -86,9 +86,9 @@ def find_msg_id():
     "Get the message id by searching the call stack for __msg_id."
     return find_var('__msg_id')
 
-def _diff_dialog(pred, dname, err):
-    "Raise ValueError if targeting a different dialog and `pred` is True"
-    if not pred: return
+def _diff_dialog(pred, dname, err="`id` parameter must be provided when target dialog is different", id=None):
+    "Raise ValueError if targeting a different dialog, `pred` is True, and no `id` provided"
+    if not pred or id: return
     if dname or ('dname' in dh_settings): raise ValueError(err)
 
 # %% ../nbs/00_core.ipynb #96bc23d8
@@ -117,7 +117,7 @@ def msg_idx(
     dname:str='' # Dialog to get message index from; defaults to current dialog
 ):
     "Get absolute index of message in dialog."
-    _diff_dialog(not id, dname, "`id` parameter must be provided when target dialog is different")
+    _diff_dialog(True, dname, id=id)
     if not id: id = find_msg_id()
     return call_endp('msg_idx_', dname, json=True, id=id)['idx']
 
@@ -179,6 +179,8 @@ def find_msgs(
     nums:bool=False, # Show line numbers?
     trunc_out:bool=False, # Middle-out truncate code output to 100 characters?
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
+    headers_only:bool=False, # Only return note messages that are headers (first line only); cannot be used together with `header_section`
+    header_section:str=None, # Find section starting with this header; returns it plus all children (i.e until next header of equal or more significant level)
     dname:str='' # Dialog to get info for; defaults to current dialog
 )->list[dict]: # Messages in requested dialog that contain the given information
     """Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
@@ -188,7 +190,8 @@ def find_msgs(
     To refer to a found message from code or tools, use its `id` field."""
     res = call_endp('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg,
-                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out, trunc_in=trunc_in)
+                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out, trunc_in=trunc_in,
+                    headers_only=headers_only, header_section=header_section)
     return _maybe_xml(res, as_xml=as_xml, key='msgs')
 
 # %% ../nbs/00_core.ipynb #9ff2a38e
@@ -231,7 +234,7 @@ def read_msg(
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    _diff_dialog(relative and not id, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different")
+    _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
     if relative and not id: id = find_msg_id()
     data = dict(n=n, relative=relative, id=id)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
@@ -263,12 +266,12 @@ def add_msg(
     o_collapsed: int | None = 0, # Collapse output?
     heading_collapsed: int | None = 0, # Collapse heading section?
     pinned: int | None = 0, # Pin to context?
-    dname:str='' # Dialog to get info for; defaults to current dialog. If passed, `placement` must be 'at_start' or 'at_end'
+    dname:str='' # Dialog to get info for; defaults to current dialog. If passed, provide `id` or use `placement='at_start'`/`'at_end'`
 ):
     """Add/update a message to the queue to show after code execution completes.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    _diff_dialog(placement not in ('at_start','at_end') and not id, dname,
-        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")
+    _diff_dialog(placement not in ('at_start','at_end'), dname,
+        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, id=id, msg_type=msg_type, output=output,
@@ -297,8 +300,8 @@ def _add_msg_unsafe(
 ):
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
-    _diff_dialog(placement not in ('at_start','at_end') and not id, dname,
-        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different")    
+    _diff_dialog(placement not in ('at_start','at_end'), dname,
+        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
         'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
