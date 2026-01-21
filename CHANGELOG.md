@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.1.16
+
+### New Features
+
+- Refactor: move inspecttools to toolslm, add @llmtool decorators, extract tracetools ([#106](https://github.com/AnswerDotAI/dialoghelper/issues/106))
+- Support adding after/before a message in other dlgs; add `headers_only`/`header_section` params to `find_msgs` ([#105](https://github.com/AnswerDotAI/dialoghelper/issues/105))
+- Rename `get*` to `sym*`, add multi-symbol support to symtype/symval, add `symtype_val` ([#104](https://github.com/AnswerDotAI/dialoghelper/issues/104))
+
+
 ## 0.1.15
 
 ### Bugs Squashed
