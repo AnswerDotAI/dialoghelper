@@ -346,7 +346,7 @@ def update_msg(
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
     res = call_endp('update_msg_', dname, id=id, **kwargs)
-    if notdname: set_var('__msg_id', res)
+    if not dname: set_var('__msg_id', res)
     return res
 
 # %% ../nbs/00_core.ipynb #316bd7a0
