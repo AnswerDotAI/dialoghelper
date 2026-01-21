@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.17
+
+### New Features
+
+- Add `dialoghelper_explain_dialog_editing` ([#107](https://github.com/AnswerDotAI/dialoghelper/issues/107))
+
+
 ## 0.1.16
 
 ### New Features
