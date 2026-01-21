@@ -4,7 +4,7 @@
 
 # %% auto #0
 __all__ = ['default_tmux_lines', 'shell_ret', 'set_default_history', 'pane', 'list_panes', 'panes', 'list_windows', 'windows',
-           'list_sessions', 'sessions', 'flatten_dict', 'tmux_tool_info']
+           'list_sessions', 'sessions', 'flatten_dict']
 
 # %% ../nbs/03_tmux.ipynb #fa3a67d2
 from .core import add_msg
@@ -40,6 +40,7 @@ def set_default_history(n:int):
     default_tmux_lines = n
 
 # %% ../nbs/03_tmux.ipynb #0ba9f132
+@llmtool
 @delegates(shell_ret)
 def pane(
     n:int=None, # Number of scrollback lines to capture, in addition to visible area (None uses default_tmux_lines, which is 500 if not otherwise set)
@@ -58,6 +59,7 @@ def pane(
     return shell_ret(cmd, **kwargs).strip()
 
 # %% ../nbs/03_tmux.ipynb #2376176e
+@llmtool
 @delegates(shell_ret)
 def list_panes(
     session:str=None,  # Session name to list panes from
@@ -76,6 +78,7 @@ def _pane_data(line, n, session, window, **kwargs):
     pane_num = int(line.split(':')[0])
     return (pane_num, pane(n=n, pane=pane_num, session=session, window=window, **kwargs))
 
+@llmtool
 @delegates(shell_ret)
 def panes(
     session:str=None,  # Session name to target
@@ -89,6 +92,7 @@ def panes(
     return dict(_pane_data(line, n, session, window, **kwargs) for line in panes_info)
 
 # %% ../nbs/03_tmux.ipynb #bee15f75
+@llmtool
 @delegates(shell_ret)
 def list_windows(
     session:str=None,  # Session name to list windows from
@@ -106,6 +110,7 @@ def _window_data(line, n, session, **kwargs):
     win_name = parts[1].split('[')[0].strip().rstrip('*-')
     return (f'{win_num}:{win_name}', panes(session=session, window=win_num, n=n, **kwargs))
 
+@llmtool
 @delegates(shell_ret)
 def windows(
     session:str=None,  # Session name to target
@@ -117,6 +122,7 @@ def windows(
     return dict(_window_data(line, n, session, **kwargs) for line in windows_info)
 
 # %% ../nbs/03_tmux.ipynb #17c4031f
+@llmtool
 @delegates(shell_ret)
 def list_sessions(**kwargs):
     'List all tmux sessions'
@@ -128,6 +134,7 @@ def _session_data(line, n, **kwargs):
     session_name = line.split(':')[0]
     return (session_name, windows(session=session_name, n=n, **kwargs))
 
+@llmtool
 @delegates(shell_ret)
 def sessions(
     n:int=None,        # Number of scrollback lines to capture
@@ -146,8 +153,3 @@ def flatten_dict(d, parent_key='', sep='//'):
         if isinstance(v, dict): items.extend(flatten_dict(v, new_key, sep))
         else: items.append((new_key, v))
     return items
-
-# %% ../nbs/03_tmux.ipynb #9fc196c2
-def tmux_tool_info():
-    "Add a the message below, showing the available tools, to Solveit"
-    add_msg("dialoghelper.tmux tools: &`[pane, list_panes, panes, list_windows, windows, list_sessions, sessions]`")

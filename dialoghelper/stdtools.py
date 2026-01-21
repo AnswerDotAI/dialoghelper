@@ -1,3 +1,4 @@
 from dialoghelper import *
-from dialoghelper.inspecttools import *
 from fastcore.tools import *
+from toolslm.xml import *
+from toolslm.inspecttools import *
