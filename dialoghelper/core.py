@@ -5,7 +5,7 @@ __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'add_styles',
            'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event',
            'event_get', 'find_msgs', 'view_dlg', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
-           'create_dialog', 'rm_dialog', 'run_code_interactive', 'msg_insert_line', 'msg_str_replace',
+           'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace',
            'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py',
            'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
            'import_string', 'mk_toollist', 'import_gist', 'update_gist']
@@ -124,8 +124,8 @@ def msg_idx(
     return call_endp('msg_idx_', dname, json=True, id=id)['idx']
 
 # %% ../nbs/00_core.ipynb #4b43e4e9
-def add_scr(scr, oob='beforeend:#js-script'):
-    "Swap a script element to the end of the js-script element"
+def add_scr(scr, oob='innerHTML:#ephemeral'):
+    "Swap a script element to the end of the ephemeral element"
     if isinstance(scr,str): scr = Script(scr)
     add_html(Div(scr, hx_swap_oob=oob))
 
@@ -454,22 +454,36 @@ def run_code_interactive(
     add_msg('# Please run this:\n'+code, msg_type='code')
     return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
 
+# %% ../nbs/00_core.ipynb #1a614e33
+def dialog_link(
+    path:str # Path to dialog (e.g. '/aai-ws/dialoghelper/nbs/00_core')
+):
+    """Return an IPython HTML link to open a dialog in Solveit.
+    After calling this tool, output the resulting HTML anchor tag exactly as returned—do not wrap in a fenced code block or convert to markdown link format."""
+    path = path.removeprefix('/')
+    url = f"/dialog_?{urlencode({'name': path})}"
+    return HTML(f'<a href="{url}" target="_blank">{path}</a>')
+
 # %% ../nbs/00_core.ipynb #ceb1ad3b
 @llmtool
 def msg_insert_line(
     id:str,  # Message id to edit
     insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
     new_str: str, # The text to insert
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    update_output:bool=False # If True, insert into output instead of content
 ):
     """Insert text at a specific line number in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    lines = content.splitlines()
+    msg = read_msg(n=0, id=id, dname=dname)
+    field = 'output' if update_output else 'content'
+    text = msg.get(field, '')
+    if not text: return {'error': f"Message has no {field}"}
+    lines = text.splitlines()
     if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
     lines.insert(insert_line, new_str)
-    update_msg(id=id, content='\n'.join(lines), dname=dname)
-    return {'success': f'Inserted text after line {insert_line} in message {id}'}
+    update_msg(id=id, **{field: '\n'.join(lines)}, dname=dname)
+    return {'success': f'Inserted text after line {insert_line} in message {id} {field}'}
 
 # %% ../nbs/00_core.ipynb #8568202a
 @llmtool
@@ -477,16 +491,20 @@ def msg_str_replace(
     id:str,  # Message id to edit
     old_str: str, # Text to find and replace
     new_str: str, # Text to replace with
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    update_output:bool=False # If True, replace in output instead of content
 ):
     """Replace first occurrence of old_str with new_str in a message.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    count = content.count(old_str)
-    if count == 0: return {'error': f"Text not found in message: {repr(old_str)}"}
+    msg = read_msg(n=0, id=id, dname=dname)
+    field = 'output' if update_output else 'content'
+    text = msg.get(field, '')
+    if not text: return {'error': f"Message has no {field}"}
+    count = text.count(old_str)
+    if count == 0: return {'error': f"Text not found in message {field}: {repr(old_str)}"}
     if count > 1: return {'error': f"Multiple matches found ({count}) for text: {repr(old_str)}"}
-    update_msg(id=id, content=content.replace(old_str, new_str, 1), dname=dname)
-    return {'success': f'Replaced text in message {id}'}
+    update_msg(id=id, **{field: text.replace(old_str, new_str, 1)}, dname=dname)
+    return {'success': f'Replaced text in message {id} {field}'}
 
 # %% ../nbs/00_core.ipynb #983ce14a
 @llmtool
@@ -494,21 +512,25 @@ def msg_strs_replace(
     id:str,  # Message id to edit
     old_strs:list[str], # List of strings to find and replace
     new_strs:list[str], # List of replacement strings (must match length of old_strs)
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    update_output:bool=False # If True, replace in output instead of content
 ):
     """Replace multiple strings simultaneously in a message.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
     if not isinstance(old_strs, list): return {'error': f"`old_strs` should be a list[str] but got {type(old_strs)}"}
     if not isinstance(new_strs, list): return {'error': f"`new_strs` should be a list[str] but got {type(new_strs)}"}
     if len(old_strs) != len(new_strs): return {'error': f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs"}
-    content = read_msg(n=0, id=id, dname=dname)['content']
+    msg = read_msg(n=0, id=id, dname=dname)
+    field = 'output' if update_output else 'content'
+    text = msg.get(field, '')
+    if not text: return {'error': f"Message has no {field}"}
     for idx, (old_str, new_str) in enumerate(zip(old_strs, new_strs)):
-        count = content.count(old_str)
-        if count == 0: return {'error': f"Text not found in message at index {idx}: {repr(old_str)}"}
+        count = text.count(old_str)
+        if count == 0: return {'error': f"Text not found in message {field} at index {idx}: {repr(old_str)}"}
         if count > 1: return {'error': f"Multiple matches ({count}) found at index {idx} for: {repr(old_str)}"}
-        content = content.replace(old_str, new_str, 1)
-    update_msg(id=id, content=content, dname=dname)
-    return {'success': f'Successfully replaced all the strings in message {id}'}
+        text = text.replace(old_str, new_str, 1)
+    update_msg(id=id, **{field: text}, dname=dname)
+    return {'success': f'Successfully replaced all the strings in message {id} {field}'}
 
 # %% ../nbs/00_core.ipynb #7b11e714
 def _norm_lines(n:int, start:int, end:int=None):
@@ -526,20 +548,24 @@ def msg_replace_lines(
     start_line:int, # Starting line number to replace (1-based indexing)
     end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
     new_content:str='', # New content to replace the specified lines
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    update_output:bool=False # If True, replace in output instead of content
 ):
     """Replace a range of lines with new content in a message.
     Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    lines = content.splitlines(keepends=True)
+    msg = read_msg(n=0, id=id, dname=dname)
+    field = 'output' if update_output else 'content'
+    text = msg.get(field, '')
+    if not text: return {'error': f"Message has no {field}"}
+    lines = text.splitlines(keepends=True)
     res = _norm_lines(len(lines), start_line, end_line)
     if isinstance(res, dict): return res
     start_line, end_line = res
     if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
     lines[start_line-1:end_line] = [new_content] if new_content else []
-    update_msg(id=id, content=''.join(lines), dname=dname)
-    return {'success': f'Replaced lines {start_line} to {end_line} in message {id}'}
+    update_msg(id=id, **{field: ''.join(lines)}, dname=dname)
+    return {'success': f'Replaced lines {start_line} to {end_line} in message {id} {field}'}
 
 # %% ../nbs/00_core.ipynb #cbd87701
 @llmtool
@@ -547,18 +573,22 @@ def msg_del_lines(
     id:str,  # Message id to edit
     start_line:int, # Starting line number to delete (1-based indexing)
     end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    update_output:bool=False # If True, delete from output instead of content
 ):
     """Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
     If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to the solveit root directory (if starting with `/`) or relative to the current dialog (if not starting with `/`), and should *not* include the .ipynb extension."""
-    content = read_msg(n=0, id=id, dname=dname)['content']
-    lines = content.splitlines(keepends=True)
+    msg = read_msg(n=0, id=id, dname=dname)
+    field = 'output' if update_output else 'content'
+    text = msg.get(field, '')
+    if not text: return {'error': f"Message has no {field}"}
+    lines = text.splitlines(keepends=True)
     res = _norm_lines(len(lines), start_line, end_line)
     if isinstance(res, dict): return res
     start_line, end_line = res
     del lines[start_line-1:end_line]
-    update_msg(id=id, content=''.join(lines), dname=dname)
-    return {'success': f'Deleted lines {start_line} to {end_line} in message {id}'}
+    update_msg(id=id, **{field: ''.join(lines)}, dname=dname)
+    return {'success': f'Deleted lines {start_line} to {end_line} in message {id} {field}'}
 
 # %% ../nbs/00_core.ipynb #5cafdc5a
 @llmtool
