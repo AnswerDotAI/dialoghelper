@@ -124,8 +124,8 @@ def msg_idx(
     return call_endp('msg_idx_', dname, json=True, id=id)['idx']
 
 # %% ../nbs/00_core.ipynb #4b43e4e9
-def add_scr(scr, oob='beforeend:#js-script'):
-    "Swap a script element to the end of the js-script element"
+def add_scr(scr, oob='beforeend:#ephemeral'):
+    "Swap a script element to the end of the ephemeral element"
     if isinstance(scr,str): scr = Script(scr)
     add_html(Div(scr, hx_swap_oob=oob))
 
