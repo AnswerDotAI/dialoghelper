@@ -316,6 +316,94 @@ def _add_msg_unsafe(
     set_var('__msg_id', res)
     return res
 
+# %% ../nbs/00_core.ipynb #0d3a0201
+class _StreamingWriter:
+    """Captures stdout and streams updates to a solveit message."""
+    def __init__(self, msg_id):
+        self.msg_id, self.buffer, self.outputs = msg_id, "", []
+    
+    def write(self, text):
+        self.buffer += text
+        self._update()
+        time.sleep(0.05)
+    
+    def flush(self): pass
+    
+    def _update(self):
+        all_outputs = [{"output_type": "stream", "name": "stdout", "text": self.buffer}] if self.buffer else []
+        all_outputs.extend(self.outputs)
+        update_msg(id=self.msg_id, output=json.dumps(all_outputs))
+    
+    def add_image(self, b64):
+        self.outputs.append({"output_type": "display_data", "data": {"image/png": b64}, "metadata": {}})
+        self._update()
+    
+    def add_result(self, text):
+        self.outputs.append({"output_type": "execute_result", "data": {"text/plain": text}, "metadata": {}, "execution_count": 1})
+        self._update()
+    
+    def add_error(self, etype, evalue, tb):
+        self.outputs.append({"output_type": "error", "ename": etype, "evalue": evalue, "traceback": tb})
+        self._update()
+
+# %% ../nbs/00_core.ipynb #bab33583
+def _capture_figures():
+    """Capture all matplotlib figures as base64 PNG images."""
+    images = []
+    if plt.get_fignums():
+        for fig_num in plt.get_fignums():
+            buf = BytesIO()
+            plt.figure(fig_num).savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            images.append(base64.b64encode(buf.read()).decode())
+        plt.close('all')
+    return images
+
+# %% ../nbs/00_core.ipynb #19c1c83f
+def _exec_with_return(code):
+    """Execute code and return value of last expression (if any)."""
+    lines = code.strip().split('\n')
+    if not lines: return None
+    try:
+        last = lines[-1]
+        if lines[:-1]: exec('\n'.join(lines[:-1]), globals())
+        return eval(last, globals())
+    except SyntaxError:
+        exec(code, globals())
+        return None
+
+# %% ../nbs/00_core.ipynb #a7bc92e6
+def _format_error(e):
+    """Format exception with IPython-style colored traceback."""
+    tb_formatter = VerboseTB(color_scheme='Linux')
+    return {
+        "etype": type(e).__name__,
+        "evalue": str(e),
+        "tb": tb_formatter.structured_traceback(type(e), e, sys.exc_info()[2])
+    }
+
+# %% ../nbs/00_core.ipynb #1c969c11
+@delegates(add_msg, but=['msg_type', 'output'])
+def _exec_python(code: str, **kwargs):
+    """Execute Python code with streaming output, matplotlib, errors, and return values."""
+    msg_id = add_msg(code, msg_type='code', **kwargs)
+    time.sleep(0.4)  # let oob_loop flush
+    
+    writer = _StreamingWriter(msg_id)
+    old_stdout, sys.stdout = sys.stdout, writer
+    result = None
+    try:
+        result = _exec_with_return(code)
+        for img in _capture_figures(): writer.add_image(img)
+        if result is not None: writer.add_result(repr(result))
+    except Exception as e:
+        err = _format_error(e)
+        writer.add_error(err['etype'], err['evalue'], err['tb'])
+    finally:
+        sys.stdout = old_stdout
+    
+    return {'output': writer.buffer or "OK", 'id': msg_id, 'result': result}
+
 # %% ../nbs/00_core.ipynb #023dcb74
 def _umsg(
     content:str|None=None, # Content of the message (i.e the message prompt, code, or note text)
