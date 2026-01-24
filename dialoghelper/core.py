@@ -460,6 +460,8 @@ def dialog_link(
 ):
     """Return an IPython HTML link to open a dialog in Solveit.
     After calling this tool, output the resulting HTML anchor tag exactly as returned—do not wrap in a fenced code block or convert to markdown link format."""
+    from urllib.parse import urlencode
+    from IPython.display import HTML
     path = path.removeprefix('/')
     url = f"/dialog_?{urlencode({'name': path})}"
     return HTML(f'<a href="{url}" target="_blank">{path}</a>')
