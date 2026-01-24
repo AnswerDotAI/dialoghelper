@@ -11,7 +11,9 @@ __all__ = ['md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'add_styles',
            'import_string', 'mk_toollist', 'import_gist', 'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
-import json,importlib,linecache,re,inspect,uuid
+import json,importlib,linecache,re,inspect,time,uuid,base64,sys
+from io import BytesIO
+import matplotlib.pyplot as plt
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -29,6 +31,7 @@ from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
 from toolslm.xml import *
+from IPython.core.ultratb import VerboseTB
 
 # %% ../nbs/00_core.ipynb #cc9f963f
 md_cls_d = {
