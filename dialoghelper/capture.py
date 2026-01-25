@@ -38,6 +38,7 @@ def capture_screen(timeout=15):
     return PIL.Image.open(BytesIO(data))
 
 # %% ../nbs/01_capture.ipynb #6b6618cc
+@llmtool
 def capture_tool(timeout:int=15):
     "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
     try: d = _capture_screen(timeout)
