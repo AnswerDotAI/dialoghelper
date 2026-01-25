@@ -2,6 +2,19 @@
 
 <!-- do not remove -->
 
+## 0.1.18
+
+### New Features
+
+- Add `dialog_link` function and `update_output` param to message editing tools ([#110](https://github.com/AnswerDotAI/dialoghelper/issues/110))
+- add `only_exp` to `find_msgs` tool ([#103](https://github.com/AnswerDotAI/dialoghelper/pull/103)), thanks to [@KeremTurgutlu](https://github.com/KeremTurgutlu)
+
+### Bugs Squashed
+
+- Update `add_scr` to use ephemeral OOB target ([#109](https://github.com/AnswerDotAI/dialoghelper/pull/109)), thanks to [@erikgaas](https://github.com/erikgaas)
+- Fix cross dlg pollution ([#108](https://github.com/AnswerDotAI/dialoghelper/pull/108)), thanks to [@civvic](https://github.com/civvic)
+
+
 ## 0.1.17
 
 ### New Features
