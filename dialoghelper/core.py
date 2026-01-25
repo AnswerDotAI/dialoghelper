@@ -173,6 +173,7 @@ def find_msgs(
     use_case:bool=False, # Use case-sensitive matching?
     use_regex:bool=True, # Use regex matching?
     only_err:bool=False, # Only return messages that have errors?
+    only_exp:bool=False, # Only return messages that are exported?
     only_chg:bool=False, # Only return messages that have changed vs git HEAD?
     ids:str='', # Optionally filter by comma-separated list of message ids
     limit:int=None, # Optionally limit number of returned items
@@ -192,7 +193,7 @@ def find_msgs(
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code or tools, use its `id` field."""
     res = call_endp('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
-                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_chg=only_chg,
+                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out, trunc_in=trunc_in,
                     headers_only=headers_only, header_section=header_section)
     return _maybe_xml(res, as_xml=as_xml, key='msgs')
