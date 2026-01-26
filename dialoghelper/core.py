@@ -405,7 +405,8 @@ def _exec_python(code: str, **kwargs):
     finally:
         sys.stdout = old_stdout
     
-    return {'output': writer.buffer or "OK", 'id': msg_id, 'result': result}
+    error = next((o for o in writer.outputs if o.get('output_type') == 'error'), None)
+    return {'output': writer.buffer or "OK", 'id': msg_id, 'result': result, 'error': error}
 
 # %% ../nbs/00_core.ipynb #023dcb74
 def _umsg(
