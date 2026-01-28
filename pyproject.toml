@@ -3,19 +3,16 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name="dialoghelper"
+name = "dialoghelper"
 dynamic = ["version"]
 description = "Helper functions for solveit dialogs"
 readme = "README.md"
-requires-python=">=3.10"
+requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 authors = [{name = "Jeremy Howard", email = "github@jhoward.fastmail.fm"}]
 keywords = ['nbdev', 'jupyter', 'notebook', 'python']
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3 :: Only",
-]
-dependencies = ["fastcore>=1.12.6","ghapi","ipykernel-helper>=0.0.28","ast-grep-cli","ast-grep-py","MonsterUI","lisette>=0.0.13","pillow","toolslm>=0.3.26"]
+classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
+dependencies = ['fastcore>=1.12.6', 'ghapi', 'ipykernel-helper>=0.0.28', 'ast-grep-cli', 'ast-grep-py', 'MonsterUI', 'lisette>=0.0.13', 'pillow', 'toolslm>=0.3.26']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/dialoghelper"
@@ -24,14 +21,14 @@ Documentation = "https://AnswerDotAI.github.io/dialoghelper"
 [project.entry-points.nbdev]
 dialoghelper = "dialoghelper._modidx:d"
 
+[project.optional-dependencies]
+dev = ['python-fasthtml', 'tracefunc']
+
 [tool.setuptools.dynamic]
 version = {attr = "dialoghelper.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["dialoghelper"]
-
-[project.optional-dependencies]
-dev = ["python-fasthtml","tracefunc"]
 
 [tool.nbdev]
 custom_sidebar = false
