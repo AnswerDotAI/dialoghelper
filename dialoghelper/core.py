@@ -4,11 +4,12 @@
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'add_styles', 'find_var', 'set_var', 'find_dname',
            'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event',
            'event_get', 'find_msgs', 'view_dlg', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg',
-           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
-           'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace',
-           'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py',
-           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
-           'import_string', 'mk_toollist', 'import_gist', 'update_gist']
+           'update_msg', 'run_msg', 'wait_s', 'wait_for', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
+           'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
 import json,importlib,linecache,re,inspect,uuid
@@ -360,6 +361,29 @@ def run_msg(
 ):
     "Adds a message to the run queue. Use read_msg to see the output once it runs."
     return call_endp('add_runq_', dname, ids=ids, api=True)
+
+# %% ../nbs/00_core.ipynb #a784b5ee
+@llmtool
+async def wait_s(seconds:float):
+    "Wait for a number of seconds"
+    await asyncio.sleep(seconds)
+
+@llmtool
+async def wait_for(
+    msg_id:str, # Message id to wait for
+    dname:str='', # Dialog to get message from; defaults to current dialog
+    poll_interval:float=1, # Seconds between checks
+    timeout:float=10 # Max seconds to wait
+):
+    "Wait for a message to finish running and return its output"
+    elapsed = 0
+    while elapsed < timeout:
+        msg = read_msg(id=msg_id, dname=dname, n=0, relative=True)
+        if msg.get('run') is None or msg.get('run') is False or msg.get('run') == {}:
+            return msg.get('output')
+        await asyncio.sleep(poll_interval)
+        elapsed += poll_interval
+    raise TimeoutError(f"Message {msg_id} did not complete within {timeout}s")
 
 # %% ../nbs/00_core.ipynb #73025e57
 @llmtool
