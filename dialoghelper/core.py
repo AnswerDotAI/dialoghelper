@@ -295,10 +295,15 @@ def add_msg(
 @llmtool
 def del_msg(
     id:str=None, # id of message to delete
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    log_changed:bool=False # Add a note showing the deleted content?
 ):
     "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
-    return call_endp('rm_msg_', dname, raiseex=True, msid=id, json=True)
+    if log_changed: msg = read_msgid(id, dname=dname)
+    res = call_endp('rm_msg_', dname, raiseex=True, msid=id, json=True)
+    if log_changed: add_msg(f"> Deleted #{id}\n\n```\n{msg.content}\n```", dname=dname)
+    return res
+
 
 # %% ../nbs/00_core.ipynb #a9614fcc
 @delegates(add_msg)
@@ -334,13 +339,14 @@ def _umsg(
     pinned: int | None = None # Pin to context?
 ): ...
 
-# %% ../nbs/00_core.ipynb #76ea5418
+# %% ../nbs/00_core.ipynb #38875a12
 @llmtool(dname=dname_doc)
 @delegates(_umsg)
 def update_msg(
     id:str=None, # id of message to update (if None, uses current message)
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     dname:str='', # Dialog to get info for; defaults to current dialog
+    log_changed:bool=False, # Add a note showing the diff?
     **kwargs):
     """Update an existing message. Provide either `msg` OR field key/values to update.
     - Use `content` param to update contents.
@@ -349,7 +355,13 @@ def update_msg(
     if msg: kwargs |= msg.get('msg', msg)
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
-    res = call_endp('update_msg_', dname, id=id, **kwargs)
+    res = call_endp('update_msg_', dname, id=id, log_changed=log_changed, **kwargs)
+    if log_changed:
+        r = json.loads(res) if isinstance(res, str) else res
+        diff = r.get('diff', '')
+        note = f"> Updated #{id}\n\n```diff\n{diff}\n```" if diff else f"> Updated #{id}\n\nNo changes."
+        add_msg(note, dname=dname)
+        res = r.get('id', res)
     if not dname: set_var('__msg_id', res)
     return res
 
@@ -607,11 +619,9 @@ This guide consolidates understanding of how dialoghelper tools work together. I
 
 ## Core Concepts
 
-**Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's runtime data path (with leading `/`). The `.ipynb` extension is never included.
-
-**Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). The current executing message's id is in `__msg_id`. Tools use `id` for targeting; `find_msg_id()` retrieves current.
-
-**Implicit state**: After `add_msg`/`update_msg`, `__msg_id` is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
+- **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's runtime data path (with leading `/`). The `.ipynb` extension is never included.
+- **Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). The current executing message's id is in `__msg_id`. Tools use `id` for targeting; `find_msg_id()` retrieves current.
+- **Implicit state**: After `add_msg`/`update_msg`, `__msg_id` is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
 
 ## Tool Workflow Patterns
 
@@ -653,11 +663,8 @@ There are additional functions available that can be added to fenced blocks, or 
 ### Key Principles
 
 1. **Always re-read before editing.** Past tool call results in chat history are TRUNCATED. Never rely on line numbers from earlier in the conversation—call `read_msgid(id, nums=True)` immediately before any edit operation.
-
 2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
-
 3. **Don't guess when tools fail.** If a tool call returns an error, STOP and ask for clarification. Do not retry with guessed parameters.
-
 4. **Verify after complex edits.** After significant changes, re-read the affected region to confirm the edit worked as expected before proceeding.
 
 ### Typical Workflow
@@ -672,10 +679,12 @@ There are additional functions available that can be added to fenced blocks, or 
 ### Tool Selection
 
 - **`msg_replace_lines`**: Best for replacing/inserting contiguous blocks. Use `view_range` on read to focus on the area.
-- **`msg_str_replace`**: Best for targeted single-string replacements when you know the exact text.
-- **`msg_strs_replace`**: Best for multiple independent replacements in one call.
+- **`msg_str_replace`**: Best for targeted single small string replacements when you know the exact text.
+- **`msg_strs_replace`**: Best for multiple small independent replacements in one call.
 - **`msg_insert_line`**: Best for adding new content without replacing existing lines.
 - **`msg_del_lines`**: Best for removing content.
+
+**Rough rule of thumb:** Prefer `msg_replace_lines` over `msg_str(s)_replace` unless there's >1 match to change or it's just a word or two. Use the insert/delete functions for inserting/deleting; don't use `msg_str(s)_replace` for that.
 
 ### Common Mistakes to Avoid
 
