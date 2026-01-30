@@ -3,7 +3,7 @@
 # %% auto #0
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'add_styles', 'find_var', 'set_var', 'find_dname',
            'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data', 'fire_event',
-           'event_get', 'find_msgs', 'view_dlg', 'add_html', 'read_msg', 'read_msgid', 'add_msg', 'del_msg',
+           'event_get', 'read_msg', 'find_msgs', 'view_dlg', 'add_html', 'read_msgid', 'add_msg', 'del_msg',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
            'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace',
            'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py',
@@ -168,6 +168,29 @@ def _maybe_xml(res, as_xml, key=None):
     if key: res = res[key]
     return dict2obj(res)
 
+# %% ../nbs/00_core.ipynb #558c6aa7
+@llmtool(dname=dname_doc)
+def read_msg(
+    n:int=-1,      # Message index (if relative, +ve is downwards)
+    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
+    id:str=None,  # Message id to find (defaults to current message)
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
+    dname:str='' # Dialog to get info for; defaults to current dialog
+    ):
+    """Get the message indexed in the current dialog.
+    NB: Messages in the current dialog above the current message are *already* visible; use this only when you need line numbers for editing operations, or for messages not in the current dialog or below the current message.
+    - To get the exact message use `n=0` and `relative=True` together with `id`.
+    - To get a relative message use `n` (relative position index).
+    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
+    {dname}"""
+    _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
+    if relative and not id: id = find_msg_id()
+    data = dict(n=n, relative=relative, id=id)
+    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
+    if nums: data['nums'] = nums
+    return call_endp('read_msg_', dname, json=True, **data)
+
 # %% ../nbs/00_core.ipynb #6a4aa03b
 @llmtool(dname=dname_doc)
 def find_msgs(
@@ -227,29 +250,6 @@ def add_html(
 # %% ../nbs/00_core.ipynb #fdc5a465
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
 
-# %% ../nbs/00_core.ipynb #d30ef9c9
-@llmtool(dname=dname_doc)
-def read_msg(
-    n:int=-1,      # Message index (if relative, +ve is downwards)
-    relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
-    id:str=None,  # Message id to find (defaults to current message)
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
-    nums:bool=False, # Whether to show line numbers
-    dname:str='' # Dialog to get info for; defaults to current dialog
-    ):
-    """Get the message indexed in the current dialog.
-    NB: Messages in the current dialog above the current message are *already* visible; use this only when you need line numbers for editing operations, or for messages not in the current dialog or below the current message.
-    - To get the exact message use `n=0` and `relative=True` together with `id`.
-    - To get a relative message use `n` (relative position index).
-    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
-    {dname}"""
-    _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
-    if relative and not id: id = find_msg_id()
-    data = dict(n=n, relative=relative, id=id)
-    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
-    if nums: data['nums'] = nums
-    return call_endp('read_msg_', dname, json=True, **data)
-
 # %% ../nbs/00_core.ipynb #7c4c7f5e
 @llmtool(dname=dname_doc)
 def read_msgid(
@@ -278,18 +278,18 @@ def add_msg(
     heading_collapsed: int | None = 0, # Collapse heading section?
     pinned: int | None = 0, # Pin to context?
     dname:str='' # Dialog to get info for; defaults to current dialog. If passed, provide `id` or use `placement='at_start'`/`'at_end'`
-):
+)->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes.
+    **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
+    otherwise messages will appear in the dialog in REVERSE order.
     {dname}"""
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    res = call_endp(
+    return call_endp(
         'add_relative_', dname, content=content, placement=placement, id=id, msg_type=msg_type, output=output,
         time_run=time_run, is_exported=is_exported, skipped=skipped, pinned=pinned,
         i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed)
-    if not dname: set_var('__msg_id', res)
-    return res
 
 # %% ../nbs/00_core.ipynb #f1ee1903
 @llmtool
@@ -314,15 +314,15 @@ def _add_msg_unsafe(
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
     **kwargs
-):
+)->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
+    **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
+    otherwise messages will appear in the dialog in REVERSE order.
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    res = call_endp(
-        'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
-    if not dname: set_var('__msg_id', res)
+    res = call_endp( 'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
     return res
 
 # %% ../nbs/00_core.ipynb #023dcb74
@@ -362,7 +362,6 @@ def update_msg(
         note = f"> Updated #{id}\n\n```diff\n{diff}\n```" if diff else f"> Updated #{id}\n\nNo changes."
         add_msg(note, dname=dname)
         res = r.get('id', res)
-    if not dname: set_var('__msg_id', res)
     return res
 
 # %% ../nbs/00_core.ipynb #316bd7a0
@@ -482,131 +481,97 @@ def dialog_link(
     url = f"/dialog_?{urlencode({'name': path})}"
     return HTML(f'<a href="{url}" target="_blank">{path}</a>')
 
+# %% ../nbs/00_core.ipynb #85676c25
+from functools import wraps
+
+# %% ../nbs/00_core.ipynb #d5f42686
+def _edit_kw(id:str, *, update_output:bool=False, dname:str='', log_changed:bool=False): pass
+_edit_ps = list(signature(_edit_kw).parameters.values())
+
+def _msg_edit(success_tpl):
+    def decorator(fn):
+        sig = signature(fn)
+        params = [p for p in sig.parameters.values() if p.name != 'text']
+        new_params = _edit_ps[:1] + params + _edit_ps[1:]
+        @wraps(fn)
+        def wrapper(id, *args, update_output=False, dname='', log_changed=False, **kw):
+            msg = read_msg(n=0, id=id, dname=dname)
+            field = 'output' if update_output else 'content'
+            text = msg.get(field, '')
+            if not text: return {'error': f"Message has no {field}"}
+            try: new_text = fn(text, *args, **kw)
+            except ValueError as e: return {'error': str(e)}
+            update_msg(id=id, **{field: new_text}, dname=dname, log_changed=log_changed)
+            return {'success': success_tpl.format(id=id, field=field)}
+        wrapper.__signature__ = sig.replace(parameters=new_params)
+        return wrapper
+    return decorator
+
+
 # %% ../nbs/00_core.ipynb #ceb1ad3b
 @llmtool(dname=dname_doc)
-def msg_insert_line(
-    id:str,  # Message id to edit
-    insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
-    new_str: str, # The text to insert
-    dname:str='', # Dialog to get info for; defaults to current dialog
-    update_output:bool=False # If True, insert into output instead of content
-):
-    """Insert text at a specific line number in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
-    {dname}"""
-    msg = read_msg(n=0, id=id, dname=dname)
-    field = 'output' if update_output else 'content'
-    text = msg.get(field, '')
-    if not text: return {'error': f"Message has no {field}"}
+@_msg_edit('Inserted text at line {id} {field}')
+def msg_insert_line(text, insert_line:int, new_str:str):
+    "Insert text at a specific line number in a message. Be sure you've called `read_msg(…, nums=True)` to ensure you know the line nums.\n    {dname}"
     lines = text.splitlines()
-    if not (0 <= insert_line <= len(lines)): return {'error': f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}'}
+    if not (0 <= insert_line <= len(lines)): raise ValueError(f'Invalid line number {insert_line}. Valid range: 0-{len(lines)}')
     lines.insert(insert_line, new_str)
-    update_msg(id=id, **{field: '\n'.join(lines)}, dname=dname)
-    return {'success': f'Inserted text after line {insert_line} in message {id} {field}'}
+    return '\n'.join(lines)
 
 # %% ../nbs/00_core.ipynb #8568202a
 @llmtool(dname=dname_doc)
-def msg_str_replace(
-    id:str,  # Message id to edit
-    old_str: str, # Text to find and replace
-    new_str: str, # Text to replace with
-    dname:str='', # Dialog to get info for; defaults to current dialog
-    update_output:bool=False # If True, replace in output instead of content
-):
-    """Replace first occurrence of old_str with new_str in a message.
-    {dname}"""
-    msg = read_msg(n=0, id=id, dname=dname)
-    field = 'output' if update_output else 'content'
-    text = msg.get(field, '')
-    if not text: return {'error': f"Message has no {field}"}
+@_msg_edit('Replaced text in message {id} {field}')
+def msg_str_replace(text, old_str:str, new_str:str):
+    "Replace first occurrence of old_str with new_str in a message.\n    {dname}"
     count = text.count(old_str)
-    if count == 0: return {'error': f"Text not found in message {field}: {repr(old_str)}"}
-    if count > 1: return {'error': f"Multiple matches found ({count}) for text: {repr(old_str)}"}
-    update_msg(id=id, **{field: text.replace(old_str, new_str, 1)}, dname=dname)
-    return {'success': f'Replaced text in message {id} {field}'}
+    if count == 0: raise ValueError(f"Text not found: {repr(old_str)}")
+    if count > 1: raise ValueError(f"Multiple matches ({count}): {repr(old_str)}")
+    return text.replace(old_str, new_str, 1)
 
 # %% ../nbs/00_core.ipynb #983ce14a
 @llmtool(dname=dname_doc)
-def msg_strs_replace(
-    id:str,  # Message id to edit
-    old_strs:list[str], # List of strings to find and replace
-    new_strs:list[str], # List of replacement strings (must match length of old_strs)
-    dname:str='', # Dialog to get info for; defaults to current dialog
-    update_output:bool=False # If True, replace in output instead of content
-):
-    """Replace multiple strings simultaneously in a message.
-    {dname}"""
-    if not isinstance(old_strs, list): return {'error': f"`old_strs` should be a list[str] but got {type(old_strs)}"}
-    if not isinstance(new_strs, list): return {'error': f"`new_strs` should be a list[str] but got {type(new_strs)}"}
-    if len(old_strs) != len(new_strs): return {'error': f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs"}
-    msg = read_msg(n=0, id=id, dname=dname)
-    field = 'output' if update_output else 'content'
-    text = msg.get(field, '')
-    if not text: return {'error': f"Message has no {field}"}
-    for idx, (old_str, new_str) in enumerate(zip(old_strs, new_strs)):
+@_msg_edit('Replaced all strings in message {id} {field}')
+def msg_strs_replace(text, old_strs:list[str], new_strs:list[str]):
+    "Replace multiple strings simultaneously in a message.\n    {dname}"
+    if not isinstance(old_strs, list): raise ValueError(f"`old_strs` should be a list[str] but got {type(old_strs)}")
+    if not isinstance(new_strs, list): raise ValueError(f"`new_strs` should be a list[str] but got {type(new_strs)}")
+    if len(old_strs) != len(new_strs): raise ValueError(f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs")
+    for idx,(old_str,new_str) in enumerate(zip(old_strs, new_strs)):
         count = text.count(old_str)
-        if count == 0: return {'error': f"Text not found in message {field} at index {idx}: {repr(old_str)}"}
-        if count > 1: return {'error': f"Multiple matches ({count}) found at index {idx} for: {repr(old_str)}"}
+        if count == 0: raise ValueError(f"Text not found at index {idx}: {repr(old_str)}")
+        if count > 1: raise ValueError(f"Multiple matches ({count}) at index {idx}: {repr(old_str)}")
         text = text.replace(old_str, new_str, 1)
-    update_msg(id=id, **{field: text}, dname=dname)
-    return {'success': f'Successfully replaced all the strings in message {id} {field}'}
+    return text
 
 # %% ../nbs/00_core.ipynb #7b11e714
 def _norm_lines(n:int, start:int, end:int=None):
-    "Normalize and validate line range. Returns (start, end) or error dict."
+    "Normalize and validate line range. Returns (start, end) or raises ValueError."
     if end is None: end = start
     if end < 0: end = n + end + 1
-    if not (1 <= start <= n): return {'error': f'Invalid start line {start}. Valid range: 1-{n}'}
-    if not (start <= end <= n): return {'error': f'Invalid end line {end}. Valid range: {start}-{n}'}
+    if not (1 <= start <= n): raise ValueError(f'Invalid start line {start}. Valid range: 1-{n}')
+    if not (start <= end <= n): raise ValueError(f'Invalid end line {end}. Valid range: {start}-{n}')
     return start, end
 
 # %% ../nbs/00_core.ipynb #1002423f
 @llmtool(dname=dname_doc)
-def msg_replace_lines(
-    id:str,  # Message id to edit
-    start_line:int, # Starting line number to replace (1-based indexing)
-    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
-    new_content:str='', # New content to replace the specified lines
-    dname:str='', # Dialog to get info for; defaults to current dialog
-    update_output:bool=False # If True, replace in output instead of content
-):
-    """Replace a range of lines with new content in a message.
-    Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
-    {dname}"""
-    msg = read_msg(n=0, id=id, dname=dname)
-    field = 'output' if update_output else 'content'
-    text = msg.get(field, '')
-    if not text: return {'error': f"Message has no {field}"}
+@_msg_edit('Replaced lines in message {id} {field}')
+def msg_replace_lines(text, start_line:int, end_line:int=None, new_content:str=''):
+    "Replace a range of lines with new content in a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.\n    {dname}"
     lines = text.splitlines(keepends=True)
-    res = _norm_lines(len(lines), start_line, end_line)
-    if isinstance(res, dict): return res
-    start_line, end_line = res
+    s,e = _norm_lines(len(lines), start_line, end_line)
     if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
-    lines[start_line-1:end_line] = [new_content] if new_content else []
-    update_msg(id=id, **{field: ''.join(lines)}, dname=dname)
-    return {'success': f'Replaced lines {start_line} to {end_line} in message {id} {field}'}
+    lines[s-1:e] = [new_content] if new_content else []
+    return ''.join(lines)
 
 # %% ../nbs/00_core.ipynb #cbd87701
 @llmtool(dname=dname_doc)
-def msg_del_lines(
-    id:str,  # Message id to edit
-    start_line:int, # Starting line number to delete (1-based indexing)
-    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
-    dname:str='', # Dialog to get info for; defaults to current dialog
-    update_output:bool=False # If True, delete from output instead of content
-):
-    """Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.
-    {dname}"""
-    msg = read_msg(n=0, id=id, dname=dname)
-    field = 'output' if update_output else 'content'
-    text = msg.get(field, '')
-    if not text: return {'error': f"Message has no {field}"}
+@_msg_edit('Deleted lines in message {id} {field}')
+def msg_del_lines(text, start_line:int, end_line:int=None):
+    "Delete a range of lines from a message. Be sure you've called `read_msg(..., nums=True)` to ensure you know the line numbers.\n    {dname}"
     lines = text.splitlines(keepends=True)
-    res = _norm_lines(len(lines), start_line, end_line)
-    if isinstance(res, dict): return res
-    start_line, end_line = res
-    del lines[start_line-1:end_line]
-    update_msg(id=id, **{field: ''.join(lines)}, dname=dname)
-    return {'success': f'Deleted lines {start_line} to {end_line} in message {id} {field}'}
+    s,e = _norm_lines(len(lines), start_line, end_line)
+    del lines[s-1:e]
+    return ''.join(lines)
 
 # %% ../nbs/00_core.ipynb #5cafdc5a
 @llmtool
@@ -635,6 +600,7 @@ This guide consolidates understanding of how dialoghelper tools work together. I
 
 ### Modifying dialogs
 - `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
+  - **NB** When not passing a message id, it defaults to the *current* message. So if you call it multiple times with no message id, the messages will be added in REVERSE! Instead, get the return value of `add_msg` after each call, and use that for the next call
 - `update_msg` — partial updates; only pass fields to change
 - `del_msg` — use sparingly, only when explicitly requested
 `copy_msg` → `paste_msg` — for moving/duplicating messages within running dialogs.
