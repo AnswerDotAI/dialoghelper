@@ -105,7 +105,7 @@ def call_endp(path, dname='', json=False, raiseex=False, id=None, **data):
     res = xpost(f'http://localhost:{dh_settings["port"]}/{path}', data=data, headers=headers)
     if raiseex: res.raise_for_status()
     try: return dict2obj(res.json()) if json else res.text
-    except Exception as e: return str(e)
+    except Exception as e: return res.text
 
 # %% ../nbs/00_core.ipynb #a9cb5512
 @llmtool
