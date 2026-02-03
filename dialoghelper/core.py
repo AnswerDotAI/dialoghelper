@@ -12,7 +12,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
-import json,importlib,linecache,re,inspect,uuid
+import json,importlib,linecache,re,inspect,uuid,asyncio
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -308,6 +308,7 @@ def _add_msg_unsafe(
     placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message)
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
+    async_run:bool=False, # Run asynchronously in background (for prompts)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
     **kwargs
 ):
@@ -317,7 +318,7 @@ def _add_msg_unsafe(
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
-        'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
+        'add_relative_', dname, content=content, placement=placement, id=id, run=run, async_run=async_run, **kwargs)
     if not dname: set_var('__msg_id', res)
     return res
 
