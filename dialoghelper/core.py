@@ -3,10 +3,10 @@
 # %% auto #0
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'besure_doc', 'add_styles', 'find_var', 'set_var',
            'find_dname', 'find_msg_id', 'call_endp', 'curr_dialog', 'msg_idx', 'add_scr', 'iife', 'pop_data',
-           'fire_event', 'event_get', 'read_msg', 'find_msgs', 'view_dlg', 'add_html', 'read_msgid', 'add_msg',
-           'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
-           'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line',
-           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
+           'fire_event', 'event_get', 'display_response', 'read_msg', 'find_msgs', 'view_dlg', 'add_html', 'read_msgid',
+           'add_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
            'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
            'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
            'update_gist']
@@ -31,6 +31,7 @@ from IPython.display import display,Markdown
 from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
 from toolslm.xml import *
+from lisette.core import ToolResponse
 
 # %% ../nbs/00_core.ipynb #e54b45ad
 dname_doc = """If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
@@ -161,6 +162,12 @@ def event_get(evt:str, timeout=15, data=None):
     data['idx'] = str(idx)
     fire_event(evt, data=data)
     return pop_data(idx, timeout)
+
+# %% ../nbs/00_core.ipynb #80334098
+def display_response(display:str, result:str=None):
+    "Return a special response where `display` is added as markdown/HTML to the prompt output, and `result` is returned to the LLM"
+    if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
+    return ToolResponse({'_display': display, 'result': result})
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
