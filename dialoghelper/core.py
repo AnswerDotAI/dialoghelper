@@ -310,7 +310,7 @@ def del_msg(
     "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     if log_changed: msg = read_msgid(id, dname=dname)
     res = call_endp('rm_msg_', dname, raiseex=True, msid=id, json=True)
-    if log_changed: add_msg(f"> Deleted #{id}\n\n```\n{msg.content}\n```", dname=dname)
+    if log_changed: add_msg(f"> Deleted #{id}\n\n```\n{msg.content}\n```")
     return res
 
 
@@ -369,7 +369,7 @@ def update_msg(
         r = json.loads(res) if isinstance(res, str) else res
         diff = r.get('diff', '')
         note = f"> Updated #{id}\n\n```diff\n{diff}\n```" if diff else f"> Updated #{id}\n\nNo changes."
-        add_msg(note, dname=dname)
+        add_msg(note)
         res = r.get('id', res)
     return res
 
