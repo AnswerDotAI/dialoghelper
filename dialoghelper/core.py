@@ -75,8 +75,9 @@ def _safe_getattr(obj, name):
 
 # %% ../nbs/00_core.ipynb #c56b1f7e
 def _run_python(code:str):
-    tools = {k: globals()[k] for k in __llmtools__ if k in globals()}
-    tools |= {k:v for k,v in globals().items() if not callable(v) and not k.startswith('_')}
+    g = _find_frame_dict('__msg_id')
+    tools = {k: g.get(k) for k in __llmtools__ if k in g}
+    tools |= {k:v for k,v in g.items() if not callable(v) and not k.startswith('_')}
     def unpack(a,*args): return list(a)
     rg = dict(__builtins__=all_builtins, _getattr_=_safe_getattr,
               _getitem_=lambda o,k: o[k], _getiter_=iter,
