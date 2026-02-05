@@ -315,7 +315,6 @@ def del_msg(
 
 
 # %% ../nbs/00_core.ipynb #a9614fcc
-@delegates(add_msg)
 def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
@@ -323,7 +322,15 @@ def _add_msg_unsafe(
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     async_run:bool=False, # Run asynchronously in background (for prompts)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
-    **kwargs
+    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
+    output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
+    time_run: str | None = '', # When was message executed
+    is_exported: int | None = 0, # Export message to a module?
+    skipped: int | None = 0, # Hide message from prompt?
+    i_collapsed: int | None = 0, # Collapse input?
+    o_collapsed: int | None = 0, # Collapse output?
+    heading_collapsed: int | None = 0, # Collapse heading section?
+    pinned: int | None = 0 # Pin to context?
 )->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
@@ -333,7 +340,9 @@ def _add_msg_unsafe(
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     res = call_endp(
-        'add_relative_', dname, content=content, placement=placement, id=id, run=run, async_run=async_run, **kwargs)
+        'add_relative_', dname, content=content, placement=placement, id=id, run=run, async_run=async_run,
+        msg_type=msg_type,output=output,time_run=time_run,is_exported=is_exported,skipped=skipped,
+        i_collapsed=i_collapsed,o_collapsed=o_collapsed,heading_collapsed=heading_collapsed,pinned=pinned)
     if not dname: set_var('__msg_id', res)
     return res
 
