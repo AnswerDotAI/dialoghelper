@@ -2,6 +2,20 @@
 
 <!-- do not remove -->
 
+## 0.1.19
+
+### New Features
+
+- Add restricted Python execution tool for LLM with sandboxed builtins ([#120](https://github.com/AnswerDotAI/dialoghelper/issues/120))
+- Add `display_response` for separate display/LLM tool outputs ([#117](https://github.com/AnswerDotAI/dialoghelper/issues/117))
+- `log_changed` ([#116](https://github.com/AnswerDotAI/dialoghelper/issues/116))
+- DRY up dname docstrings with llmtool templates ([#114](https://github.com/AnswerDotAI/dialoghelper/pull/114)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+### Bugs Squashed
+
+- fix log update ([#118](https://github.com/AnswerDotAI/dialoghelper/pull/118)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.1.18
 
 ### New Features
