@@ -60,7 +60,6 @@ from fastcore.imports import __llmtools__
 from RestrictedPython import compile_restricted,utility_builtins, safe_builtins,limited_builtins
 
 # %% ../nbs/00_core.ipynb #f5fdf7df
-__llmtools__.add('Path.exists')
 __llmtools__.add('read_url')
 
 all_builtins = safe_builtins | utility_builtins | limited_builtins
