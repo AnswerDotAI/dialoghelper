@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.23
+
+### New Features
+
+- asyncify ([#123](https://github.com/AnswerDotAI/dialoghelper/issues/123))
+
+
 ## 0.1.21
 
 ### New Features
