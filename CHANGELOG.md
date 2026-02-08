@@ -2,9 +2,9 @@
 
 <!-- do not remove -->
 
-## 0.1.23
+## 0.2.0
 
-### New Features
+### Breaking Changes
 
 - asyncify ([#123](https://github.com/AnswerDotAI/dialoghelper/issues/123))
 
