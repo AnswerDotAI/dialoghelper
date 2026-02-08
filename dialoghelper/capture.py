@@ -14,33 +14,33 @@ from importlib import resources
 from lisette.core import *
 from io import BytesIO
 
-import base64,json,time,PIL.Image
+import base64,json,time,PIL.Image,asyncio
 
-# %% ../nbs/01_capture.ipynb #74a55c25
+# %% ../nbs/01_capture.ipynb #4591f71d
 def setup_share():
     "Setup screen sharing"
-    iife((resources.files('dialoghelper')/'screenshot.js').read_text())
+    txt = (resources.files('dialoghelper')/'screenshot.js').read_text()
+    iife(txt)
 
-# %% ../nbs/01_capture.ipynb #1bf9102b
-def start_share(): fire_event('shareScreen')
+# %% ../nbs/01_capture.ipynb #7f0cbd49
+def start_share(): trigger_now('shareScreen')
 
 # %% ../nbs/01_capture.ipynb #5c81465d
-def _capture_screen(timeout=15):
-    d = event_get('captureScreen', timeout)
+async def _capture_screen(timeout=15):
+    d = await event_get_a('captureScreen', timeout)
     if 'img_data' in d: return d.img_data
     else: raise Exception(f'Capture failed: {d.error}')
 
-# %% ../nbs/01_capture.ipynb #ff20e129
-def capture_screen(timeout=15):
+async def capture_screen(timeout=15):
     "Capture the screen as a PIL image."
-    res = _capture_screen()
+    res = await _capture_screen()
     data = base64.b64decode(res.split(',')[1])
     return PIL.Image.open(BytesIO(data))
 
-# %% ../nbs/01_capture.ipynb #6b6618cc
+# %% ../nbs/01_capture.ipynb #c08b8ebc
 @llmtool
-def capture_tool(timeout:int=15):
+async def capture_tool(timeout:int=15):
     "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
-    try: d = _capture_screen(timeout)
+    try: d = await _capture_screen(timeout)
     except Exception as e: return f'Capture failed: {e}'
     return ToolResponse([{'type': 'image_url', 'image_url': d}])
