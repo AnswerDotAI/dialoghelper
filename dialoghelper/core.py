@@ -628,17 +628,27 @@ def dialog_link(
 
 # %% ../nbs/00_core.ipynb #5250fa23
 def _msg_edit(success_tpl):
-    def decorator(fn):
+    def decorator(f):
         async def wrapper(id:str, *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
             msg = await read_msg(n=0, id=id, dname=dname)
             field = 'output' if update_output else 'content'
             text = msg.get(field, '')
             if not text: return {'error': f"Message has no {field}"}
-            try: new_text = fn(text, *args, **kw)
+            try: new_text = f(text, *args, **kw)
             except ValueError as e: return {'error': str(e)}
             await update_msg(id=id, **{field: new_text}, dname=dname, log_changed=log_changed)
             return {'success': success_tpl.format(id=id, field=field)}
-        return splice_sig(wrapper, fn, 'text')
+        res = splice_sig(wrapper, f, 'text')
+        res.__doc__ += """
+
+Message editing standard parameters:
+
+id: Message id to edit
+dname: Dialog to get info for; defaults to current dialog
+update_output: If True, replace in output instead of content
+log_changed: Add a note showing the deleted content?
+"""
+        return res
     return decorator
 
 
@@ -647,7 +657,11 @@ besure_doc = "Be sure you've called `read_msg(…, nums=True)` to ensure you kno
 
 @llmtool(dname=dname_doc, besure=besure_doc)
 @_msg_edit('Inserted text at line {id} {field}')
-def msg_insert_line(text, insert_line:int, new_str:str):
+def msg_insert_line(
+    text:str, # The text to edit
+    insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
+    new_str: str, # The text to insert
+):
     "Insert text at specific line num in message. {besure}\n{dname}"
     lines = text.splitlines()
     if not (0 <= insert_line <= len(lines)): raise ValueError(f'Invalid line {insert_line}. Valid range: 0-{len(lines)}')
@@ -657,7 +671,11 @@ def msg_insert_line(text, insert_line:int, new_str:str):
 # %% ../nbs/00_core.ipynb #8568202a
 @llmtool(dname=dname_doc)
 @_msg_edit('Replaced text in message {id} {field}')
-def msg_str_replace(text, old_str:str, new_str:str):
+def msg_str_replace(
+    text:str, # The text to edit
+    old_str: str, # Text to find and replace
+    new_str: str, # Text to replace with
+):
     "Replace first occurrence of old_str with new_str in a message.\n{dname}"
     count = text.count(old_str)
     if count == 0: raise ValueError(f"Text not found: {repr(old_str)}")
@@ -667,7 +685,11 @@ def msg_str_replace(text, old_str:str, new_str:str):
 # %% ../nbs/00_core.ipynb #983ce14a
 @llmtool(dname=dname_doc)
 @_msg_edit('Replaced all strings in message {id} {field}')
-def msg_strs_replace(text, old_strs:list[str], new_strs:list[str]):
+def msg_strs_replace(
+    text:str, # The text to edit
+    old_strs:list[str], # List of strings to find and replace
+    new_strs:list[str], # List of replacement strings (must match length of old_strs)
+):
     "Replace multiple strings simultaneously in a message.\n{dname}"
     if not isinstance(old_strs, list): raise ValueError(f"`old_strs` should be a list[str] but got {type(old_strs)}")
     if not isinstance(new_strs, list): raise ValueError(f"`new_strs` should be a list[str] but got {type(new_strs)}")
@@ -691,7 +713,12 @@ def _norm_lines(n:int, start:int, end:int=None):
 # %% ../nbs/00_core.ipynb #1002423f
 @llmtool(dname=dname_doc, besure=besure_doc)
 @_msg_edit('Replaced lines in message {id} {field}')
-def msg_replace_lines(text, start_line:int, end_line:int=None, new_content:str=''):
+def msg_replace_lines(
+    text:str, # The text to edit
+    start_line:int, # Starting line number to replace (1-based indexing)
+    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
+    new_content:str='', # New content to replace the specified lines
+):
     "Replace line range in msg with new content. {besure}\n{dname}"
     lines = text.splitlines(keepends=True)
     s,e = _norm_lines(len(lines), start_line, end_line)
@@ -702,7 +729,11 @@ def msg_replace_lines(text, start_line:int, end_line:int=None, new_content:str='
 # %% ../nbs/00_core.ipynb #cbd87701
 @llmtool(dname=dname_doc, besure=besure_doc)
 @_msg_edit('Deleted lines in message {id} {field}')
-def msg_del_lines(text, start_line:int, end_line:int=None):
+def msg_del_lines(
+    text:str, # The text to edit
+    start_line:int, # Starting line number to delete (1-based indexing)
+    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
+):
     "Delete line range from a message. {besure}\n{dname}"
     lines = text.splitlines(keepends=True)
     s,e = _norm_lines(len(lines), start_line, end_line)
