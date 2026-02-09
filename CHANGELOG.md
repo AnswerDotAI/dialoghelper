@@ -2,7 +2,21 @@
 
 <!-- do not remove -->
 
-## 0.1.19
+## 0.2.1
+
+### New Features
+
+- Add parameter annotations and shared docstring to message editing tools ([#124](https://github.com/AnswerDotAI/dialoghelper/issues/124))
+
+
+## 0.2.0
+
+### Breaking Changes
+
+- asyncify ([#123](https://github.com/AnswerDotAI/dialoghelper/issues/123))
+
+
+## 0.1.21
 
 ### New Features
 
