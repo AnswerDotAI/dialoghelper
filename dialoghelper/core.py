@@ -6,14 +6,15 @@ __all__ = ['dname_doc', 'md_cls_d', 'all_builtins', 'run_python', 'dh_settings',
            'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
            'iife_a', 'iife', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
            'trigger_now', 'display_response', 'read_msg', 'find_msgs', 'view_dlg', 'read_msgid', 'add_msg', 'del_msg',
-           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
-           'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace',
-           'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py',
-           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
-           'import_string', 'mk_toollist', 'import_gist', 'update_gist']
+           'update_msg', 'run_msg', 'wait_s', 'wait_for', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
+           'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
-import json,importlib,linecache,re,inspect,uuid,ast,time
+import json,importlib,linecache,re,inspect,uuid,ast,asyncio, time
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -448,6 +449,7 @@ async def _add_msg_unsafe(
     placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message)
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
+    async_run:bool=False, # Run asynchronously in background (for prompts)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
     **kwargs
 )->str: # Message ID of newly created message
@@ -458,7 +460,8 @@ async def _add_msg_unsafe(
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    res = await call_endpa( 'add_relative_', dname, content=content, placement=placement, id=id, run=run, **kwargs)
+    res = await call_endpa( 'add_relative_', dname, content=content, placement=placement, id=id, run=run, async_run=async_run, **kwargs)
+    if not dname: set_var('__msg_id', res)
     return res
 
 
@@ -510,6 +513,29 @@ async def run_msg(
     "Adds a message to the run queue. Use read_msg to see the output once it runs."
     return await call_endpa('add_runq_', dname, ids=ids, api=True)
 
+
+# %% ../nbs/00_core.ipynb #a784b5ee
+@llmtool
+async def wait_s(seconds:float):
+    "Wait for a number of seconds"
+    await asyncio.sleep(seconds)
+
+@llmtool
+async def wait_for(
+    msg_id:str, # Message id to wait for
+    dname:str='', # Dialog to get message from; defaults to current dialog
+    poll_interval:float=1, # Seconds between checks
+    timeout:float=10 # Max seconds to wait
+):
+    "Wait for a message to finish running and return its output"
+    elapsed = 0
+    while elapsed < timeout:
+        msg = read_msg(id=msg_id, dname=dname, n=0, relative=True)
+        if msg.get('run') is None or msg.get('run') is False or msg.get('run') == {}:
+            return msg.get('output')
+        await asyncio.sleep(poll_interval)
+        elapsed += poll_interval
+    raise TimeoutError(f"Message {msg_id} did not complete within {timeout}s")
 
 # %% ../nbs/00_core.ipynb #73025e57
 @llmtool
