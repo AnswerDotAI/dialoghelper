@@ -387,8 +387,8 @@ async def view_dlg(
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
 
 # %% ../nbs/00_core.ipynb #3ad14786
-@delegates(_add_msg_unsafe, but=['run'])
 @llmtool(dname=dname_doc)
+@delegates(_add_msg_unsafe, but=['run'])
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     **kwargs
@@ -398,7 +398,6 @@ async def add_msg(
     otherwise messages will appear in the dialog in REVERSE order.
     {dname}"""
     return await _add_msg_unsafe(content=content, run=False, **kwargs)
-
 
 # %% ../nbs/00_core.ipynb #afc62c45
 @llmtool(dname=dname_doc)
