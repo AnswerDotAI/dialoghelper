@@ -5,12 +5,13 @@ __all__ = ['dname_doc', 'md_cls_d', 'all_builtins', 'run_python', 'dh_settings',
            'add_styles', 'RunPython', 'find_var', 'set_var', 'find_dname', 'find_msg_id', 'xposta', 'xgeta',
            'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
            'iife_a', 'iife', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
-           'trigger_now', 'display_response', 'read_msg', 'find_msgs', 'view_dlg', 'read_msgid', 'add_msg', 'del_msg',
-           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'url2note',
-           'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace',
-           'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py',
-           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
-           'import_string', 'mk_toollist', 'import_gist', 'update_gist']
+           'trigger_now', 'display_response', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'del_msg',
+           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
+           'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link',
+           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
+           'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
 import json,importlib,linecache,re,inspect,uuid,ast,time
@@ -385,19 +386,6 @@ async def view_dlg(
 # %% ../nbs/00_core.ipynb #fdc5a465
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
 
-# %% ../nbs/00_core.ipynb #7c4c7f5e
-@llmtool(dname=dname_doc)
-async def read_msgid(
-    id:str,  # Message id to find
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
-    nums:bool=False, # Whether to show line numbers
-    dname:str='' # Dialog to get message from; defaults to current dialog
-    ):
-    """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
-    {dname}"""
-    return await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
-
-
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
 async def add_msg(
@@ -427,6 +415,22 @@ async def add_msg(
         time_run=time_run, is_exported=is_exported, skipped=skipped, pinned=pinned,
         i_collapsed=i_collapsed, o_collapsed=o_collapsed, heading_collapsed=heading_collapsed)
 
+
+# %% ../nbs/00_core.ipynb #afc62c45
+@llmtool(dname=dname_doc)
+async def read_msgid(
+    id:str,  # Message id to find
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    nums:bool=False, # Whether to show line numbers
+    dname:str='', # Dialog to get message from; defaults to current dialog
+    add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
+):
+    """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
+    Use `add_to_dlg` if the LLM or human may need to refer to the message content again later.
+    {dname}"""
+    res = await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
+    if add_to_dlg: await add_msg(res['content'], msg_type='raw')
+    return res
 
 # %% ../nbs/00_core.ipynb #f1ee1903
 @llmtool
@@ -568,6 +572,17 @@ async def toggle_header(
     res = await call_endpa('toggle_header_collapse_', dname, id=id)
     return {'success':'complete'}
 
+
+# %% ../nbs/00_core.ipynb #90b55ef4
+@llmtool
+async def toggle_bookmark(
+    id:str, # id of message to toggle bookmark on
+    n:int, # Bookmark number (1-9)
+    dname:str='' # Dialog to set bookmark in; defaults to current dialog
+):
+    "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
+    if not id: id = find_msg_id()
+    return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
 
 # %% ../nbs/00_core.ipynb #1827e124
 async def url2note(
