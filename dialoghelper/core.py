@@ -21,10 +21,9 @@ from ipykernel_helper import *
 from dataclasses import dataclass
 from os.path import normpath
 from fastcore.xml import to_xml
-from fastcore.meta import splice_sig
+from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from fastcore.meta import delegates
 from ghapi.all import *
 from fastcore.xtras import asdict
 from inspect import currentframe,Parameter,signature
@@ -386,11 +385,8 @@ async def view_dlg(
 # %% ../nbs/00_core.ipynb #fdc5a465
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
 
-# %% ../nbs/00_core.ipynb #ca694d38
-async def _add_msg_unsafe(
-    content:str, # Content of the message (i.e the message prompt, code, or note text)
-    placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
-    id:str=None, # id of message that placement is relative to (if None, uses current message)
+# %% ../nbs/00_core.ipynb #5093cfe4
+def _add_msg(
     run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
@@ -401,7 +397,16 @@ async def _add_msg_unsafe(
     o_collapsed: int | None = 0, # Collapse output?
     heading_collapsed: int | None = 0, # Collapse heading section?
     pinned: int | None = 0, # Pin to context?
-    dname:str='' # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+): ...
+
+# %% ../nbs/00_core.ipynb #ca694d38
+@delegated(_add_msg)
+async def _add_msg_unsafe(
+    content:str, # Content of the message (i.e the message prompt, code, or note text)
+    placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
+    id:str=None, # id of message that placement is relative to (if None, uses current message)
+    dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+    **kwargs
 )->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
@@ -410,12 +415,7 @@ async def _add_msg_unsafe(
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    return await call_endpa(
-        'add_relative_', dname, content=content, placement=placement, id=id, run=run,
-        msg_type=msg_type, output=output, time_run=time_run, is_exported=is_exported,
-        skipped=skipped, pinned=pinned, i_collapsed=i_collapsed, o_collapsed=o_collapsed,
-        heading_collapsed=heading_collapsed)
-
+    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, **kwargs)
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
