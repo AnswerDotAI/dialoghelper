@@ -5,13 +5,13 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'run_python',
            'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id', 'xposta', 'xgeta', 'call_endp',
            'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
            'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
-           'display_response', 'RunPython', 'allow', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid',
-           'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
-           'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link',
-           'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines',
-           'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
-           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
-           'update_gist']
+           'display_response', 'RunPython', 'safe_type', 'allow', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg',
+           'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive',
+           'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
+           'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
+           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
+           'import_gist', 'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
 import json,importlib,linecache,re,inspect,uuid,ast,time
@@ -252,13 +252,16 @@ from RestrictedPython import compile_restricted,utility_builtins, safe_builtins,
 # %% ../nbs/00_core.ipynb #bad1fe81
 __llmtools__.add('read_url')
 
-all_builtins = safe_builtins | utility_builtins | limited_builtins
+all_builtins = safe_builtins | utility_builtins | limited_builtins | {
+    'dict': dict, 'list': list, 'set': set, 'tuple': tuple, 'frozenset': frozenset}
 
 # %% ../nbs/00_core.ipynb #5a460c05
 def _safe_getattr(obj, name):
     val = getattr(obj, name)
     if callable(val):
         keys = [f"{cls.__name__}.{name}" for cls in type(obj).__mro__]
+        obj_name = getattr(obj, '__name__', None)
+        if obj_name: keys.append(f"{obj_name}.{name}")
         if not any(k in __llmtools__ for k in keys): raise AttributeError(f"Cannot access callable: {name}")
     return val
 
@@ -278,12 +281,18 @@ def _run_python(code:str):
         try: return f(compile_restricted(src, '<tool>', mode), rg, loc)
         except SyntaxError as e: return f'SyntaxError: {e}'
         except NameError as e: return f'`{e.name}` is not available in this sandbox; ask the user to add it to the available tools'
+    def _export(): g.update({k:v for k,v in loc.items() if k.endswith('_') and not k.startswith('_')})
     tree = ast.parse(code)
     if tree.body and isinstance(tree.body[-1], ast.Expr):
         last = tree.body.pop()
-        if tree.body: run(ast.unparse(ast.Module(tree.body, [])))
-        return run(ast.unparse(ast.Expression(last.value)), False)
+        if tree.body:
+            err = run(ast.unparse(ast.Module(tree.body, [])))
+            if isinstance(err, str): return err
+        res = run(ast.unparse(ast.Expression(last.value)), False)
+        _export()
+        return res
     run(code)
+    _export()
 
 # %% ../nbs/00_core.ipynb #e8d3024e
 class RunPython:
@@ -298,6 +307,8 @@ class RunPython:
             Multiline code blocks can be used, including defining functions and variables, for use within the call.
             In addition most builtins are available, plus these symbols: {tools}
 
+            **NB**: If `code` creates symbols that end with `_`, they will be exported by to the calling namespace.
+            - This is how you can use symbols that either human or AI can use again later.
             Examples: `len([1,2,3])` (builtin); `add_msg(content="hi")` (tool); `df.shape` (non-callable attr);
             `[x**2 for x in range(5)]` (last expression returned); `sorted(my_dict.items())` (builtin + non-callable attr)"""
 
@@ -309,13 +320,18 @@ class RunPython:
 # %% ../nbs/00_core.ipynb #accbe9ad
 run_python = RunPython()
 
+# %% ../nbs/00_core.ipynb #2303931f
+def safe_type(o):
+    "Same as `type(o)`"
+    return type(o)
+
 # %% ../nbs/00_core.ipynb #da0287bd
 def allow(*c):
     for o in c:
         if isinstance(o, dict): __llmtools__.update({f'{k.__name__}.{m}' for k,v in o.items() for m in v})
         else: __llmtools__.add(o)
 
-allow('run_python',
+allow('run_python', 'safe_type',
     {dict: ['items','values','keys','get','update','pop'],
      str: ['split','strip','join','replace','startswith','endswith','lower','upper','format','count','find'],
      list: ['append','extend','sort','pop','copy','index','insert','remove'],
