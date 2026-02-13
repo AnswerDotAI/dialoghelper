@@ -321,7 +321,7 @@ class RunPython:
 run_python = RunPython()
 
 # %% ../nbs/00_core.ipynb #2303931f
-def safe_type(o):
+def safe_type(o:object):
     "Same as `type(o)`"
     return type(o)
 
