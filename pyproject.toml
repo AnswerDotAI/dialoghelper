@@ -22,7 +22,7 @@ dependencies = [
   'MonsterUI',
   'lisette>=0.0.13',
   'pillow',
-  'toolslm>=0.3.28',
+  'toolslm>=0.3.30',
   'restrictedpython'
 ]
 
