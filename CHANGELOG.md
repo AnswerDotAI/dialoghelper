@@ -2,6 +2,22 @@
 
 <!-- do not remove -->
 
+## 0.2.2
+
+### New Features
+
+- add support for async/await ([#134](https://github.com/AnswerDotAI/dialoghelper/issues/134))
+- Collect print/warn/errs in `python` and return structured dict with stdout/warnings/result ([#133](https://github.com/AnswerDotAI/dialoghelper/issues/133))
+- Add sandbox symbol export via `_` suffix, safe type constructors, and improved error handling in `python` ([#128](https://github.com/AnswerDotAI/dialoghelper/issues/128))
+- Add `allow` helper for tool registration, improve RunPython sandbox access and error handling ([#127](https://github.com/AnswerDotAI/dialoghelper/issues/127))
+- Add `toggle_bookmark` tool and `add_to_dlg` param to `read_msgid` ([#125](https://github.com/AnswerDotAI/dialoghelper/issues/125))
+- Let `python` to use user globals, not .core globals to access tools and variables. ([#122](https://github.com/AnswerDotAI/dialoghelper/pull/122)), thanks to [@PiotrCzapla](https://github.com/PiotrCzapla)
+
+### Bugs Squashed
+
+- Missing type hint in `safe_type` param ([#130](https://github.com/AnswerDotAI/dialoghelper/issues/130))
+
+
 ## 0.2.1
 
 ### New Features
