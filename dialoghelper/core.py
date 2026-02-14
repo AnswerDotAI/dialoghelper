@@ -245,17 +245,18 @@ def display_response(display:str, result:str=None):
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return ToolResponse({'_display': display, 'result': result})
 
-# %% ../nbs/00_core.ipynb #7ee61434
+# %% ../nbs/00_core.ipynb #61250b49
 from fastcore.imports import __llmtools__
-from RestrictedPython import compile_restricted,utility_builtins, safe_builtins,limited_builtins
+from RestrictedPython import utility_builtins, safe_builtins,limited_builtins
+from restrictedpython_async import *
 
-# %% ../nbs/00_core.ipynb #bad1fe81
+# %% ../nbs/00_core.ipynb #a90b4a9e
 __llmtools__.add('read_url')
 
-all_builtins = safe_builtins | utility_builtins | limited_builtins | {
+all_builtins = safe_builtins | utility_builtins | limited_builtins | async_builtins | {
     'dict': dict, 'list': list, 'set': set, 'tuple': tuple, 'frozenset': frozenset}
 
-# %% ../nbs/00_core.ipynb #5a460c05
+# %% ../nbs/00_core.ipynb #cc67e36d
 def _safe_getattr(obj, name):
     val = getattr(obj, name)
     if callable(val):
@@ -265,8 +266,8 @@ def _safe_getattr(obj, name):
         if not any(k in __llmtools__ for k in keys): raise AttributeError(f"Cannot access callable: {name}")
     return val
 
-# %% ../nbs/00_core.ipynb #eac2db87
-def _run_python(code:str):
+# %% ../nbs/00_core.ipynb #0f1a5b3a
+async def _run_python(code:str):
     g = _find_frame_dict('__msg_id')
     tools = {k: g.get(k) for k in __llmtools__ if k in g}
     tools |= {k:v for k,v in g.items() if (not callable(v) or k.endswith('_')) and not k.startswith('_')}
@@ -276,9 +277,11 @@ def _run_python(code:str):
               _unpack_sequence_=unpack, _iter_unpack_sequence_=unpack,
               enumerate=enumerate, sorted=sorted, reversed=reversed, **tools)
     loc = {}
-    def run(src, is_exec=True):
-        f,mode = (exec,'exec') if is_exec else (eval,'eval')
-        try: return f(compile_restricted(src, '<tool>', mode), rg, loc)
+    async def run(src, is_exec=True):
+        try:
+            res = eval(compile_restricted(src, '<tool>', 'exec' if is_exec else 'eval'), rg, loc)
+            if inspect.iscoroutine(res): res = await res
+            return res
         except SyntaxError as e: return f'SyntaxError: {e}'
         except NameError as e: return f'`{e.name}` is not available in this sandbox; ask the user to add it to the available tools'
     def _export(): g.update({k:v for k,v in loc.items() if k.endswith('_') and not k.startswith('_')})
@@ -286,15 +289,15 @@ def _run_python(code:str):
     if tree.body and isinstance(tree.body[-1], ast.Expr):
         last = tree.body.pop()
         if tree.body:
-            err = run(ast.unparse(ast.Module(tree.body, [])))
+            err = await run(ast.unparse(ast.Module(tree.body, [])))
             if isinstance(err, str): return err
-        res = run(ast.unparse(ast.Expression(last.value)), False)
+        res = await run(ast.unparse(ast.Expression(last.value)), False)
         _export()
         return res
-    run(code)
+    await run(code)
     _export()
 
-# %% ../nbs/00_core.ipynb #e8d3024e
+# %% ../nbs/00_core.ipynb #7a9ee79b
 class RunPython:
     @property
     def __doc__(self):
@@ -312,20 +315,20 @@ class RunPython:
             Examples: `len([1,2,3])` (builtin); `add_msg(content="hi")` (tool); `df.shape` (non-callable attr);
             `[x**2 for x in range(5)]` (last expression returned); `sorted(my_dict.items())` (builtin + non-callable attr)"""
 
-    def __call__(self,
+    async def __call__(self,
         code:str # Python code to execute, can be multiple lines, include functions, etc
     ): # The result of the last expression, if any
-        return _run_python(code)
+        return await _run_python(code)
 
-# %% ../nbs/00_core.ipynb #accbe9ad
+# %% ../nbs/00_core.ipynb #1414353e
 run_python = RunPython()
 
-# %% ../nbs/00_core.ipynb #2303931f
+# %% ../nbs/00_core.ipynb #f7c3532e
 def safe_type(o):
     "Same as `type(o)`"
     return type(o)
 
-# %% ../nbs/00_core.ipynb #da0287bd
+# %% ../nbs/00_core.ipynb #d411a2e0
 def allow(*c):
     for o in c:
         if isinstance(o, dict): __llmtools__.update({f'{k.__name__}.{m}' for k,v in o.items() for m in v})
