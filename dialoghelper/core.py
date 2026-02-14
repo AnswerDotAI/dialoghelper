@@ -245,14 +245,16 @@ def display_response(display:str, result:str=None):
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return ToolResponse({'_display': display, 'result': result})
 
-# %% ../nbs/00_core.ipynb #7ee61434
+# %% ../nbs/00_core.ipynb #ad9162c8
 from fastcore.imports import __llmtools__
-from RestrictedPython import compile_restricted,utility_builtins, safe_builtins,limited_builtins
+from RestrictedPython import utility_builtins, safe_builtins,limited_builtins,PrintCollector
+from restrictedpython_async import *
 
-# %% ../nbs/00_core.ipynb #bad1fe81
+
+# %% ../nbs/00_core.ipynb #25806df4
 __llmtools__.add('read_url')
 
-all_builtins = safe_builtins | utility_builtins | limited_builtins | {
+all_builtins = safe_builtins | utility_builtins | limited_builtins | async_builtins | {
     'dict': dict, 'list': list, 'set': set, 'tuple': tuple, 'frozenset': frozenset}
 
 # %% ../nbs/00_core.ipynb #5a460c05
@@ -265,11 +267,8 @@ def _safe_getattr(obj, name):
         if not any(k in __llmtools__ for k in keys): raise AttributeError(f"Cannot access callable: {name}")
     return val
 
-# %% ../nbs/00_core.ipynb #9019f6ee
-from RestrictedPython import compile_restricted,utility_builtins, safe_builtins,limited_builtins,PrintCollector
-
 # %% ../nbs/00_core.ipynb #a505d32a
-def _run_python(code:str):
+async def _run_python(code:str):
     g = _find_frame_dict('__msg_id')
     tools = {k: g.get(k) for k in __llmtools__ if k in g}
     tools |= {k:v for k,v in g.items() if (not callable(v) or k.endswith('_')) and not k.startswith('_')}
@@ -281,9 +280,11 @@ def _run_python(code:str):
               enumerate=enumerate, sorted=sorted, reversed=reversed, **tools)
     loc = {}
     errs, warns = [], []
-    def run(src, is_exec=True):
-        f,mode = (exec,'exec') if is_exec else (eval,'eval')
-        try: return f(compile_restricted(src, '<tool>', mode), rg, loc)
+    async def run(src, is_exec=True):
+        try:
+            res = eval(compile_restricted(src, '<tool>', 'exec' if is_exec else 'eval'), rg, loc)
+            if inspect.iscoroutine(res): res = await res
+            return res
         except SyntaxError as e: errs.append(f'SyntaxError: {e}')
         except NameError as e: errs.append(f'`{e.name}` is not available in this sandbox; ask the user to add it to the available tools')
     def _export(): g.update({k:v for k,v in loc.items() if k.endswith('_') and not k.startswith('_')})
@@ -304,11 +305,11 @@ def _run_python(code:str):
         if tree.body and isinstance(tree.body[-1], ast.Expr):
             last = tree.body.pop()
             if tree.body:
-                run(ast.unparse(ast.Module(tree.body, [])))
+                await run(ast.unparse(ast.Module(tree.body, [])))
                 if errs: return _result(ws=w)
-            res = run(ast.unparse(ast.Expression(last.value)), False)
+            res = await run(ast.unparse(ast.Expression(last.value)), False)
             return _result(res, ws=w)
-        run(code)
+        await run(code)
         return _result(ws=w)
 
 # %% ../nbs/00_core.ipynb #e8d3024e
@@ -329,10 +330,10 @@ class RunPython:
             Examples: `len([1,2,3])` (builtin); `add_msg(content="hi")` (tool); `df.shape` (non-callable attr);
             `[x**2 for x in range(5)]` (last expression returned); `sorted(my_dict.items())` (builtin + non-callable attr)"""
 
-    def __call__(self,
+    async def __call__(self,
         code:str # Python code to execute, can be multiple lines, include functions, etc
     ): # A dict containing up to 3 keys for non-empty vals: `{'stdout': ..., 'warnings': ..., 'result': ...}`
-        return _run_python(code)
+        return await _run_python(code)
 
 # %% ../nbs/00_core.ipynb #accbe9ad
 python = RunPython()
