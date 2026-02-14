@@ -23,7 +23,8 @@ dependencies = [
   'lisette>=0.0.13',
   'pillow',
   'toolslm>=0.3.28',
-  'restrictedpython'
+  'restrictedpython',
+  "restrictedpython-async",
 ]
 
 [project.urls]
