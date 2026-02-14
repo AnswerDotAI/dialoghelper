@@ -14,7 +14,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Pl
            'import_gist', 'update_gist']
 
 # %% ../nbs/00_core.ipynb #e881cda4
-import json,importlib,linecache,re,inspect,uuid,ast,time
+import json,importlib,linecache,re,inspect,uuid,ast,time,warnings
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -265,7 +265,10 @@ def _safe_getattr(obj, name):
         if not any(k in __llmtools__ for k in keys): raise AttributeError(f"Cannot access callable: {name}")
     return val
 
-# %% ../nbs/00_core.ipynb #eac2db87
+# %% ../nbs/00_core.ipynb #9019f6ee
+from RestrictedPython import compile_restricted,utility_builtins, safe_builtins,limited_builtins,PrintCollector
+
+# %% ../nbs/00_core.ipynb #a505d32a
 def _run_python(code:str):
     g = _find_frame_dict('__msg_id')
     tools = {k: g.get(k) for k in __llmtools__ if k in g}
@@ -274,25 +277,39 @@ def _run_python(code:str):
     rg = dict(__builtins__=all_builtins, _getattr_=_safe_getattr,
               _getitem_=lambda o,k: o[k], _getiter_=iter,
               _unpack_sequence_=unpack, _iter_unpack_sequence_=unpack,
+              _print_=PrintCollector, _print=PrintCollector(_safe_getattr),
               enumerate=enumerate, sorted=sorted, reversed=reversed, **tools)
     loc = {}
+    errs, warns = [], []
     def run(src, is_exec=True):
         f,mode = (exec,'exec') if is_exec else (eval,'eval')
         try: return f(compile_restricted(src, '<tool>', mode), rg, loc)
-        except SyntaxError as e: return f'SyntaxError: {e}'
-        except NameError as e: return f'`{e.name}` is not available in this sandbox; ask the user to add it to the available tools'
+        except SyntaxError as e: errs.append(f'SyntaxError: {e}')
+        except NameError as e: errs.append(f'`{e.name}` is not available in this sandbox; ask the user to add it to the available tools')
     def _export(): g.update({k:v for k,v in loc.items() if k.endswith('_') and not k.startswith('_')})
-    tree = ast.parse(code)
-    if tree.body and isinstance(tree.body[-1], ast.Expr):
-        last = tree.body.pop()
-        if tree.body:
-            err = run(ast.unparse(ast.Module(tree.body, [])))
-            if isinstance(err, str): return err
-        res = run(ast.unparse(ast.Expression(last.value)), False)
+    def _result(res=None, ws=None):
+        if ws: warns.extend(ws)
         _export()
-        return res
-    run(code)
-    _export()
+        d = {}
+        if pc := loc.get('_print', rg.get('_print')):
+            if (stdout:=pc()): d['stdout'] = stdout
+        all_errs = errs + [f'{w.category.__name__}: {w.message}' for w in warns]
+        if all_errs: d['warnings'] = '\n'.join(all_errs)
+        if res is not None: d['result'] = res
+        return d or None
+    tree = ast.parse(code)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        warnings.filterwarnings("ignore", category=SyntaxWarning)
+        if tree.body and isinstance(tree.body[-1], ast.Expr):
+            last = tree.body.pop()
+            if tree.body:
+                run(ast.unparse(ast.Module(tree.body, [])))
+                if errs: return _result(ws=w)
+            res = run(ast.unparse(ast.Expression(last.value)), False)
+            return _result(res, ws=w)
+        run(code)
+        return _result(ws=w)
 
 # %% ../nbs/00_core.ipynb #e8d3024e
 class RunPython:
@@ -314,7 +331,7 @@ class RunPython:
 
     def __call__(self,
         code:str # Python code to execute, can be multiple lines, include functions, etc
-    ): # The result of the last expression, if any
+    ): # A dict containing up to 3 keys for non-empty vals: `{'stdout': ..., 'warnings': ..., 'result': ...}`
         return _run_python(code)
 
 # %% ../nbs/00_core.ipynb #accbe9ad
