@@ -5,16 +5,17 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Pl
            'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id', 'xposta', 'xgeta', 'call_endp',
            'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
            'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
-           'display_response', 'RunPython', 'safe_type', 'allow', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg',
-           'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
-           'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog', 'run_code_interactive',
-           'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
-           'msg_del_lines', 'dialoghelper_explain_dialog_editing', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
-           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
-           'import_gist', 'update_gist']
+           'display_response', 'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg',
+           'add_msg', 'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid',
+           'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog',
+           'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
+           'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist', 'dialoghelper_explain_dialog_editing', 'solveit_docs']
 
-# %% ../nbs/00_core.ipynb #e881cda4
-import json,importlib,linecache,re,inspect,uuid,ast,time,warnings
+# %% ../nbs/00_core.ipynb #468aa264
+import json,importlib,linecache,re,inspect,uuid,ast,warnings,collections,time,asyncio,urllib.parse,dataclasses,shlex
+
 from typing import Dict
 from tempfile import TemporaryDirectory
 from ipykernel_helper import *
@@ -24,8 +25,9 @@ from fastcore.xml import to_xml
 from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from ghapi.all import *
 from fastcore.xtras import asdict
+from fastcore.docments import MarkdownRenderer
+from ghapi.all import *
 from inspect import currentframe,Parameter,signature
 from httpx import AsyncClient, get as xget, post as xpost
 from IPython.display import display,Markdown,HTML
@@ -33,6 +35,15 @@ from monsterui.all import franken_class_map,apply_classes
 from fasthtml.common import Safe,Script,Div
 from toolslm.xml import *
 from lisette.core import ToolResponse
+
+import zlib,unicodedata,binascii,enum,secrets,pickle,contextlib,types,keyword,httpx
+import heapq, bisect, html, struct, decimal, fractions, pprint, fnmatch, base64
+import random, statistics, difflib, csv, string, textwrap, hashlib, copy, datetime as dt_mod
+import xml.etree.ElementTree as ET,ipaddress,colorsys,cmath,traceback,sys
+from datetime import datetime
+from urllib.parse import quote,unquote,urlencode
+from io import StringIO,BytesIO
+from collections import Counter,deque
 
 # %% ../nbs/00_core.ipynb #e54b45ad
 dname_doc = """If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
@@ -75,6 +86,7 @@ def set_var(var:str, val):
 
 # %% ../nbs/00_core.ipynb #eb1636a6
 dh_settings = {'port':5001}
+# dh_settings = {'port':6001}
 
 # %% ../nbs/00_core.ipynb #a01ad161
 def find_dname(dname=None):
@@ -245,17 +257,30 @@ def display_response(display:str, result:str=None):
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return ToolResponse({'_display': display, 'result': result})
 
-# %% ../nbs/00_core.ipynb #ad9162c8
+# %% ../nbs/00_core.ipynb #f178e529
 from fastcore.imports import __llmtools__
 from RestrictedPython import utility_builtins, safe_builtins,limited_builtins,PrintCollector
 from restrictedpython_async import *
 
 
-# %% ../nbs/00_core.ipynb #25806df4
+# %% ../nbs/00_core.ipynb #bff398e9
 __llmtools__.add('read_url')
 
-all_builtins = safe_builtins | utility_builtins | limited_builtins | async_builtins | {
-    'dict': dict, 'list': list, 'set': set, 'tuple': tuple, 'frozenset': frozenset}
+# %% ../nbs/00_core.ipynb #947e6c21
+__pytools__ = set()
+
+def allow(*c):
+    for o in c:
+        if isinstance(o, dict):
+            __pytools__.update({k.__name__ for k in o})
+            __pytools__.update({f'{k.__name__}.{m}' for k,v in o.items() for m in v})
+        else: __pytools__.add(o)
+
+# %% ../nbs/00_core.ipynb #12f3bde3
+all_builtins = safe_builtins | utility_builtins | limited_builtins | async_builtins | dict(
+    dict=dict, list=list, set=set, tuple=tuple, frozenset=frozenset,
+    __import__=__import__
+)
 
 # %% ../nbs/00_core.ipynb #5a460c05
 def _safe_getattr(obj, name):
@@ -264,13 +289,13 @@ def _safe_getattr(obj, name):
         keys = [f"{cls.__name__}.{name}" for cls in type(obj).__mro__]
         obj_name = getattr(obj, '__name__', None)
         if obj_name: keys.append(f"{obj_name}.{name}")
-        if not any(k in __llmtools__ for k in keys): raise AttributeError(f"Cannot access callable: {name}")
+        if not any(k in (__llmtools__|__pytools__) for k in keys): raise AttributeError(f"Cannot access callable: {name}")
     return val
 
 # %% ../nbs/00_core.ipynb #a505d32a
 async def _run_python(code:str):
     g = _find_frame_dict('__msg_id')
-    tools = {k: g.get(k) for k in __llmtools__ if k in g}
+    tools = {k: g.get(k) for k in (__llmtools__|__pytools__) if k in g}
     tools |= {k:v for k,v in g.items() if (not callable(v) or k.endswith('_')) and not k.startswith('_')}
     def unpack(a,*args): return list(a)
     rg = dict(__builtins__=all_builtins, _getattr_=_safe_getattr,
@@ -316,9 +341,9 @@ async def _run_python(code:str):
 class RunPython:
     @property
     def __doc__(self):
-        tools = ', '.join(sorted(__llmtools__))
+        tools = ', '.join(sorted(__llmtools__|__pytools__))
         return f"""Execute restricted Python with access to LLM tools, returning last expression.
-            All non-callable globals and non-callable attrs are usable.
+            `import` works in the usual way. All non-callable globals and non-callable attrs are usable.
             Callable globals are also usable if their name ends with `_` (but not `_`-prefixed).
             - This is an easy way for users to expose extra functions: `def my_helper_(...)`
             Callable object attrs are only accessible if `ClassName.method` is registered as a tool.
@@ -337,23 +362,98 @@ class RunPython:
 
 # %% ../nbs/00_core.ipynb #accbe9ad
 python = RunPython()
+allow('python')
 
 # %% ../nbs/00_core.ipynb #2303931f
 def safe_type(o:object):
     "Same as `type(o)`"
     return type(o)
 
-# %% ../nbs/00_core.ipynb #da0287bd
-def allow(*c):
-    for o in c:
-        if isinstance(o, dict): __llmtools__.update({f'{k.__name__}.{m}' for k,v in o.items() for m in v})
-        else: __llmtools__.add(o)
+# %% ../nbs/00_core.ipynb #7df0c1fe
+_io_meths = ['getvalue', 'read', 'write', 'seek']
 
-allow('python', 'safe_type',
-    {dict: ['items','values','keys','get','update','pop'],
-     str: ['split','strip','join','replace','startswith','endswith','lower','upper','format','count','find'],
-     list: ['append','extend','sort','pop','copy','index','insert','remove'],
-     set: ['add','discard','update']})
+# %% ../nbs/00_core.ipynb #0afdb9f2
+def docs(sym)->str:
+    """Get documentation (signature, docstring, + docments if they exist) for `sym`.
+    **NB**: This is not an llm tool, so must be run with python(). `sym` must be available in the namespace."""
+    return MarkdownRenderer(sym)._repr_markdown_()
+
+# %% ../nbs/00_core.ipynb #67713a82
+allow({
+    re: ['search', 'findall', 'sub', 'match', 'compile', 'split', 'escape', 'fullmatch', 'subn'],
+    json: ['loads', 'dumps', 'load'],
+    math: ['sqrt', 'floor', 'ceil', 'log', 'log2', 'log10', 'gcd', 'isnan', 'isinf',
+        'exp', 'sin', 'cos', 'tan', 'atan2', 'radians', 'degrees', 'factorial', 'comb', 'perm', 'prod', 'isclose',
+        'fsum', 'hypot', 'isfinite', 'copysign'],
+    collections: ['Counter', 'defaultdict', 'deque', 'namedtuple', 'OrderedDict', 'ChainMap'],
+    tuple: ['index', 'count'],
+    float: ['is_integer', 'fromhex'],
+    Counter: ['most_common'],
+    dict: ['keys', 'values', 'items', 'get', 'update', 'pop', 'setdefault', 'copy'],
+    list: ['append', 'copy', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse', 'sort', 'count'],
+    set: ['add', 'discard', 'intersection', 'union', 'difference', 'update',
+        'symmetric_difference', 'issubset', 'issuperset', 'copy', 'pop', 'remove'],
+    str: ['split', 'join', 'replace', 'strip', 'lstrip', 'rstrip', 'startswith', 'endswith', 'lower', 'upper',
+        'find', 'count', 'format', 'isdigit', 'isalpha', 'title', 'encode', 'splitlines', 'removeprefix', 'removesuffix',
+        'zfill', 'center', 'ljust', 'rjust', 'maketrans', 'translate', 'casefold', 'partition', 'rpartition'],
+    bytes: ['decode', 'fromhex', 'hex'],
+    int: ['to_bytes', 'from_bytes', 'bit_length'],
+    Path: ['read_text', 'glob', 'iterdir', 'exists', 'read_bytes', 'is_file', 'is_dir', 'stat', 'resolve',
+        'with_suffix', 'with_name', 'relative_to', 'match', 'joinpath'],
+    asyncio: ['gather'], copy: ['deepcopy'], httpx: ['get', 'options'],
+    itertools: ['chain', 'islice', 'groupby', 'product', 'permutations', 'combinations', 'accumulate', 'starmap', 'zip_longest',
+        'pairwise', 'takewhile', 'dropwhile', 'filterfalse', 'compress', 'count', 'repeat', 'cycle', 'tee', 'batched'],
+    functools: ['reduce', 'partial', 'lru_cache', 'cache', 'wraps', 'cmp_to_key', 'total_ordering'],
+    textwrap: ['dedent', 'indent', 'wrap', 'shorten', 'fill'],
+    datetime: ['now', 'fromisoformat', 'strftime', 'strptime', 'isoformat'],
+    dt_mod: ['timedelta', 'date', 'time', 'timezone'],
+    operator: ['itemgetter', 'attrgetter', 'add', 'mul', 'sub', 'truediv', 'neg', 'contains',
+        'getitem', 'mod', 'eq', 'ne', 'lt', 'gt', 'or_', 'and_', 'not_', 'pow', 'floordiv', 'xor'],
+    frozenset: ['intersection', 'union', 'difference', 'symmetric_difference', 'issubset', 'issuperset', 'copy'],
+    StringIO: _io_meths, BytesIO: _io_meths,
+    }, 'urlencode', 'quote', 'unquote', 'string', 'safe_type', 'docs'
+)
+
+# %% ../nbs/00_core.ipynb #67b9faa7
+allow({
+    os.path: ['join', 'basename', 'dirname', 'splitext', 'exists', 'isfile', 'isdir', 'abspath',
+        'relpath', 'expanduser', 'normpath'],
+    base64: ['b64encode', 'b64decode', 'urlsafe_b64encode', 'urlsafe_b64decode'],
+    hashlib: ['md5', 'sha256'],
+    random: ['choice', 'randint', 'sample', 'shuffle', 'uniform', 'random'],
+    statistics: ['mean', 'median', 'stdev'],
+    difflib: ['unified_diff', 'ndiff'],
+    csv: ['reader', 'DictReader'],
+    heapq: ['nlargest', 'nsmallest', 'heappush', 'heappop'],
+    bisect: ['bisect_left', 'bisect_right', 'insort'],
+    html: ['escape', 'unescape'],
+    struct: ['pack', 'unpack'],
+    fnmatch: ['fnmatch', 'filter'],
+    time: ['time', 'perf_counter'],
+    urllib.parse: ['urlparse', 'parse_qs', 'parse_qsl', 'urlunparse', 'urljoin', 'quote_plus', 'unquote_plus'],
+    dataclasses: ['dataclass', 'field', 'asdict', 'fields', 'replace', 'is_dataclass'],
+    shlex: ['split', 'quote'],
+    zlib: ['compress', 'decompress', 'crc32'],
+    unicodedata: ['name', 'lookup', 'category', 'normalize'],
+    binascii: ['hexlify', 'unhexlify'],
+    enum: ['Enum', 'IntEnum'],
+    secrets: ['token_hex', 'token_urlsafe'],
+    deque: ['appendleft', 'popleft', 'rotate', 'extendleft'],
+    ast: ['literal_eval', 'parse', 'dump', 'walk', 'unparse'],
+    pickle: ['loads', 'dumps'],
+    contextlib: ['suppress', 'contextmanager'],
+    inspect: ['getsource', 'getsourcefile', 'getsourcelines', 'getmodule', 'getdoc', 'getmembers',
+        'signature', 'isclass', 'isfunction', 'ismethod', 'ismodule', 'getfile'],
+    keyword: ['iskeyword', 'kwlist'],
+    ET: ['fromstring', 'tostring'],
+    ET.Element: ['findall', 'find', 'get', 'iter'],
+    ipaddress: ['ip_address', 'ip_network'],
+    colorsys: ['rgb_to_hsv', 'hsv_to_rgb', 'rgb_to_hls'],
+    cmath: ['phase', 'polar', 'rect', 'sqrt'],
+    decimal: ['Decimal'], fractions: ['Fraction'],
+    uuid: ['uuid4'], pprint: ['pformat'], types: ['SimpleNamespace'],
+    traceback: ['format_exc'], sys: ['getsizeof'],
+})
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
@@ -803,93 +903,6 @@ def msg_del_lines(
     del lines[s-1:e]
     return ''.join(lines)
 
-# %% ../nbs/00_core.ipynb #5cafdc5a
-@llmtool
-def dialoghelper_explain_dialog_editing(
-)->str: # Detailed documention on dialoghelper dialog editing
-    "Call this to get a detailed explanation of how dialog editing is done in dialoghelper. Always use if doing anything non-trivial, or if dialog editing has not previously occured in this session"
-    return """# dialoghelper dialog editing functionality
-
-This guide consolidates understanding of how dialoghelper tools work together. Individual tool schemas are already in context—this adds architectural insight and usage patterns.
-
-## Core Concepts
-
-- **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's runtime data path (with leading `/`). The `.ipynb` extension is never included.
-- **Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). The current executing message's id is in `__msg_id`. Tools use `id` for targeting; `find_msg_id()` retrieves current.
-- **Implicit state**: After `add_msg`/`update_msg`, `__msg_id` is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
-
-## Tool Workflow Patterns
-
-### Reading dialog state
-- `view_dlg` — fastest way to see entire dialog structure with line numbers for editing
-- `find_msgs` — search with regex, filter by type/errors/changes
-- `read_msg` — navigate relative to current message
-- `read_msgid` — direct access when you have the id
-
-**Key insight**: Messages above the current prompt are already in LLM context—their content and outputs are always up-to-date. Do NOT use read tools just to review content you can already see. Use read tools only for: (1) getting line numbers immediately before editing, (2) accessing messages below current prompt (if you're sure the user wants you to "look ahead"), (3) accessing other dialogs.
-
-### Modifying dialogs
-- `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
-  - **NB** When not passing a message id, it defaults to the *current* message. So if you call it multiple times with no message id, the messages will be added in REVERSE! Instead, get the return value of `add_msg` after each call, and use that for the next call
-- `update_msg` — partial updates; only pass fields to change
-- `del_msg` — use sparingly, only when explicitly requested
-`copy_msg` → `paste_msg` — for moving/duplicating messages within running dialogs.
-
-## Non-decorated Functions Worth Knowing
-
-There are additional functions available that can be added to fenced blocks, or the user may add as tools; they are not included in schemas by default.
-
-**Browser integration:**
-- `add_html(content)` — inject HTML with `hx-swap-oob` into live browser DOM
-- `iife(code)` — execute JavaScript immediately in browser
-- `fire_event(evt, data)` / `event_get(evt)` — trigger/await browser events
-
-**Content helpers:**
-- `url2note(url, ...)` — fetch URL as markdown, add as note message
-- `mermaid(code)` / `enable_mermaid()` — render mermaid diagrams
-- `add_styles(s)` — apply solveit's MonsterUI styling to HTML
-
-**Dangerous (not exposed by default):**
-- `_add_msg_unsafe(content, run=True, ...)` — add AND execute message (code or prompt)
-- `run_msg(ids)` — queue messages for execution
-- `rm_dialog(name)` — delete entire dialog
-
-## Important Patterns
-
-### Key Principles
-
-1. **Always re-read before editing.** Past tool call results in chat history are TRUNCATED. Never rely on line numbers from earlier in the conversation—call `read_msgid(id, nums=True)` immediately before any edit operation.
-2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
-3. **Don't guess when tools fail.** If a tool call returns an error, STOP and ask for clarification. Do not retry with guessed parameters.
-4. **Verify after complex edits.** After significant changes, re-read the affected region to confirm the edit worked as expected before proceeding.
-
-### Typical Workflow
-
-```
-1. read_msgid(id, nums=True)           # Get current state with line numbers
-2. Identify lines to change
-3. msg_replace_lines(...) or msg_str_replace(...)  # Make edit
-4. If more edits needed: re-read, then repeat from step 2
-```
-
-### Tool Selection
-
-- **`msg_replace_lines`**: Best for replacing/inserting contiguous blocks. Use `view_range` on read to focus on the area.
-- **`msg_str_replace`**: Best for targeted single small string replacements when you know the exact text.
-- **`msg_strs_replace`**: Best for multiple small independent replacements in one call.
-- **`msg_insert_line`**: Best for adding new content without replacing existing lines.
-- **`msg_del_lines`**: Best for removing content.
-
-**Rough rule of thumb:** Prefer `msg_replace_lines` over `msg_str(s)_replace` unless there's >1 match to change or it's just a word or two. Use the insert/delete functions for inserting/deleting; don't use `msg_str(s)_replace` for that.
-
-### Common Mistakes to Avoid
-
-- Using line numbers from a truncated earlier result
-- Making multiple edits without re-reading between them
-- Guessing line numbers when a view_range was truncated
-- Always call `read_msgid(id, nums=True)` first to get accurate line numbers
-- String-based tools (`msg_str_replace`, `msg_strs_replace`) fail if the search string appears zero or multiple times—use exact unique substrings."""
-
 # %% ../nbs/00_core.ipynb #9adf1cbb
 def ast_py(code:str):
     "Get an SgRoot root node for python `code`"
@@ -1046,3 +1059,112 @@ def update_gist(gist_id:str, content:str):
     fname = first(gist.files.keys())
     res = api.gists.update(gist_id, files={fname: {'content': content}})
     return res['html_url']
+
+# %% ../nbs/00_core.ipynb #fccb02d6
+@llmtool
+def dialoghelper_explain_dialog_editing(
+)->str: # Detailed documention on dialoghelper dialog editing
+    "Call this to get a detailed explanation of how dialog editing is done in dialoghelper. Always use if doing anything non-trivial, or if dialog editing has not previously occured in this session"
+    return """# dialoghelper dialog editing functionality
+
+This guide consolidates understanding of how dialoghelper tools work together. Individual tool schemas are already in context—this adds architectural insight and usage patterns.
+
+## Core Concepts
+
+- **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's runtime data path (with leading `/`). The `.ipynb` extension is never included.
+- **Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). The current executing message's id is in `__msg_id`. Tools use `id` for targeting; `find_msg_id()` retrieves current.
+- **Implicit state**: After `add_msg`/`update_msg`, `__msg_id` is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
+
+## Tool Workflow Patterns
+
+### Reading dialog state
+- `view_dlg` — fastest way to see entire dialog structure with line numbers for editing
+- `find_msgs` — search with regex, filter by type/errors/changes
+- `read_msg` — navigate relative to current message
+- `read_msgid` — direct access when you have the id
+
+**Key insight**: Messages above the current prompt are already in LLM context—their content and outputs are always up-to-date. Do NOT use read tools just to review content you can already see. Use read tools only for: (1) getting line numbers immediately before editing, (2) accessing messages below current prompt (if you're sure the user wants you to "look ahead"), (3) accessing other dialogs.
+
+### Modifying dialogs
+- `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
+  - **NB** When not passing a message id, it defaults to the *current* message. So if you call it multiple times with no message id, the messages will be added in REVERSE! Instead, get the return value of `add_msg` after each call, and use that for the next call
+- `update_msg` — partial updates; only pass fields to change
+- `del_msg` — use sparingly, only when explicitly requested
+`copy_msg` → `paste_msg` — for moving/duplicating messages within running dialogs.
+
+## Non-decorated Functions Worth Knowing
+
+There are additional functions available that can be added to fenced blocks, or the user may add as tools; they are not included in schemas by default.
+
+**Browser integration:**
+- `add_html(content)` — inject HTML with `hx-swap-oob` into live browser DOM
+- `iife(code)` — execute JavaScript immediately in browser
+- `fire_event(evt, data)` / `event_get(evt)` — trigger/await browser events
+
+**Content helpers:**
+- `url2note(url, ...)` — fetch URL as markdown, add as note message
+- `mermaid(code)` / `enable_mermaid()` — render mermaid diagrams
+- `add_styles(s)` — apply solveit's MonsterUI styling to HTML
+
+**Dangerous (not exposed by default):**
+- `_add_msg_unsafe(content, run=True, ...)` — add AND execute message (code or prompt)
+- `run_msg(ids)` — queue messages for execution
+- `rm_dialog(name)` — delete entire dialog
+
+## Important Patterns
+
+### Key Principles
+
+1. **Always re-read before editing.** Past tool call results in chat history are TRUNCATED. Never rely on line numbers from earlier in the conversation—call `read_msgid(id, nums=True)` immediately before any edit operation.
+2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
+3. **Don't guess when tools fail.** If a tool call returns an error, STOP and ask for clarification. Do not retry with guessed parameters.
+4. **Verify after complex edits.** After significant changes, re-read the affected region to confirm the edit worked as expected before proceeding.
+
+### Typical Workflow
+
+```
+1. read_msgid(id, nums=True)           # Get current state with line numbers
+2. Identify lines to change
+3. msg_replace_lines(...) or msg_str_replace(...)  # Make edit
+4. If more edits needed: re-read, then repeat from step 2
+```
+
+### Tool Selection
+
+- **`msg_replace_lines`**: Best for replacing/inserting contiguous blocks. Use `view_range` on read to focus on the area.
+- **`msg_str_replace`**: Best for targeted single small string replacements when you know the exact text.
+- **`msg_strs_replace`**: Best for multiple small independent replacements in one call.
+- **`msg_insert_line`**: Best for adding new content without replacing existing lines.
+- **`msg_del_lines`**: Best for removing content.
+
+**Rough rule of thumb:** Prefer `msg_replace_lines` over `msg_str(s)_replace` unless there's >1 match to change or it's just a word or two. Use the insert/delete functions for inserting/deleting; don't use `msg_str(s)_replace` for that.
+
+### Common Mistakes to Avoid
+
+- Using line numbers from a truncated earlier result
+- Making multiple edits without re-reading between them
+- Guessing line numbers when a view_range was truncated
+- Always call `read_msgid(id, nums=True)` first to get accurate line numbers
+- String-based tools (`msg_str_replace`, `msg_strs_replace`) fail if the search string appears zero or multiple times—use exact unique substrings."""
+
+# %% ../nbs/00_core.ipynb #11ee26d9
+@llmtool
+def solveit_docs():
+    """Full reference documentation for Solveit - use this to answer questions about how to use Solveit.
+    **NB**: The whole docs fit in LLM context, so read the whole thing, don't search/filter it. *Always* re-run rather than relying on truncated history or assumptions."""
+    _ref_gist_id = '9e7b444aba5ecf6d14295ba2cee890c3'
+    pre = f"""⚠️ This content will be truncated in your next turn. Re-call this tool if you need it again.
+If the user wants more info, give them a link to https://gist.github.com/jph00/{_ref_gist_id}."""
+    return pre + gist_file(_ref_gist_id)['content']
+
+# %% ../nbs/00_core.ipynb #70ec67db
+@llmtool
+def dialog_link(
+    path:str, # Path to dialog (e.g. '/aai-ws/dialoghelper/nbs/00_core')
+    msg_id:str=None # Optional message id to scroll to
+):
+    """Return an IPython HTML link to open a dialog in Solveit.
+    After calling this tool, output the resulting HTML anchor tag exactly as returned—do not wrap in a fenced code block or convert to markdown link format."""
+    path = path.removeprefix('/')
+    url = f"/dialog_?{urlencode({'name': path})}" + (f"#{msg_id}" if msg_id else "")
+    return HTML(f'<a href="{url}" target="_blank">{path}</a>')
