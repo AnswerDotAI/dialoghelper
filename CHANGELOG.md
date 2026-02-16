@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.2.3
+
+### New Features
+
+- Split `__pytools__` from `__llmtools__` ([#135](https://github.com/AnswerDotAI/dialoghelper/issues/135))
+- Add `__import__` to sandbox, expand stdlib allowlist ([#135](https://github.com/AnswerDotAI/dialoghelper/issues/135))
+- Add `docs`/`solveit_docs`/`dialog_link` tools ([#135](https://github.com/AnswerDotAI/dialoghelper/issues/135))
+
+
 ## 0.2.2
 
 ### New Features
