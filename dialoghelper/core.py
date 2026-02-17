@@ -321,7 +321,12 @@ async def _run_python(code:str):
             if (stdout:=pc()): d['stdout'] = stdout
         all_errs = errs + [f'{w.category.__name__}: {w.message}' for w in warns]
         if all_errs: d['warnings'] = '\n'.join(all_errs)
-        if res is not None: d['result'] = res
+        if res is not None:
+            for attr in ('_repr_markdown_', '_repr_html_'):
+                if hasattr(res, attr):
+                    d['result'] = getattr(res, attr)()
+                    break
+            else: d['result'] = res
         return d or None
     tree = ast.parse(code)
     with warnings.catch_warnings(record=True) as w:
