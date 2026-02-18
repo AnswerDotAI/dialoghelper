@@ -560,6 +560,7 @@ async def _add_msg_unsafe(
     placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message)
     dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+    async_run:bool=False, # Run prompt asynchronously (starts immediately, doesn't block run queue)?
     **kwargs
 )->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
@@ -569,7 +570,7 @@ async def _add_msg_unsafe(
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, **kwargs)
+    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, async_run=async_run, **kwargs)
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
