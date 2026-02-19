@@ -6,8 +6,8 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Pl
            'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
            'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
            'display_response', 'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msg', 'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid',
-           'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog',
+           'add_msg', 'add_prompt', 'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg',
+           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog',
            'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
            'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
            'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
@@ -585,6 +585,28 @@ async def add_msg(
     otherwise messages will appear in the dialog in REVERSE order.
     {dname}"""
     return await _add_msg_unsafe(content=content, **kwargs)
+
+# %% ../nbs/00_core.ipynb #1f93261a
+@llmtool
+@delegates(_add_msg_unsafe, but=['content','msg_type','run'])
+async def add_prompt(
+    content:str,    # Prompt to run
+    dname:str=None, # Dialog to run prompt in; defaults to current dialog
+    msg_id:str=None, # Message id to place prompt after (if None, places at end)
+    wait:bool=True, # Wait for and return response?
+    poll:float=0.5, # Frequency of polling to check for completion
+    placement:str='', # Location to place message, defaults to 'at_end' if no msg_id
+    **kwargs
+):
+    "Run a prompt and, if `wait`, wait for and return the response text"
+    assert not (wait and not dname), "Can not wait in current dialog"
+    if not placement: placement = 'add_after' if msg_id else 'at_end'
+    msg_id = await _add_msg_unsafe(content, msg_type='prompt', run=True, dname=dname, placement=placement, **kwargs)
+    if not wait: return msg_id
+    while True:
+        res = await read_msgid(msg_id, dname=dname)
+        if not res.get('run', False): return res['output']
+        await asyncio.sleep(poll)
 
 # %% ../nbs/00_core.ipynb #afc62c45
 @llmtool(dname=dname_doc)
