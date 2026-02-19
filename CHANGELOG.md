@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.4
+
+### New Features
+
+- Add max and min builtins to safe Python execution ([#136](https://github.com/AnswerDotAI/dialoghelper/pull/136)), thanks to [@ncoop57](https://github.com/ncoop57)
+- Add `add_prompt`
+
+
 ## 0.2.3
 
 ### New Features
