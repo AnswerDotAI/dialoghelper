@@ -263,9 +263,6 @@ from RestrictedPython import utility_builtins, safe_builtins,limited_builtins,Pr
 from restrictedpython_async import *
 
 
-# %% ../nbs/00_core.ipynb #bff398e9
-__llmtools__.add('read_url')
-
 # %% ../nbs/00_core.ipynb #947e6c21
 __pytools__ = set()
 
