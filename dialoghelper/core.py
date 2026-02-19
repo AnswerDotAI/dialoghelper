@@ -588,7 +588,7 @@ async def add_msg(
 
 # %% ../nbs/00_core.ipynb #1f93261a
 @llmtool
-@delegates(_add_msg_unsafe, but=['content','msg_type','run'])
+@delegates(_add_msg_unsafe, but=['content','msg_type','run_mode'])
 async def add_prompt(
     content:str,    # Prompt to run
     dname:str=None, # Dialog to run prompt in; defaults to current dialog
@@ -601,7 +601,7 @@ async def add_prompt(
     "Run a prompt and, if `wait`, wait for and return the response text"
     assert not (wait and not dname), "Can not wait in current dialog"
     if not placement: placement = 'add_after' if msg_id else 'at_end'
-    msg_id = await _add_msg_unsafe(content, msg_type='prompt', run=True, dname=dname, placement=placement, **kwargs)
+    msg_id = await _add_msg_unsafe(content, msg_type='prompt', run_mode='run', dname=dname, placement=placement, **kwargs)
     if not wait: return msg_id
     while True:
         res = await read_msgid(msg_id, dname=dname)
