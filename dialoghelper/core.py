@@ -559,7 +559,8 @@ async def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message)
-    dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+    run_mode:str|None=None, # Run mode: None (don't run) or 'run' (run the message)
     **kwargs
 )->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
@@ -569,11 +570,11 @@ async def _add_msg_unsafe(
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, **kwargs)
+    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, run_mode=run_mode, **kwargs)
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
-@delegates(_add_msg_unsafe, but=['run'])
+@delegates(_add_msg_unsafe, but=['run_mode'])
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     **kwargs
@@ -582,7 +583,7 @@ async def add_msg(
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
     otherwise messages will appear in the dialog in REVERSE order.
     {dname}"""
-    return await _add_msg_unsafe(content=content, run=False, **kwargs)
+    return await _add_msg_unsafe(content=content, **kwargs)
 
 # %% ../nbs/00_core.ipynb #afc62c45
 @llmtool(dname=dname_doc)
@@ -1107,7 +1108,7 @@ There are additional functions available that can be added to fenced blocks, or 
 - `add_styles(s)` — apply solveit's MonsterUI styling to HTML
 
 **Dangerous (not exposed by default):**
-- `_add_msg_unsafe(content, run=True, ...)` — add AND execute message (code or prompt)
+- `_add_msg_unsafe(content, run_mode='run', ...)` — add AND execute message (code or prompt)
 - `run_msg(ids)` — queue messages for execution
 - `rm_dialog(name)` — delete entire dialog
 
