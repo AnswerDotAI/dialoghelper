@@ -302,7 +302,8 @@ async def _run_python(code:str):
               _getitem_=lambda o,k: o[k], _getiter_=iter,
               _unpack_sequence_=unpack, _iter_unpack_sequence_=unpack,
               _print_=PrintCollector, _print=PrintCollector(_safe_getattr),
-              enumerate=enumerate, sorted=sorted, reversed=reversed, **tools)
+              enumerate=enumerate, sorted=sorted, reversed=reversed, max=max,
+              min=min, **tools)
     loc = {}
     errs, warns = [], []
     async def run(src, is_exec=True):
