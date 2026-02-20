@@ -694,6 +694,7 @@ async def copy_msg(
     "Add `ids` to clipboard."
     id,*_ = ids.split(',')
     res = await call_endpa('msg_clipboard_', dname, ids=ids, id=id, cmd='cut' if cut else 'copy')
+    if not res: return {'error': f'Dialog: {dname} is not running!'}
     return {'success':'complete'}
 
 
@@ -706,6 +707,7 @@ async def paste_msg(
 ):
     "Paste clipboard msg(s) after/before the current selected msg (id)."
     res = await call_endpa('msg_paste_', dname, id=id, after=after)
+    if not res: return {'error': f'Dialog: {dname} is not running!'}
     return {'success':'complete'}
 
 
@@ -738,8 +740,8 @@ async def toggle_header(
 ):
     "Toggle collapsed header state for `id`"
     res = await call_endpa('toggle_header_collapse_', dname, id=id)
+    if not res: return {'error': f'Dialog: {dname} is not running!'}
     return {'success':'complete'}
-
 
 # %% ../nbs/00_core.ipynb #90b55ef4
 @llmtool
