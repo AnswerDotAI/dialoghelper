@@ -6,8 +6,8 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Pl
            'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
            'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
            'display_response', 'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msg', 'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid',
-           'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog',
+           'add_msg', 'add_prompt', 'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg',
+           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog',
            'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
            'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
            'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
@@ -127,7 +127,7 @@ def _prep_endp(path, dname, json, id, data):
 
 def _handle_resp(res, json, raiseex):
     if raiseex: res.raise_for_status()
-    try: return dict2obj(res.json()) if json else res.text
+    try: return adict(res.json()) if json else res.text
     except Exception: return res.text
 
 # %% ../nbs/00_core.ipynb #5fc896fe
@@ -263,9 +263,6 @@ from RestrictedPython import utility_builtins, safe_builtins,limited_builtins,Pr
 from restrictedpython_async import *
 
 
-# %% ../nbs/00_core.ipynb #bff398e9
-__llmtools__.add('read_url')
-
 # %% ../nbs/00_core.ipynb #947e6c21
 __pytools__ = set()
 
@@ -302,7 +299,8 @@ async def _run_python(code:str):
               _getitem_=lambda o,k: o[k], _getiter_=iter,
               _unpack_sequence_=unpack, _iter_unpack_sequence_=unpack,
               _print_=PrintCollector, _print=PrintCollector(_safe_getattr),
-              enumerate=enumerate, sorted=sorted, reversed=reversed, **tools)
+              enumerate=enumerate, sorted=sorted, reversed=reversed, max=max,
+              min=min, **tools)
     loc = {}
     errs, warns = [], []
     async def run(src, is_exec=True):
@@ -564,7 +562,8 @@ async def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
     id:str=None, # id of message that placement is relative to (if None, uses current message)
-    dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
+    run_mode:str|None=None, # Run mode: None (don't run) or 'run' (run the message)
     **kwargs
 )->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
@@ -574,11 +573,11 @@ async def _add_msg_unsafe(
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     if placement not in ('at_start','at_end') and not id: id = find_msg_id()
-    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, **kwargs)
+    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, run_mode=run_mode, **kwargs)
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
-@delegates(_add_msg_unsafe, but=['run'])
+@delegates(_add_msg_unsafe, but=['run_mode'])
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     **kwargs
@@ -587,7 +586,29 @@ async def add_msg(
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
     otherwise messages will appear in the dialog in REVERSE order.
     {dname}"""
-    return await _add_msg_unsafe(content=content, run=False, **kwargs)
+    return await _add_msg_unsafe(content=content, **kwargs)
+
+# %% ../nbs/00_core.ipynb #1f93261a
+@llmtool
+@delegates(_add_msg_unsafe, but=['content','msg_type','run_mode'])
+async def add_prompt(
+    content:str,    # Prompt to run
+    dname:str=None, # Dialog to run prompt in; defaults to current dialog
+    msg_id:str=None, # Message id to place prompt after (if None, places at end)
+    wait:bool=True, # Wait for and return response?
+    poll:float=0.5, # Frequency of polling to check for completion
+    placement:str='', # Location to place message, defaults to 'at_end' if no msg_id
+    **kwargs
+):
+    "Run a prompt and, if `wait`, wait for and return the response text"
+    assert not (wait and not dname), "Can not wait in current dialog"
+    if not placement: placement = 'add_after' if msg_id else 'at_end'
+    msg_id = await _add_msg_unsafe(content, msg_type='prompt', run_mode='run', dname=dname, placement=placement, **kwargs)
+    if not wait: return msg_id
+    while True:
+        res = await read_msgid(msg_id, dname=dname)
+        if not res.get('run', False): return res['output']
+        await asyncio.sleep(poll)
 
 # %% ../nbs/00_core.ipynb #afc62c45
 @llmtool(dname=dname_doc)
@@ -1112,7 +1133,7 @@ There are additional functions available that can be added to fenced blocks, or 
 - `add_styles(s)` — apply solveit's MonsterUI styling to HTML
 
 **Dangerous (not exposed by default):**
-- `_add_msg_unsafe(content, run=True, ...)` — add AND execute message (code or prompt)
+- `_add_msg_unsafe(content, run_mode='run', ...)` — add AND execute message (code or prompt)
 - `run_msg(ids)` — queue messages for execution
 - `rm_dialog(name)` — delete entire dialog
 
