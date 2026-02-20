@@ -127,7 +127,7 @@ def _prep_endp(path, dname, json, id, data):
 
 def _handle_resp(res, json, raiseex):
     if raiseex: res.raise_for_status()
-    try: return dict2obj(res.json()) if json else res.text
+    try: return adict(res.json()) if json else res.text
     except Exception: return res.text
 
 # %% ../nbs/00_core.ipynb #5fc896fe
