@@ -2,10 +2,12 @@
 
 <!-- do not remove -->
 
-## 0.2.6
+## 0.2.7
 
 ### New Features
 
+- Replace PrintCollector with direct stdout/stderr capture via redirect ([#144](https://github.com/AnswerDotAI/dialoghelper/issues/144))
+- Remove `find_msg_id` and implicit `__msg_id` usage; let server track current message ([#143](https://github.com/AnswerDotAI/dialoghelper/issues/143))
 - Add `view_msg`/`stop_dialog`, rename `create_dialog`→`create_or_run_dialog` ([#142](https://github.com/AnswerDotAI/dialoghelper/issues/142))
 
 
