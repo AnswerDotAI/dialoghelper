@@ -254,7 +254,7 @@ def display_response(display:str, result:str=None):
 
 # %% ../nbs/00_core.ipynb #f178e529
 from fastcore.imports import __llmtools__
-from RestrictedPython import utility_builtins, safe_builtins,limited_builtins,PrintCollector
+from RestrictedPython import utility_builtins, safe_builtins,limited_builtins
 from restrictedpython_async import *
 
 
@@ -284,20 +284,24 @@ def _safe_getattr(obj, name):
         if not any(k in (__llmtools__|__pytools__) for k in keys): raise AttributeError(f"Cannot access callable: {name}")
     return val
 
-# %% ../nbs/00_core.ipynb #a505d32a
+# %% ../nbs/00_core.ipynb #6becac3b
+class _DirectPrint:
+    def __init__(self, *a, **kw): pass
+    def _call_print(self, *a, **kw): print(*a, **kw)
+    def __call__(self, *a, **kw): print(*a, **kw)
+
+# %% ../nbs/00_core.ipynb #36f08ae3
 async def _run_python(code:str):
     g = _find_frame_dict('__dialog_name')
     tools = {k: g.get(k) for k in (__llmtools__|__pytools__) if k in g}
     tools |= {k:v for k,v in g.items() if (not callable(v) or k.endswith('_')) and not k.startswith('_')}
     def unpack(a,*args): return list(a)
     rg = dict(__builtins__=all_builtins, _getattr_=_safe_getattr,
-              _getitem_=lambda o,k: o[k], _getiter_=iter,
+              _getitem_=lambda o,k: o[k], _getiter_=iter, _print_=_DirectPrint, _print=_DirectPrint(),
               _unpack_sequence_=unpack, _iter_unpack_sequence_=unpack,
-              _print_=PrintCollector, _print=PrintCollector(_safe_getattr),
-              enumerate=enumerate, sorted=sorted, reversed=reversed, max=max,
-              min=min, **tools)
-    loc = {}
-    errs, warns = [], []
+              enumerate=enumerate, sorted=sorted, reversed=reversed, max=max, min=min, **tools)
+    loc,errs = {},[]
+    sout, serr = StringIO(), StringIO()
     async def run(src, is_exec=True):
         try:
             res = eval(compile_restricted(src, '<tool>', 'exec' if is_exec else 'eval'), rg, loc)
@@ -306,29 +310,26 @@ async def _run_python(code:str):
         except SyntaxError as e: errs.append(f'SyntaxError: {e}')
         except NameError as e: errs.append(f'`{e.name}` is not available in this sandbox; ask the user to add it to the available tools')
     def _export(): g.update({k:v for k,v in loc.items() if k.endswith('_') and not k.startswith('_')})
-    def _result(res=None, ws=None):
-        if ws: warns.extend(ws)
+    def _result(res=None):
         _export()
         d = {}
-        if pc := loc.get('_print', rg.get('_print')):
-            if (stdout:=pc()): d['stdout'] = stdout
-        all_errs = errs + [f'{w.category.__name__}: {w.message}' for w in warns]
-        if all_errs: d['warnings'] = '\n'.join(all_errs)
+        if (out := sout.getvalue()): d['stdout'] = out
+        if (err := serr.getvalue()): d['stderr'] = err
+        if errs: d['errors'] = '\n'.join(errs)
         if res is not None: d['result'] = res
         return d or None
     tree = ast.parse(code)
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        warnings.filterwarnings("ignore", category=SyntaxWarning)
+    with contextlib.redirect_stdout(sout), contextlib.redirect_stderr(serr), warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=SyntaxWarning)
         if tree.body and isinstance(tree.body[-1], ast.Expr):
             last = tree.body.pop()
             if tree.body:
                 await run(ast.unparse(ast.Module(tree.body, [])))
-                if errs: return _result(ws=w)
+                if errs: return _result()
             res = await run(ast.unparse(ast.Expression(last.value)), False)
-            return _result(res, ws=w)
+            return _result(res)
         await run(code)
-        return _result(ws=w)
+        return _result()
 
 # %% ../nbs/00_core.ipynb #e8d3024e
 class RunPython:
@@ -350,10 +351,10 @@ class RunPython:
 
     async def __call__(self,
         code:str # Python code to execute, can be multiple lines, include functions, etc
-    ): # A dict containing up to 3 keys for non-empty vals: `{'stdout': ..., 'warnings': ..., 'result': ...}`
+    ): # A dict containing up to 4 keys for non-empty vals: `(stdout=, stderr=, errors=, result=)`
         return await _run_python(code)
 
-# %% ../nbs/00_core.ipynb #accbe9ad
+# %% ../nbs/00_core.ipynb #d0bd7086
 python = RunPython()
 allow('python')
 
