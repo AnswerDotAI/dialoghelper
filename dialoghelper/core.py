@@ -6,12 +6,13 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Pl
            'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
            'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
            'display_response', 'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msg', 'add_prompt', 'read_msgid', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg',
-           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_dialog', 'rm_dialog',
-           'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
-           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
-           'update_gist', 'dialoghelper_explain_dialog_editing', 'solveit_docs']
+           'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg',
+           'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note',
+           'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line',
+           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep',
+           'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
+           'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing',
+           'solveit_docs']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import json,importlib,linecache,re,inspect,uuid,ast,warnings,collections,time,asyncio,urllib.parse,dataclasses,shlex
@@ -509,7 +510,7 @@ async def find_msgs(
 )->list[dict]: # Messages in requested dialog that contain the given information
     """Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
     {dname}
-    Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `read_msgid`.
+    Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code or tools, use its `id` field."""
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
@@ -529,7 +530,7 @@ async def view_dlg(
     trunc_out:bool=True, # Middle-out truncate code output to 100 characters (only applies if `include_output`)?
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
 ):
-    "Concise XML view of all messages (optionally filtered by type), not including metadata. Often it is more efficient to call this to see the whole dialog at once (including line numbers if needed), instead of running `find_msgs` or `read_msg` multiple times."
+    "Concise XML view of all messages (optionally filtered by type), not including metadata. Often it is more efficient to call this to see the whole dialog at once (including line numbers if needed), instead of running `find_msgs` or `view_msg` multiple times."
     return await find_msgs(msg_type=msg_type, dname=dname, as_xml=True, nums=nums,
         include_meta=False, include_output=include_output, trunc_out=trunc_out, trunc_in=trunc_in)
 
@@ -621,6 +622,22 @@ async def read_msgid(
     if add_to_dlg: await add_msg(res['content'], msg_type='raw')
     return res
 
+# %% ../nbs/00_core.ipynb #801783c2
+@llmtool(dname=dname_doc)
+async def view_msg(
+    id:str,  # Message id to view
+    dname:str='', # Dialog to get message from; defaults to current dialog
+    nums:bool=True, # Whether to show line numbers
+    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF. Rarely needed--read whole message in nearly all cases instead
+    add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
+):
+    """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
+    Use `add_to_dlg` if the LLM or human may need to refer to the message content again later.
+    {dname}"""
+    res = (await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname))['content']
+    if add_to_dlg: await add_msg(res, msg_type='raw')
+    return res
+
 # %% ../nbs/00_core.ipynb #f1ee1903
 @llmtool
 async def del_msg(
@@ -681,8 +698,7 @@ async def run_msg(
     dname:str='' # Running dialog to get info for; defaults to current dialog. (Note dialog *must* be running for this function)
 ):
     "Adds a message to the run queue. Use read_msg to see the output once it runs."
-    return await call_endpa('add_runq_', dname, ids=ids, api=True)
-
+    return await call_endpa('add_runq_', dname, ids=ids, json=True)
 
 # %% ../nbs/00_core.ipynb #73025e57
 @llmtool
@@ -768,22 +784,29 @@ async def url2note(
 
 # %% ../nbs/00_core.ipynb #f26259cf
 @llmtool
-async def create_dialog(
-    name:str, # Name/path of the new dialog (relative to current dialog's folder, or absolute if starts with '/')
+async def create_or_run_dialog(
+    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
-    "Create a new dialog"
+    "Create a new dialog, or set an existing one running"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('create_dialog_', name=name, api=True, json=True)
+    return await call_endpa('create_dialog_', name=name, json=True)
 
+# %% ../nbs/00_core.ipynb #80433dd1
+@llmtool
+async def stop_dialog(
+    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
+):
+    "Stop a running dialog kernel"
+    name = find_dname(name).lstrip('/')
+    return await call_endpa('stop_kernel_', name=name, json=True)
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
     name:str, # Name/path of the dialog to delete (relative to current dialog's folder, or absolute if starts with '/')
 ):
-    "Delete a dialog (or folder) and associated records"
+    "Delete a dialog (or folder) and associated records, stopping the kernel if running"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('rm_dialog_', name=name, sess='{}', api=True, json=True)
-
+    return await call_endpa('rm_dialog_', name=name, sess='{}', json=True)
 
 # %% ../nbs/00_core.ipynb #5617305b
 @llmtool
@@ -837,7 +860,7 @@ log_changed: Add a note showing the deleted content?
 
 
 # %% ../nbs/00_core.ipynb #ceb1ad3b
-besure_doc = "Be sure you've called `read_msg(…, nums=True)` to ensure you know the line nums."
+besure_doc = "Be sure you've called `view_msg(…)` to ensure you know the line nums."
 
 @llmtool(dname=dname_doc, besure=besure_doc)
 @_msg_edit('Inserted text at line {id} {field}')
@@ -1085,7 +1108,8 @@ def update_gist(gist_id:str, content:str):
 @llmtool
 def dialoghelper_explain_dialog_editing(
 )->str: # Detailed documention on dialoghelper dialog editing
-    "Call this to get a detailed explanation of how dialog editing is done in dialoghelper. Always use if doing anything non-trivial, or if dialog editing has not previously occured in this session"
+    """Call this to get a detailed explanation of how dialog editing is done in dialoghelper.
+    **ALWAYS** call this first, if dialog editing has not previously occured in this session"""
     return """# dialoghelper dialog editing functionality
 
 This guide consolidates understanding of how dialoghelper tools work together. Individual tool schemas are already in context—this adds architectural insight and usage patterns.
@@ -1102,7 +1126,7 @@ This guide consolidates understanding of how dialoghelper tools work together. I
 - `view_dlg` — fastest way to see entire dialog structure with line numbers for editing
 - `find_msgs` — search with regex, filter by type/errors/changes
 - `read_msg` — navigate relative to current message
-- `read_msgid` — direct access when you have the id
+- `view_msg` (content+line numbers only) or `read_msgid` (including metadata and output)  — direct access when you have the id
 
 **Key insight**: Messages above the current prompt are already in LLM context—their content and outputs are always up-to-date. Do NOT use read tools just to review content you can already see. Use read tools only for: (1) getting line numbers immediately before editing, (2) accessing messages below current prompt (if you're sure the user wants you to "look ahead"), (3) accessing other dialogs.
 
@@ -1136,7 +1160,7 @@ There are additional functions available that can be added to fenced blocks, or 
 
 ### Key Principles
 
-1. **Always re-read before editing.** Past tool call results in chat history are TRUNCATED. Never rely on line numbers from earlier in the conversation—call `read_msgid(id, nums=True)` immediately before any edit operation.
+1. **Always re-read before editing.** Past tool call results in chat history are TRUNCATED. Never rely on line numbers from earlier in the conversation—call `view_msg(id)` immediately before any edit operation.
 2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
 3. **Don't guess when tools fail.** If a tool call returns an error, STOP and ask for clarification. Do not retry with guessed parameters.
 4. **Verify after complex edits.** After significant changes, re-read the affected region to confirm the edit worked as expected before proceeding.
@@ -1144,7 +1168,7 @@ There are additional functions available that can be added to fenced blocks, or 
 ### Typical Workflow
 
 ```
-1. read_msgid(id, nums=True)           # Get current state with line numbers
+1. view_msg(id)           # Get current state with line numbers
 2. Identify lines to change
 3. msg_replace_lines(...) or msg_str_replace(...)  # Make edit
 4. If more edits needed: re-read, then repeat from step 2
@@ -1165,7 +1189,7 @@ There are additional functions available that can be added to fenced blocks, or 
 - Using line numbers from a truncated earlier result
 - Making multiple edits without re-reading between them
 - Guessing line numbers when a view_range was truncated
-- Always call `read_msgid(id, nums=True)` first to get accurate line numbers
+- Always call `view_msg(id)` first to get accurate line numbers
 - String-based tools (`msg_str_replace`, `msg_strs_replace`) fail if the search string appears zero or multiple times—use exact unique substrings."""
 
 # %% ../nbs/00_core.ipynb #11ee26d9
