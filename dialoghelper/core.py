@@ -2,17 +2,16 @@
 
 # %% auto #0
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Placements', 'mermaid_url', 'besure_doc',
-           'add_styles', 'find_var', 'set_var', 'find_dname', 'find_msg_id', 'xposta', 'xgeta', 'call_endp',
-           'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
-           'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
-           'display_response', 'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg',
-           'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note',
-           'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line',
-           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep',
-           'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
-           'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing',
-           'solveit_docs']
+           'add_styles', 'find_var', 'set_var', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa',
+           'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a',
+           'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response',
+           'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'add_prompt',
+           'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid',
+           'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_or_run_dialog', 'stop_dialog',
+           'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
+           'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist', 'dialoghelper_explain_dialog_editing', 'solveit_docs']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import json,importlib,linecache,re,inspect,uuid,ast,warnings,collections,time,asyncio,urllib.parse,dataclasses,shlex
@@ -102,10 +101,6 @@ def find_dname(dname=None):
     assert '../' not in res, "Path traversal not permitted"
     return '/'+res
 
-def find_msg_id():
-    "Get the message id by searching the call stack for __msg_id."
-    return find_var('__msg_id')
-
 def _diff_dialog(pred, dname, err="`id` parameter must be provided when target dialog is different", id=None):
     "Raise ValueError if targeting a different dialog, `pred` is True, and no `id` provided"
     if not pred or id: return
@@ -158,9 +153,8 @@ async def msg_idx(
 ):
     "Get absolute index of message in dialog."
     _diff_dialog(True, dname, id=id)
-    if not id: id = find_msg_id()
+    res = await call_endpa('msg_idx_', dname, json=True, id=id)
     return (await call_endpa('msg_idx_', dname, json=True, id=id))['idx']
-
 
 # %% ../nbs/00_core.ipynb #5335c78c
 async def add_html_a(
@@ -292,7 +286,7 @@ def _safe_getattr(obj, name):
 
 # %% ../nbs/00_core.ipynb #a505d32a
 async def _run_python(code:str):
-    g = _find_frame_dict('__msg_id')
+    g = _find_frame_dict('__dialog_name')
     tools = {k: g.get(k) for k in (__llmtools__|__pytools__) if k in g}
     tools |= {k:v for k,v in g.items() if (not callable(v) or k.endswith('_')) and not k.startswith('_')}
     def unpack(a,*args): return list(a)
@@ -479,12 +473,10 @@ async def read_msg(
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
     {dname}"""
     _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
-    if relative and not id: id = find_msg_id()
     data = dict(n=n, relative=relative, id=id)
     if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
     if nums: data['nums'] = nums
     return await call_endpa('read_msg_', dname, json=True, **data)
-
 
 # %% ../nbs/00_core.ipynb #6a4aa03b
 @llmtool(dname=dname_doc)
@@ -568,7 +560,6 @@ dname:str='', # Dialog to get info for; defaults to current dialog (`run` only h
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
-    if placement not in ('at_start','at_end') and not id: id = find_msg_id()
     return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, run_mode=run_mode, **kwargs)
 
 # %% ../nbs/00_core.ipynb #3ad14786
@@ -584,7 +575,7 @@ async def add_msg(
     {dname}"""
     return await _add_msg_unsafe(content=content, **kwargs)
 
-# %% ../nbs/00_core.ipynb #1f93261a
+# %% ../nbs/00_core.ipynb #e40e896c
 @llmtool
 @delegates(_add_msg_unsafe, but=['content','msg_type','run_mode'])
 async def add_prompt(
@@ -765,7 +756,6 @@ async def toggle_bookmark(
     dname:str='' # Dialog to set bookmark in; defaults to current dialog
 ):
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
-    if not id: id = find_msg_id()
     return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
 
 # %% ../nbs/00_core.ipynb #1827e124
@@ -1117,8 +1107,8 @@ This guide consolidates understanding of how dialoghelper tools work together. I
 ## Core Concepts
 
 - **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's runtime data path (with leading `/`). The `.ipynb` extension is never included.
-- **Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). The current executing message's id is in `__msg_id`. Tools use `id` for targeting; `find_msg_id()` retrieves current.
-- **Implicit state**: After `add_msg`/`update_msg`, `__msg_id` is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
+- **Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). Solveit sets the "current message" to the most recently run message.
+- **Implicit state**: After `add_msg`/`update_msg`, the "current message" is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
 
 ## Tool Workflow Patterns
 
