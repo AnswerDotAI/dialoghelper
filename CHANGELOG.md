@@ -2,6 +2,12 @@
 
 <!-- do not remove -->
 
+## 0.2.6
+
+### New Features
+
+- Add `view_msg`/`stop_dialog`, rename `create_dialog`→`create_or_run_dialog` ([#142](https://github.com/AnswerDotAI/dialoghelper/issues/142))
+
 
 ## 0.2.4
 
