@@ -7,11 +7,11 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'all_builtins', 'python', 'Pl
            'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response',
            'allow', 'RunPython', 'safe_type', 'docs', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'add_prompt',
            'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid',
-           'mermaid', 'toggle_header', 'toggle_bookmark', 'url2note', 'create_or_run_dialog', 'stop_dialog',
-           'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
-           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
-           'update_gist', 'dialoghelper_explain_dialog_editing', 'solveit_docs']
+           'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog',
+           'stop_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line', 'msg_str_replace',
+           'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
+           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
+           'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing', 'solveit_docs']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import json,importlib,linecache,re,inspect,uuid,ast,warnings,collections,time,asyncio,urllib.parse,dataclasses,shlex
@@ -134,6 +134,12 @@ def call_endp(path, dname='', json=False, raiseex=False, id=None, **data):
 async def call_endpa(path, dname='', json=False, raiseex=False, id=None, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data)
     return _handle_resp(await xposta(url, data=data, headers=headers), json, raiseex)
+
+# %% ../nbs/00_core.ipynb #1a5b4b75
+def _check_res(res, dname):
+    "Check if a route call succeeded; return success or error dict"
+    if not res: return {'error': f'Dialog {dname} may not be running, or message not found'}
+    return {'success': 'complete'}
 
 # %% ../nbs/00_core.ipynb #a9cb5512
 @llmtool
@@ -702,8 +708,7 @@ async def copy_msg(
     "Add `ids` to clipboard."
     id,*_ = ids.split(',')
     res = await call_endpa('msg_clipboard_', dname, ids=ids, id=id, cmd='cut' if cut else 'copy')
-    return {'success':'complete'}
-
+    return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #80def27e
 @llmtool
@@ -714,8 +719,7 @@ async def paste_msg(
 ):
     "Paste clipboard msg(s) after/before the current selected msg (id)."
     res = await call_endpa('msg_paste_', dname, id=id, after=after)
-    return {'success':'complete'}
-
+    return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #13e9163a
 mermaid_url = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
@@ -746,8 +750,7 @@ async def toggle_header(
 ):
     "Toggle collapsed header state for `id`"
     res = await call_endpa('toggle_header_collapse_', dname, id=id)
-    return {'success':'complete'}
-
+    return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #90b55ef4
 @llmtool
@@ -758,6 +761,18 @@ async def toggle_bookmark(
 ):
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
     return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
+
+# %% ../nbs/00_core.ipynb #334395f8
+@llmtool
+async def toggle_comment(
+    id:str, # id of code message (or comma-separated ids) to toggle comments on
+    dname:str='' # Dialog to toggle comments in; defaults to current dialog. (Note dialog *must* be running for this function)
+):
+    "Toggle line comments on code message(s). If any lines are uncommented, comments all; otherwise uncomments all."
+    ids = id
+    id,*_ = ids.split(',')
+    res = await call_endpa('toggle_comment_', dname, ids=ids, id=id)
+    return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #1827e124
 async def url2note(
