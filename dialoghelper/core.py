@@ -14,7 +14,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'solveit_docs']
 
 # %% ../nbs/00_core.ipynb #468aa264
-import re,inspect,ast,collections,time,asyncio
+import ast,asyncio,collections,inspect,json,re,time
 
 from typing import Dict
 from tempfile import TemporaryDirectory
