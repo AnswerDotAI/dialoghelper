@@ -334,7 +334,6 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 
 # %% ../nbs/00_core.ipynb #5093cfe4
 def _add_msg(
-    run:bool=False, # For prompts, send it to the AI; for code, execute it (*DANGEROUS -- be careful of what you run!)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
