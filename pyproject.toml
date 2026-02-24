@@ -25,7 +25,7 @@ dependencies = [
   'toolslm>=0.3.30',
   'restrictedpython',
   "restrictedpython-async",
-  "safepyrun",
+  "safepyrun>=0.0.5",
 ]
 
 [project.urls]
