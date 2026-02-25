@@ -4,7 +4,7 @@
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'mermaid_url', 'besure_doc', 'add_styles', 'find_dname',
            'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html',
            'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'display_response', 'docs', 'read_msg', 'find_msgs', 'view_dlg',
+           'event_get_a', 'event_get', 'trigger_now', 'display_response', 'doc', 'read_msg', 'find_msgs', 'view_dlg',
            'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg',
            'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note',
            'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line',
@@ -242,13 +242,13 @@ pyrun = RunPython(sentinel='__dialog_name')
 __llmtools__.add('pyrun')
 
 # %% ../nbs/00_core.ipynb #0afdb9f2
-def docs(sym)->str:
+def doc(sym)->str:
     """Get documentation (signature, docstring, + docments if they exist) for `sym`.
     **NB**: This is not an llm tool, so must be run with python(). `sym` must be available in the namespace."""
     return MarkdownRenderer(sym)._repr_markdown_()
 
 # %% ../nbs/00_core.ipynb #f978d4aa
-allow('docs')
+allow('doc')
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
