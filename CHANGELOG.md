@@ -2,6 +2,22 @@
 
 <!-- do not remove -->
 
+## 0.2.8
+
+### Breaking Changes
+
+- Change `docs()` to `doc()` ([#150](https://github.com/AnswerDotAI/dialoghelper/issues/150))
+
+### New Features
+
+- `toggle_comment` tool ([#145](https://github.com/AnswerDotAI/dialoghelper/issues/145))
+
+### Bugs Squashed
+
+- Remove unused run:bool param from `_add_msg` - so ai doesn't get confused. ([#148](https://github.com/AnswerDotAI/dialoghelper/pull/148)), thanks to [@PiotrCzapla](https://github.com/PiotrCzapla)
+- `copy_msg`, `paste_msg`, `toggle_header` silently succeed when target dialog is not running ([#140](https://github.com/AnswerDotAI/dialoghelper/issues/140))
+
+
 ## 0.2.7
 
 ### New Features
