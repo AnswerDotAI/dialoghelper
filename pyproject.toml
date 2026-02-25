@@ -14,7 +14,7 @@ keywords = ['nbdev', 'jupyter', 'notebook', 'python']
 classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 dependencies = [
-  'fastcore>=1.12.17',
+  'fastcore>=1.12.18',
   'ghapi',
   'ipykernel-helper>=0.0.28',
   'ast-grep-cli',

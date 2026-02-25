@@ -245,7 +245,7 @@ __llmtools__.add('pyrun')
 def doc(sym)->str:
     """Get documentation (signature, docstring, + docments if they exist) for `sym`.
     **NB**: This is not an llm tool, so must be run with python(). `sym` must be available in the namespace."""
-    return MarkdownRenderer(sym)._repr_markdown_()
+    return str(MarkdownRenderer(sym))
 
 # %% ../nbs/00_core.ipynb #f978d4aa
 allow('doc')
