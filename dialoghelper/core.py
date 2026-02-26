@@ -7,11 +7,11 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'event_get_a', 'event_get', 'trigger_now', 'display_response', 'doc', 'read_msg', 'find_msgs', 'view_dlg',
            'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg',
            'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note',
-           'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'dialog_link', 'msg_insert_line',
+           'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'msg_insert_line',
            'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep',
            'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
            'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing',
-           'solveit_docs']
+           'solveit_docs', 'dialog_link']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import re,inspect,ast,collections,time,asyncio,json,linecache,importlib
@@ -621,18 +621,6 @@ async def run_code_interactive(
     return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
 
 
-# %% ../nbs/00_core.ipynb #1a614e33
-def dialog_link(
-    path:str # Path to dialog (e.g. '/aai-ws/dialoghelper/nbs/00_core')
-):
-    """Return an IPython HTML link to open a dialog in Solveit.
-    After calling this tool, output the resulting HTML anchor tag exactly as returned—do not wrap in a fenced code block or convert to markdown link format."""
-    from urllib.parse import urlencode
-    from IPython.display import HTML
-    path = path.removeprefix('/')
-    url = f"/dialog_?{urlencode({'name': path})}"
-    return HTML(f'<a href="{url}" target="_blank">{path}</a>')
-
 # %% ../nbs/00_core.ipynb #5250fa23
 def _msg_edit(success_tpl):
     def decorator(f):
@@ -1005,11 +993,14 @@ If the user wants more info, give them a link to https://gist.github.com/jph00/{
 # %% ../nbs/00_core.ipynb #70ec67db
 @llmtool
 def dialog_link(
-    path:str, # Path to dialog (e.g. '/aai-ws/dialoghelper/nbs/00_core')
+    path:str='', # Path to dialog (e.g. '/aai-ws/dialoghelper/nbs/00_core'), defaults to current dialog
     msg_id:str=None # Optional message id to scroll to
 ):
     """Return an IPython HTML link to open a dialog in Solveit.
     After calling this tool, output the resulting HTML anchor tag exactly as returned—do not wrap in a fenced code block or convert to markdown link format."""
+    if not (path or msg_id): return 'err: no path or id'
     path = path.removeprefix('/')
-    url = f"/dialog_?{urlencode({'name': path})}" + (f"#{msg_id}" if msg_id else "")
-    return HTML(f'<a href="{url}" target="_blank">{path}</a>')
+    url = ''
+    if path: url += f"/dialog_?{urlencode({'name': path})}"
+    if msg_id: url += f"#{msg_id}"
+    return HTML(f'<a href="{url}" target="_blank">{path}</a>') if path else Markdown(f'[{url}]({url})')
