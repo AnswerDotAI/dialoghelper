@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.14
+
+### New Features
+
+- Add file editing variants of text edit tools plus regex/line-range filtering ([#156](https://github.com/AnswerDotAI/dialoghelper/issues/156))
+- Add `msg_pyrun` tool and `set_pyrun` helper; support async in `_msg_edit` ([#155](https://github.com/AnswerDotAI/dialoghelper/issues/155))
+
+
 ## 0.2.13
 
 ### New Features
