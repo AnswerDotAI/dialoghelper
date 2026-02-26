@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.10
+
+### New Features
+
+- return unified diffs; add exhash module ([#153](https://github.com/AnswerDotAI/dialoghelper/issues/153))
+- Add exhash ([#152](https://github.com/AnswerDotAI/dialoghelper/issues/152))
+
+
 ## 0.2.9
 
 ### New Features
