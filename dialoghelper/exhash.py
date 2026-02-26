@@ -51,4 +51,4 @@ async def msg_exhash(id:str, cmds:list):
     res = '\n'.join(res['lines'])
     upres = await update_msg(id=id, content=res)
     assert upres.startswith('_'), f"Message update failed: {upres}"
-    return res
+    return '\n'.join(lnhashview(res))
