@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.12
+
+### New Features
+
+- `file_exhash`/`file_lnhashview` ([#154](https://github.com/AnswerDotAI/dialoghelper/issues/154))
+
+
 ## 0.2.11
 
 ### New Features
