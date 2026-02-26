@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.9
+
+### New Features
+
+- Optional path in `dialog_link` ([#151](https://github.com/AnswerDotAI/dialoghelper/issues/151))
+
+
 ## 0.2.8
 
 ### Breaking Changes
