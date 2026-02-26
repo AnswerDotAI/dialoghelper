@@ -25,7 +25,7 @@ dependencies = [
   'toolslm>=0.3.30',
   'restrictedpython',
   "restrictedpython-async",
-  "exhash",
+  "exhash>=0.1.4",
   "safepyrun>=0.0.5",
 ]
 
