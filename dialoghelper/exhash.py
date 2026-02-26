@@ -48,7 +48,7 @@ async def msg_exhash(id:str, cmds:list):
     msg = await read_msgid(id=id)
     txt = msg['content']
     res = exhash(txt, cmds)
-    res = '\n'.join(res['lines'])
+    res = '\n'.join(res.lines)
     upres = await update_msg(id=id, content=res)
     assert upres.startswith('_'), f"Message update failed: {upres}"
     return '\n'.join(lnhashview(res))
@@ -63,6 +63,6 @@ def file_exhash(path:str, cmds:list[str]):
     """Verified line-addressed editor for files. Apply commands to file at `path`, return lnhashview(result).
     See `doc(msg_lnhashview)` for details"""
     txt = Path(path).read_text()
-    res = '\n'.join(exhash(txt, cmds)['lines'])
+    res = '\n'.join(exhash(txt, cmds).lines)
     Path(path).write_text(res)
     return '\n'.join(lnhashview(res))
