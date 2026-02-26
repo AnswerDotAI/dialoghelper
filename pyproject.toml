@@ -25,6 +25,7 @@ dependencies = [
   'toolslm>=0.3.30',
   'restrictedpython',
   "restrictedpython-async",
+  "exhash",
   "safepyrun>=0.0.5",
 ]
 
@@ -45,4 +46,5 @@ version = {attr = "dialoghelper.__version__"}
 include = ["dialoghelper"]
 
 [tool.nbdev]
+allowed_cell_metadata_keys = ['solveit_ai']
 
