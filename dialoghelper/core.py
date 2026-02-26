@@ -4,12 +4,12 @@
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'mermaid_url', 'besure_doc', 'add_styles', 'find_dname',
            'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html',
            'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'display_response', 'doc', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg', 'copy_msg',
-           'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note',
-           'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'msg_insert_line',
-           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'ast_py', 'ast_grep',
-           'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
+           'event_get_a', 'event_get', 'trigger_now', 'display_response', 'set_pyrun', 'doc', 'read_msg', 'find_msgs',
+           'view_dlg', 'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg',
+           'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
+           'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'msg_insert_line',
+           'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'msg_pyrun', 'ast_py',
+           'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
            'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing',
            'solveit_docs', 'dialog_link']
 
@@ -240,6 +240,12 @@ def display_response(display:str, result:str=None):
 # %% ../nbs/00_core.ipynb #d0bd7086
 pyrun = RunPython(sentinel='__dialog_name')
 __llmtools__.add('pyrun')
+
+# %% ../nbs/00_core.ipynb #0f51c26d
+def set_pyrun(rp:RunPython):
+    "Replace the default RunPython used by msg_pyrun"
+    global pyrun
+    pyrun = rp
 
 # %% ../nbs/00_core.ipynb #0afdb9f2
 def doc(sym)->str:
@@ -628,7 +634,7 @@ def _msg_edit(f):
         field = 'output' if update_output else 'content'
         text = msg.get(field, '')
         if not text: return f"error: Message has no {field}"
-        try: new_text = f(text, *args, **kw)
+        try: new_text = await maybe_await(f(text, *args, **kw))
         except ValueError as e: return f'error: {e}'
         await update_msg(id=id, **{field: new_text}, dname=dname, log_changed=log_changed)
         diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
@@ -734,6 +740,20 @@ def msg_del_lines(
     s,e = _norm_lines(len(lines), start_line, end_line)
     del lines[s-1:e]
     return ''.join(lines)
+
+# %% ../nbs/00_core.ipynb #04feb916
+@llmtool(dname=dname_doc)
+@_msg_edit
+async def msg_pyrun(
+    text:str, # The text to edit
+    code:str, # Python code; `text` var has content, last expr is new content
+):
+    """Edit message by running `code` in pyrun.
+    `text` var has content, last expr is new content.
+    {dname}"""
+    res = await pyrun(f'text = {repr(text)}\n{code}', concise=False)
+    if 'error' in res: raise ValueError(str(res['error']))
+    return res['result']
 
 # %% ../nbs/00_core.ipynb #9adf1cbb
 def ast_py(code:str):
