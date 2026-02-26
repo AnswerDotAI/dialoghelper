@@ -21,6 +21,7 @@ def setup_share():
     "Setup screen sharing"
     txt = (resources.files('dialoghelper')/'screenshot.js').read_text()
     iife(txt)
+    time.sleep(0.3)
 
 # %% ../nbs/01_capture.ipynb #7f0cbd49
 def start_share(): trigger_now('shareScreen')
