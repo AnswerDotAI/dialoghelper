@@ -14,7 +14,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'solveit_docs', 'dialog_link']
 
 # %% ../nbs/00_core.ipynb #468aa264
-import re,inspect,ast,collections,time,asyncio,json,linecache,importlib
+import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib
 
 from typing import Dict
 from tempfile import TemporaryDirectory
@@ -622,19 +622,19 @@ async def run_code_interactive(
 
 
 # %% ../nbs/00_core.ipynb #5250fa23
-def _msg_edit(success_tpl):
-    def decorator(f):
-        async def wrapper(id:str, *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
-            msg = await read_msg(n=0, id=id, dname=dname)
-            field = 'output' if update_output else 'content'
-            text = msg.get(field, '')
-            if not text: return {'error': f"Message has no {field}"}
-            try: new_text = f(text, *args, **kw)
-            except ValueError as e: return {'error': str(e)}
-            await update_msg(id=id, **{field: new_text}, dname=dname, log_changed=log_changed)
-            return {'success': success_tpl.format(id=id, field=field)}
-        res = splice_sig(wrapper, f, 'text')
-        res.__doc__ += """
+def _msg_edit(f):
+    async def wrapper(id:str, *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
+        msg = await read_msg(n=0, id=id, dname=dname)
+        field = 'output' if update_output else 'content'
+        text = msg.get(field, '')
+        if not text: return f"error: Message has no {field}"
+        try: new_text = f(text, *args, **kw)
+        except ValueError as e: return f'error: {e}'
+        await update_msg(id=id, **{field: new_text}, dname=dname, log_changed=log_changed)
+        diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
+        return diff or 'none: No changes.'
+    res = splice_sig(wrapper, f, 'text')
+    res.__doc__ += """
 
 Message editing standard parameters:
 
@@ -642,16 +642,16 @@ id: Message id to edit
 dname: Dialog to get info for; defaults to current dialog
 update_output: If True, replace in output instead of content
 log_changed: Add a note showing the deleted content?
-"""
-        return res
-    return decorator
 
+returns: diff of changes, or "none: No changes.", or "error: ..."
+"""
+    return res
 
 # %% ../nbs/00_core.ipynb #ceb1ad3b
 besure_doc = "Be sure you've called `view_msg(…)` to ensure you know the line nums."
 
 @llmtool(dname=dname_doc, besure=besure_doc)
-@_msg_edit('Inserted text at line {id} {field}')
+@_msg_edit
 def msg_insert_line(
     text:str, # The text to edit
     insert_line: int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
@@ -665,7 +665,7 @@ def msg_insert_line(
 
 # %% ../nbs/00_core.ipynb #8568202a
 @llmtool(dname=dname_doc)
-@_msg_edit('Replaced text in message {id} {field}')
+@_msg_edit
 def msg_str_replace(
     text:str, # The text to edit
     old_str: str, # Text to find and replace
@@ -679,7 +679,7 @@ def msg_str_replace(
 
 # %% ../nbs/00_core.ipynb #983ce14a
 @llmtool(dname=dname_doc)
-@_msg_edit('Replaced all strings in message {id} {field}')
+@_msg_edit
 def msg_strs_replace(
     text:str, # The text to edit
     old_strs:list[str], # List of strings to find and replace
@@ -707,7 +707,7 @@ def _norm_lines(n:int, start:int, end:int=None):
 
 # %% ../nbs/00_core.ipynb #1002423f
 @llmtool(dname=dname_doc, besure=besure_doc)
-@_msg_edit('Replaced lines in message {id} {field}')
+@_msg_edit
 def msg_replace_lines(
     text:str, # The text to edit
     start_line:int, # Starting line number to replace (1-based indexing)
@@ -723,7 +723,7 @@ def msg_replace_lines(
 
 # %% ../nbs/00_core.ipynb #cbd87701
 @llmtool(dname=dname_doc, besure=besure_doc)
-@_msg_edit('Deleted lines in message {id} {field}')
+@_msg_edit
 def msg_del_lines(
     text:str, # The text to edit
     start_line:int, # Starting line number to delete (1-based indexing)
