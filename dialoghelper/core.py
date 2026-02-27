@@ -368,7 +368,9 @@ dname:str='', # Dialog to get info for; defaults to current dialog (`run` only h
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
-    return await call_endpa('add_relative_', dname, content=content, placement=placement, id=id, run_mode=run_mode, **kwargs)
+    res = await call_endpa('add_relative_', dname, json=True, content=content, placement=placement, id=id, run_mode=run_mode, **kwargs)
+    if 'error' in res: return f"error: {res['error']}"
+    return res['id']
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
@@ -481,15 +483,13 @@ async def update_msg(
     if msg: kwargs |= msg.get('msg', msg)
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
-    res = await call_endpa('update_msg_', dname, id=id, log_changed=log_changed, **kwargs)
+    res = await call_endpa('update_msg_', dname, json=True, id=id, log_changed=log_changed, **kwargs)
+    if 'error' in res: return f"error: {res['error']}"
     if log_changed:
-        r = json.loads(res) if isinstance(res, str) else res
-        diff = r.get('diff', '')
+        diff = res.get('diff', '')
         note = f"> Updated #{id}\n\n```diff\n{diff}\n```" if diff else f"> Updated #{id}\n\nNo changes."
         await add_msg(note)
-        res = r.get('id', res)
-    return res
-
+    return res['id']
 
 # %% ../nbs/00_core.ipynb #316bd7a0
 async def run_msg(
