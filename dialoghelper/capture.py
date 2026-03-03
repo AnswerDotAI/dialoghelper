@@ -11,7 +11,6 @@ from fastcore.all import *
 from fasthtml.common import Div,Script
 from httpx import post as xpost
 from importlib import resources
-from lisette.core import *
 from io import BytesIO
 
 import base64,json,time,PIL.Image,asyncio
@@ -42,6 +41,5 @@ async def capture_screen(timeout=15):
 @llmtool
 async def capture_tool(timeout:int=15):
     "Capture the screen. Re-call this function to get the most recent screenshot, as needed. Use default timeout where possible"
-    try: d = await _capture_screen(timeout)
+    try: return await capture_screen(timeout)
     except Exception as e: return f'Capture failed: {e}'
-    return ToolResponse([{'type': 'image_url', 'image_url': d}])
