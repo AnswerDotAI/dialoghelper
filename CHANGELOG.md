@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.15
+
+### New Features
+
+- Compat with solveit direct image return ([#159](https://github.com/AnswerDotAI/dialoghelper/issues/159))
+- Improve error handling and response parsing in `add_relative` and `update_msg` ([#158](https://github.com/AnswerDotAI/dialoghelper/pull/158)), thanks to [@ncoop57](https://github.com/ncoop57)
+
+
 ## 0.2.14
 
 ### New Features
