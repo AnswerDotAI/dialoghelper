@@ -12,7 +12,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep',
            'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
            'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing',
-           'solveit_docs', 'dialog_link']
+           'solveit_docs', 'dialog_link', 'spawn_agent']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid
@@ -1083,3 +1083,10 @@ def dialog_link(
     if path: url += f"/dialog_?{urlencode({'name': path})}"
     if msg_id: url += f"#{msg_id}"
     return HTML(f'<a href="{url}" target="_blank">{path}</a>') if path else Markdown(f'[{url}]({url})')
+
+# %% ../nbs/00_core.ipynb #c147990d
+@llmtool
+async def spawn_agent(prompt:str):
+    """Spawn a subagent to complete a task defined by `prompt`. Must be run as a tool - not from Python.
+    The subagent's context and tools is defined by the parent prompt's history"""
+    raise Exception("Do not run from python: this is a server-side only tool")
