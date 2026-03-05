@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.16
+
+### New Features
+
+- Add `spawn_agent` ([#161](https://github.com/AnswerDotAI/dialoghelper/issues/161))
+
+
 ## 0.2.15
 
 ### New Features
