@@ -12,10 +12,10 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep',
            'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
            'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'read_pr',
-           'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent']
+           'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn', 'input']
 
 # %% ../nbs/00_core.ipynb #468aa264
-import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid
+import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins
 
 from typing import Dict
 from tempfile import TemporaryDirectory
@@ -33,8 +33,9 @@ from inspect import currentframe,Parameter,signature
 from httpx import AsyncClient, get as xget, post as xpost
 from IPython.display import display,Markdown,HTML
 from monsterui.all import franken_class_map,apply_classes
-from fasthtml.common import Safe,Script,Div
 from toolslm.xml import *
+from fasthtml.common import *
+from fasthtml.components import Solveit_input
 from lisette.core import ToolResponse
 from urllib.parse import urlencode
 from fastcore.imports import __llmtools__
@@ -1143,3 +1144,12 @@ async def spawn_agent(prompt:str):
     """Spawn a subagent to complete a task defined by `prompt`. Must be run as a tool - not from Python.
     The subagent's context and tools is defined by the parent prompt's history"""
     raise Exception("Do not run from python: this is a server-side only tool")
+
+# %% ../nbs/00_core.ipynb #aab4330e
+def InputBtn(txt, value=None, btncls=(), **kw):
+    btncls = ' '.join(f'uk-btn-{o}' for o in listify(btncls))
+    return Button(txt, type='submit', name='user_input', value=value or txt, cls=f'uk-btn {btncls}', **kw)
+
+def input(prompt='', *args):
+    "Solveit customised input to handle fasttag prompts"
+    return builtins.input(prompt if isinstance(prompt,str) else Solveit_input(prompt, *args))
