@@ -999,7 +999,7 @@ def read_pr(
     folder:str='', # For diffs, limit to only to files in `folder`
     replies:bool=False # Include replies
 ):
-    "Fetch a GitHub PR or issue's title, body, and diff (if PR)"
+    "Fetch a GitHub PR or issue's title, body, optionally replies, and diff (if PR)"
     if folder: folder = f"{folder}/"
     api = GhApi()
     res = None
