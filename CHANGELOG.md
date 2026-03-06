@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.17
+
+### New Features
+
+- Add InputBtn component and custom input() wrapper for fasttag prompts ([#163](https://github.com/AnswerDotAI/dialoghelper/issues/163))
+- Add `read_pr` ([#162](https://github.com/AnswerDotAI/dialoghelper/issues/162))
+
+
 ## 0.2.16
 
 ### New Features
