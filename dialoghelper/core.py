@@ -11,8 +11,8 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
            'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep',
            'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
-           'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'dialoghelper_explain_dialog_editing',
-           'solveit_docs', 'dialog_link', 'spawn_agent']
+           'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'read_pr',
+           'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid
@@ -970,6 +970,59 @@ def update_gist(gist_id:str, content:str):
     fname = first(gist.files.keys())
     res = api.gists.update(gist_id, files={fname: {'content': content}})
     return res['html_url']
+
+# %% ../nbs/00_core.ipynb #3afa7bdb
+def _filter_diff(diff, folder='solveit/', skip_files=('_modidx.py',)):
+    "Filter unified diff to only include files under `folder`, skipping `skip_files`"
+    sections = re.split(r'(?=^diff --git )', diff, flags=re.MULTILINE)
+    return ''.join(s for s in sections
+                   if s.startswith(f'diff --git a/{folder}')
+                   and not any(f'/{f} ' in s.split('\n')[0] for f in skip_files))
+
+def _reduce_ctx(diff):
+    "Keep only diff headers and changed lines (optionally with `n` context lines)"
+    lines = diff.splitlines(True)
+    return ''.join(l for l in lines if l[0:1] in ('+','-','d','i','@') or not l.strip())
+
+def _fmt_replies(api, owner, repo, num):
+    "Format issue/PR comment replies"
+    comments = api.issues.list_comments(owner, repo, num)
+    if not comments: return ''
+    return '\n\n## Replies\n' + '\n\n---\n'.join(f"**@{c.user.login}** ({c.created_at[:10]}):\n{c.body}" for c in comments)
+
+# %% ../nbs/00_core.ipynb #6d26d0ed
+@llmtool
+def read_pr(
+    pr_number:int, # Issue or PR number
+    owner:str='answerdotai', # Owner
+    repo:str='solveit', # Repo
+    folder:str='', # For diffs, limit to only to files in `folder`
+    replies:bool=False # Include replies
+):
+    "Fetch a GitHub PR or issue's title, body, and diff (if PR)"
+    if folder: folder = f"{folder}/"
+    api = GhApi()
+    res = None
+    try: pr = api.pulls.get(owner, repo, pr_number)
+    except:
+        try: iss = api.issues.get(owner, repo, pr_number)
+        except Exception as e: return f"Err: {e}"
+        title,body = iss.title, iss.body or ''
+        evts = api.issues.list_events(owner, repo, pr_number)
+        sha = first(e.commit_id for e in evts if e.commit_id)
+        if not sha: res = f"# {title}\n\n{body}"
+        else:
+            try: diff = api.repos.get_commit(owner, repo, sha, headers={'Accept': 'application/vnd.github.v3.diff'})
+            except Exception as e: res = f"# {title}\n\n{body}\n\n(No diff: {e})"
+    else:
+        title,body = pr.title, pr.body or ''
+        try: diff = api.pulls.get(owner, repo, pr_number, headers={'Accept': 'application/vnd.github.v3.diff'})
+        except Exception as e: res = f"# {title}\n\n{body}\n\n(No diff: {e})"
+    if res is None:
+        diff = _reduce_ctx(_filter_diff(diff, folder=folder))
+        res = f"# {title}\n\n{body}\n\n## Diff\n```diff\n{diff}\n```"
+    if replies: res += _fmt_replies(api, owner, repo, pr_number)
+    return res
 
 # %% ../nbs/00_core.ipynb #fccb02d6
 @llmtool
