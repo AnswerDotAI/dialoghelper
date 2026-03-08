@@ -18,7 +18,7 @@ async def msg_exhash(id:str, cmds:list):
     """Verified line-addressed editor. Apply commands to msg `id` contents, return lnhashview(result).
     **NB**: *all* exhash commands *must* start with an address.
     The *only* allowed addresses are a single lnhash, or a pair separated by `,`. (I.e no `%`, `.`, etc.)
-    **NB**: hashes are checked only *once* before all commands are run. So passing multiple commands work fine, even if hashes change.
+    **NB**: hashes are checked before each command is run. So be sure to have commands go last->first order to avoid changing earlier lines.
 
     Commands are like `ex`, but use lnhash addresses instead of bare line numbers: ``lineno|hash|cmd`` where hash is a 4-char hex content hash.
     Use `msg_lnhashview(text)` to get addresses before first use.

@@ -3,19 +3,20 @@
 # %% auto #0
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'mermaid_url', 'msg_insert_line', 'file_insert_line',
            'msg_str_replace', 'file_str_replace', 'msg_strs_replace', 'file_strs_replace', 'msg_replace_lines',
-           'file_replace_lines', 'msg_del_lines', 'file_del_lines', 'msg_pyrun', 'file_pyrun', 'add_styles',
-           'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a',
-           'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'display_response', 'set_pyrun', 'doc', 'read_msg', 'find_msgs',
-           'view_dlg', 'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg', 'update_msg', 'run_msg',
-           'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-           'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep',
-           'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file',
-           'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'read_pr',
-           'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn', 'input']
+           'file_replace_lines', 'msg_del_lines', 'file_del_lines', 'msg_pyrun', 'file_pyrun', 'msg_ast_replace',
+           'file_ast_replace', 'add_styles', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog',
+           'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data',
+           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'set_pyrun',
+           'doc', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg',
+           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
+           'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog',
+           'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
+           'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist', 'update_gist',
+           'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn',
+           'input']
 
 # %% ../nbs/00_core.ipynb #468aa264
-import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins
+import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
 
 from typing import Dict
 from tempfile import TemporaryDirectory
@@ -636,25 +637,32 @@ Be sure you've called `view_msg(…)` to ensure you know the line nums.
 
 Message editing standard parameters:
 
-id: Message id to edit
+id: Message id to edit, or list of ids, or 'all' for all messages in dialog
 dname: Dialog to get info for; defaults to current dialog
 update_output: If True, replace in output instead of content
 log_changed: Add a note showing the deleted content?
 
-returns: diff of changes, or "none: No changes.", or "error: ..." """
+returns:
+- For single id: diff of changes, or "none: No changes.", or "error: ..."
+- For id list (or 'all'): list of tuples of (id,diff) for changed messages"""
 
-# %% ../nbs/00_core.ipynb #5163fd13
+# %% ../nbs/00_core.ipynb #ee87e70d
 def _msg_edit(f, name=None):
-    async def wrapper(id:str, *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
-        msg = await read_msg(n=0, id=id, dname=dname)
-        field = 'output' if update_output else 'content'
-        text = msg.get(field, '')
-        if not text: return f"error: Message has no {field}"
-        try: new_text = await maybe_await(f(text, *args, **kw))
-        except ValueError as e: return f'error: {e}'
-        await update_msg(id=id, **{field: new_text}, dname=dname, log_changed=log_changed)
-        diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
-        return diff or 'none: No changes.'
+    async def wrapper(id:str|list[str], *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
+        async def _one(mid):
+            msg = await read_msg(n=0, id=mid, dname=dname)
+            field = 'output' if update_output else 'content'
+            text = msg.get(field, '')
+            if not text: return f"error: Message has no {field}"
+            try: new_text = await maybe_await(f(text, *args, **kw))
+            except ValueError as e: return f'error: {e}'
+            await update_msg(id=mid, **{field: new_text}, dname=dname, log_changed=log_changed)
+            diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
+            return diff or 'none: No changes.'
+        if isinstance(id, list) or id == 'all':
+            if id=='all': id = [m['id'] for m in (await find_msgs(dname=dname, include_meta=False, include_output=False))]
+            return [(mid, r) for mid in id if not (r:=await _one(mid)).startswith(('error:', 'none:'))]
+        return await _one(id)
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
     res.__doc__ = (f.__doc__ or '') + _msg_edit_doc
@@ -802,7 +810,7 @@ def _del_lines(
 msg_del_lines =  _msg_edit (_del_lines, 'msg_del_lines')
 file_del_lines = _file_edit(_del_lines, 'file_del_lines')
 
-# %% ../nbs/00_core.ipynb #04feb916
+# %% ../nbs/00_core.ipynb #73cb7c93
 async def _pyrun_edit(
     text:str,
     code:str, # Python code; `text` var has content, last expr is new content
@@ -839,11 +847,37 @@ def ast_grep(
     Examples: `import $MODULE` (find imports); `$OBJ.$METHOD($$$)` (find method calls); `await $EXPR` (find await expressions)
     
     Useful for: Refactoring—find all uses of deprecated APIs or changed signatures; Security review—locate SQL queries, file operations, eval calls; Code exploration—understand how libraries are used across codebase; Pattern analysis—find async functions, error handlers, decorators; Better than regex—handles multi-line code, nested structures, respects syntax"""
-    import json, subprocess
     cmd = f"ast-grep --pattern '{pattern}' --lang {lang} --json=compact"
     if path != ".": cmd = f"cd {path} && {cmd}"
     res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return json.loads(res.stdout) if res.stdout else res.stderr
+
+# %% ../nbs/00_core.ipynb #5880e518
+def _ast_replace(
+    text:str,
+    pattern:str, # AST pattern to match, e.g. 'print($A)'; use $VAR for single nodes, $$$ for multiple
+    rewrite:str, # Replacement template with metavariables expanded, e.g. 'log($A)'
+    lang:str='python' # Source language (see ast-grep --help for supported languages)
+ ):
+    """Replace code by AST pattern using ast-grep.
+
+    Pattern syntax:
+    - $VAR captures single nodes, $$$ captures multiple
+    - Match structure directly: `def $FUNC($$$)` finds any function; `class $CLASS` finds classes regardless of inheritance
+    - DON'T include `:` - it's concrete syntax, not AST structure
+    - Whitespace/formatting ignored - matches structural equivalence
+
+    Examples: `import $MODULE` (find imports); `$OBJ.$METHOD($$$)` (find method calls); `await $EXPR` (find await expressions)"""
+    res = subprocess.run(
+        ['ast-grep', 'run', '--pattern', pattern, '--rewrite', rewrite,
+         '--lang', lang, '--update-all', '--stdin'],
+        input=text, capture_output=True, text=True)
+    if res.returncode: raise ValueError(res.stderr.strip())
+    if not res.stdout or res.stdout == text: raise ValueError(f"No matches found for pattern: {pattern}")
+    return res.stdout
+
+msg_ast_replace  = _msg_edit (_ast_replace, 'msg_ast_replace')
+file_ast_replace = _file_edit(_ast_replace, 'file_ast_replace')
 
 # %% ../nbs/00_core.ipynb #5fd28219
 @delegates(folder2ctx)
