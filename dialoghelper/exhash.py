@@ -6,15 +6,19 @@ __all__ = ['msg_lnhashview', 'msg_exhash', 'file_lnhashview', 'file_exhash']
 # %% ../nbs/04_exhash.ipynb #d6291515
 from .core import *
 from exhash import *
+from tempfile import TemporaryDirectory
+from fastcore.foundation import working_directory
+from pathlib import Path
 
 # %% ../nbs/04_exhash.ipynb #c7a53c95
-async def msg_lnhashview(id:str):
-    "Show lnhash-addressed lines of a message"
+async def msg_lnhashview(id:str, output:bool=False):
+    "Show lnhash-addressed lines of a message's content or output"
     msg = await read_msgid(id=id)
-    return '\n'.join(lnhashview(msg['content']))
+    txt = msg['output'] if output else msg['content']
+    return '\n'.join(lnhashview(txt))
 
 # %% ../nbs/04_exhash.ipynb #9bdae034
-async def msg_exhash(id:str, cmds:list):
+async def msg_exhash(id:str, cmds:list, ids:list[str]=None):
     """Verified line-addressed editor. Apply commands to msg `id` contents, return lnhashview(result).
     **NB**: *all* exhash commands *must* start with an address.
     The *only* allowed addresses are a single lnhash, or a pair separated by `,`. (I.e no `%`, `.`, etc.)
@@ -26,7 +30,7 @@ async def msg_exhash(id:str, cmds:list):
     Addressing:
       Single:   ``12|a3f2|cmd``
       Range:    ``12|a3f2|,15|b1c3|cmd``
-      Special:  ``0|0000|`` targets before line 1 (only with a or i)
+      Special:  ``0|0000|`` targets before line 1 (only with a, i, or r)
 
     Commands:
       s/pat/rep/[flags]  Substitute (regex). Flags: g=all, i=case-insensitive
@@ -43,11 +47,19 @@ async def msg_exhash(id:str, cmds:list):
       p                  Print (include in output without changing)
       g/pat/cmd          Global: run cmd on matching lines
       g!/pat/cmd         Inverted global (also v/pat/cmd)
+      r filepath         Read file contents and insert after address
 
-    `cmds` is a required list of command strings. For `a`/`i`/`c`, include the text block in the same command string after a newline."""
-    msg = await read_msgid(id=id)
-    txt = msg['content']
-    res = exhash(txt, cmds)
+    `cmds` is a required list of command strings. For `a`/`i`/`c`, include the text block in the same command string after a newline.
+    `ids` is an optional list of message ids whose content will be written to temp files (as `{id}.txt`) so `r` commands can reference them."""
+    all_ids = [id] + (ids or [])
+    with TemporaryDirectory(prefix='exhash_') as tmpdir: # Mirror messages to files to allow r filepath to work
+      with working_directory(tmpdir):
+        tmpdir = Path(tmpdir)
+        for mid in all_ids:
+            msg = await read_msgid(id=mid)
+            (tmpdir / f'{mid}.txt').write_text(msg['content'])
+        txt = (tmpdir / f'{id}.txt').read_text()
+        res = exhash(txt, cmds)
     res = '\n'.join(res['lines'])
     upres = await update_msg(id=id, content=res)
     assert upres.startswith('_'), f"Message update failed: {upres}"
