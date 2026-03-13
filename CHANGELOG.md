@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.18
+
+### New Features
+
+- Merge `add_prompt` into `add_msg`, add run/wait params, create %%py magic, and add `run_and_prompt` helper ([#166](https://github.com/AnswerDotAI/dialoghelper/issues/166))
+- Add ast-grep replace support (`msg_ast_replace`/`file_ast_replace`) and multi-id editing to `_msg_edit` ([#164](https://github.com/AnswerDotAI/dialoghelper/issues/164))
+
+
 ## 0.2.17
 
 ### New Features
