@@ -7,7 +7,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'file_ast_replace', 'add_styles', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog',
            'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data',
            'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'set_pyrun',
-           'doc', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'add_prompt', 'read_msgid', 'view_msg', 'del_msg',
+           'doc', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'del_msg', 'run_and_prompt',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
            'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog',
            'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
@@ -40,7 +40,7 @@ from fasthtml.components import Solveit_input
 from lisette.core import ToolResponse
 from urllib.parse import urlencode
 from fastcore.imports import __llmtools__
-from safepyrun import RunPython,allow,find_var
+from safepyrun import RunPython,allow,find_var,create_pyrun_magic
 
 # %% ../nbs/00_core.ipynb #e54b45ad
 dname_doc = """If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
@@ -242,6 +242,7 @@ def display_response(display:str, result:str=None):
 
 # %% ../nbs/00_core.ipynb #d0bd7086
 pyrun = RunPython(sentinel='__dialog_name')
+create_pyrun_magic(pyrun=pyrun)
 __llmtools__.add('pyrun')
 
 # %% ../nbs/00_core.ipynb #0f51c26d
@@ -249,11 +250,13 @@ def set_pyrun(rp:RunPython):
     "Replace the default RunPython used by msg_pyrun"
     global pyrun
     pyrun = rp
+    create_pyrun_magic(pyrun=pyrun)
 
 # %% ../nbs/00_core.ipynb #0afdb9f2
-def doc(sym)->str:
+def doc(sym  # Symbol to retrieve docs for
+)->str:
     """Get documentation (signature, docstring, + docments if they exist) for `sym`.
-    **NB**: This is not an llm tool, so must be run with python(). `sym` must be available in the namespace."""
+    **NB**: This is not an llm tool, so must be run with `%%py` or `pyrun()`. `sym` must be available in the namespace."""
     return str(MarkdownRenderer(sym))
 
 # %% ../nbs/00_core.ipynb #f978d4aa
@@ -343,7 +346,6 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 
 # %% ../nbs/00_core.ipynb #5093cfe4
 def _add_msg(
-    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
     is_exported: int | None = 0, # Export message to a module?
@@ -358,56 +360,49 @@ def _add_msg(
 @delegated(_add_msg)
 async def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
-    placement:str='add_after', # Can be 'at_start' or 'at_end', and for default dname can also be 'add_after' or 'add_before'
+    placement:str='', # Location to place message. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
     id:str=None, # id of message that placement is relative to (if None, uses current message)
-dname:str='', # Dialog to get info for; defaults to current dialog (`run` only has a effect if dialog is currently running)
-    run_mode:str|None=None, # Run mode: None (don't run) or 'run' (run the message)
+    dname:str='', # Dialog to add to; defaults to current dialog (`run` only has a effect if dialog is currently running)
+    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
+    run:bool=False, # Run the message?
+    wait:bool=False, # Wait for and return response? (if `run`)
+    poll:float=0.5, # Frequency of polling to check for completion (if `wait`)
     **kwargs
 )->str: # Message ID of newly created message
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
     otherwise messages will appear in the dialog in REVERSE order.
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
+    if not placement: placement = 'add_after' if id or not dname else 'at_end'
     _diff_dialog(placement not in ('at_start','at_end'), dname,
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
-    res = await call_endpa('add_relative_', dname, json=True, content=content, placement=placement, id=id, run_mode=run_mode, **kwargs)
+    assert not (wait and not dname), "Can not wait in current dialog"
+    res = await call_endpa('add_relative_', dname, json=True, content=content, placement=placement, id=id, msg_type=msg_type,
+        run=run, **kwargs)
     if 'error' in res: return f"error: {res['error']}"
-    return res['id']
+    rmsg_id = res['id']
+    if not wait or not run: return rmsg_id
+    while True:
+        res = await read_msgid(rmsg_id, dname=dname)
+        if not res.get('run', False): return res['output']
+        await asyncio.sleep(poll)
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @llmtool(dname=dname_doc)
-@delegates(_add_msg_unsafe, but=['run_mode'])
+@delegates(_add_msg_unsafe)
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
+    msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
+    run:bool=False, # Run the message?
     **kwargs
 )->str: # Message ID of newly created message
-    """Add/update a message to the queue to show after code execution completes.
+    """Add/update a message to the queue to show after code execution completes, and optionally run it.
+    Code messages are run using pyrun's restricted sandbox.
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
     otherwise messages will appear in the dialog in REVERSE order.
     {dname}"""
-    return await _add_msg_unsafe(content=content, **kwargs)
-
-# %% ../nbs/00_core.ipynb #e40e896c
-@llmtool
-@delegates(_add_msg_unsafe, but=['content','msg_type','run_mode'])
-async def add_prompt(
-    content:str,    # Prompt to run
-    dname:str=None, # Dialog to run prompt in; defaults to current dialog
-    msg_id:str=None, # Message id to place prompt after (if None, places at end)
-    wait:bool=True, # Wait for and return response?
-    poll:float=0.5, # Frequency of polling to check for completion
-    placement:str='', # Location to place message, defaults to 'at_end' if no msg_id
-    **kwargs
-):
-    "Run a prompt and, if `wait`, wait for and return the response text"
-    assert not (wait and not dname), "Can not wait in current dialog"
-    if not placement: placement = 'add_after' if msg_id else 'at_end'
-    msg_id = await _add_msg_unsafe(content, msg_type='prompt', run_mode='run', dname=dname, placement=placement, **kwargs)
-    if not wait: return msg_id
-    while True:
-        res = await read_msgid(msg_id, dname=dname)
-        if not res.get('run', False): return res['output']
-        await asyncio.sleep(poll)
+    if msg_type=='code' and run: content = "%%py\n"+content
+    return await _add_msg_unsafe(content=content, msg_type=msg_type, run=run, **kwargs)
 
 # %% ../nbs/00_core.ipynb #afc62c45
 @llmtool(dname=dname_doc)
@@ -454,6 +449,15 @@ async def del_msg(
     if log_changed: await add_msg(f"> Deleted #{id}\n\n```\n{msg.content}\n```")
     return res
 
+
+# %% ../nbs/00_core.ipynb #30e90bf9
+async def run_and_prompt(
+    code: str,  # Python code to run
+    prompt: str = ".",  # Prompt to add after code execution
+) -> str:
+    "Run `code` and then run `prompt`, returning the resulting message ID."
+    id = await add_msg(code, msg_type="code", run=True)
+    return await add_msg(prompt, msg_type="prompt", run=True, id=id)
 
 # %% ../nbs/00_core.ipynb #023dcb74
 def _umsg(
