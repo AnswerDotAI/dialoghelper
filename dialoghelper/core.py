@@ -6,8 +6,8 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'file_replace_lines', 'msg_del_lines', 'file_del_lines', 'msg_pyrun', 'file_pyrun', 'msg_ast_replace',
            'file_ast_replace', 'add_styles', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog',
            'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data',
-           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'set_pyrun',
-           'doc', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'del_msg', 'run_and_prompt',
+           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'doc',
+           'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'del_msg', 'run_and_prompt',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
            'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog',
            'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
@@ -67,6 +67,12 @@ def add_styles(s:str, cls_map:dict=None):
 # %% ../nbs/00_core.ipynb #eb1636a6
 dh_settings = {'port':5001}
 # dh_settings = {'port':6001}
+
+# %% ../nbs/00_core.ipynb #6e5226c1
+pyrun = RunPython(sentinel='__dialog_name')
+try: create_pyrun_magic(get_ipython(), pyrun=pyrun)
+except NameError: pass
+__llmtools__.add('pyrun')
 
 # %% ../nbs/00_core.ipynb #65a8b58b
 def find_dname(dname=None):
@@ -239,18 +245,6 @@ def display_response(display:str, result:str=None):
     "Return a special response where `display` is added as markdown/HTML to the prompt output, and `result` is returned to the LLM"
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return ToolResponse({'_display': display, 'result': result})
-
-# %% ../nbs/00_core.ipynb #d0bd7086
-pyrun = RunPython(sentinel='__dialog_name')
-create_pyrun_magic(pyrun=pyrun)
-__llmtools__.add('pyrun')
-
-# %% ../nbs/00_core.ipynb #0f51c26d
-def set_pyrun(rp:RunPython):
-    "Replace the default RunPython used by msg_pyrun"
-    global pyrun
-    pyrun = rp
-    create_pyrun_magic(pyrun=pyrun)
 
 # %% ../nbs/00_core.ipynb #0afdb9f2
 def doc(sym  # Symbol to retrieve docs for
@@ -820,7 +814,7 @@ async def _pyrun_edit(
     code:str, # Python code; `text` var has content, last expr is new content
 ):
     "Edit text by running `code` in pyrun. `text` var has content, last expr is new content"
-    res = await pyrun(f'text = {repr(text)}\n{code}', concise=False)
+    res = await pyrun(f'text = {repr(text)}\n{code}')
     if 'error' in res: raise ValueError(str(res['error']))
     return res['result']
 
