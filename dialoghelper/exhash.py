@@ -4,6 +4,7 @@
 __all__ = ['msg_lnhashview', 'msg_exhash', 'file_lnhashview', 'file_exhash']
 
 # %% ../nbs/04_exhash.ipynb #d6291515
+from fastcore.utils import *
 from .core import *
 from exhash import *
 
