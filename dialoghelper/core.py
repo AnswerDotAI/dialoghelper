@@ -598,10 +598,11 @@ async def url2note(
 @llmtool
 async def create_or_run_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
+    template:bool=True, # Include TEMPLATE.ipynb files when creating a new dialog
 ):
     "Create a new dialog, or set an existing one running"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('create_dialog_', name=name, json=True)
+    return await call_endpa('create_dialog_', name=name, template=template, json=True)
 
 # %% ../nbs/00_core.ipynb #80433dd1
 @llmtool
