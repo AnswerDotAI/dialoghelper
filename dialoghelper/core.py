@@ -7,13 +7,13 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'file_ast_replace', 'add_styles', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog',
            'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data',
            'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'doc',
-           'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'del_msg', 'run_and_prompt',
-           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
-           'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'rm_dialog',
-           'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
-           'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist', 'update_gist',
-           'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn',
-           'input']
+           'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg',
+           'run_and_prompt', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog',
+           'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link',
+           'spawn_agent', 'InputBtn', 'input']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -430,6 +430,12 @@ async def view_msg(
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
 
+# %% ../nbs/00_core.ipynb #79cdeb39
+def msg_ref(id, dname=None):
+    "Markdown ref to a message — same-dialog `#id` or cross-dialog `#dname/id`"
+    if not dname: return f'#{id}'
+    return f'#{find_dname(dname).strip("/")}/{id}'
+
 # %% ../nbs/00_core.ipynb #f1ee1903
 @llmtool
 async def del_msg(
@@ -440,7 +446,7 @@ async def del_msg(
     "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     if log_changed: msg = await read_msgid(id, dname=dname)
     res = await call_endpa('rm_msg_', dname, raiseex=True, msid=id, json=True)
-    if log_changed: await add_msg(f"> Deleted #{id}\n\n```\n{msg.content}\n```")
+    if log_changed: await add_msg(f"> Deleted {msg_ref(id, dname)}\n\n```\n{msg.content}\n```")
     return res
 
 
@@ -487,8 +493,7 @@ async def update_msg(
     if 'error' in res: return f"error: {res['error']}"
     if log_changed:
         diff = res.get('diff', '')
-        note = f"> Updated #{id}\n\n```diff\n{diff}\n```" if diff else f"> Updated #{id}\n\nNo changes."
-        await add_msg(note)
+        await add_msg(f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.'))
     return res['id']
 
 # %% ../nbs/00_core.ipynb #316bd7a0
