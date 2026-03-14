@@ -10,10 +10,10 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'pyrun', 'Placements', 'merma
            'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg',
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog',
-           'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
-           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
-           'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link',
-           'spawn_agent', 'InputBtn', 'input']
+           'load_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
+           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
+           'import_gist', 'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs',
+           'dialog_link', 'spawn_agent', 'InputBtn', 'input']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -612,6 +612,15 @@ async def stop_dialog(
     "Stop a running dialog kernel"
     name = find_dname(name).lstrip('/')
     return await call_endpa('stop_kernel_', name=name, json=True)
+
+# %% ../nbs/00_core.ipynb #62101e04
+@llmtool
+async def load_dialog(
+    src_dname:str, # Dialog to load code from (path relative to solveit data dir, no .ipynb)
+    dname:str='', # Target dialog; defaults to current dialog
+):
+    "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents."
+    return await call_endpa('load_dialog_', dname, src_dname=src_dname)
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
