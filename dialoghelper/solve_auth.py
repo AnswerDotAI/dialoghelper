@@ -6,8 +6,6 @@
 __all__ = ['solve_signin_rt', 'SolveSigninError', 'setup_solve_signin', 'sub_from_signin']
 
 # %% ../nbs/05_solve_auth.ipynb #3ab8149a
-from starlette.responses import RedirectResponse
-
 import os, json, httpx, jwt
 
 # %% ../nbs/05_solve_auth.ipynb #b8dad395
@@ -18,10 +16,11 @@ _AUTH_URL = 'https://auth.solve.it.com/request_signin'
 def _key(): return os.environ['AAI_USER_KEY']
 def _app_url(port): return f'https://{json.loads(os.environ["PUBLIC_DOMAINS"])[str(port)]}.solve.it.com'
 
-# %% ../nbs/05_solve_auth.ipynb #cfb33df0
+# %% ../nbs/05_solve_auth.ipynb #b8c32209
 solve_signin_rt = '/solve_signin'
 def setup_solve_signin(app, port=8000, callback_rt='/signin_completed'):
     "Add /solve_signin route to `app` that redirects to Google via SolveIt auth"
+    from starlette.responses import RedirectResponse
     callback = _app_url(port) + callback_rt
     @app.route(solve_signin_rt)
     def solve_signin():
