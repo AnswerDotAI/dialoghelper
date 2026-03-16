@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.22
+
+### New Features
+
+- Add `include_skipped` param ([#172](https://github.com/AnswerDotAI/dialoghelper/issues/172))
+
+
 ## 0.2.21
 
 ### New Features
