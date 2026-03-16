@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.2.21
+
+### New Features
+
+- Switch event funcs to `**kwargs`, support `~` in `file_edit` paths ([#171](https://github.com/AnswerDotAI/dialoghelper/issues/171))
+- Add Google Sign-In integration for SolveIt-hosted apps ([#170](https://github.com/AnswerDotAI/dialoghelper/pull/170)), thanks to [@ncoop57](https://github.com/ncoop57)
+- add cross dialog msg references ([#167](https://github.com/AnswerDotAI/dialoghelper/pull/167)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.2.20
 
 ### New Features
