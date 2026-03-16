@@ -306,6 +306,7 @@ async def find_msgs(
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
     headers_only:bool=False, # Only return note messages that are headers (first line only); cannot be used together with `header_section`
     header_section:str=None, # Find section starting with this header; returns it plus all children (i.e until next header of equal or more significant level)
+    include_skipped:bool=False, # Include messages hidden from AI (skipped)?
     dname:str='' # Dialog to get info for; defaults to current dialog
 )->list[dict]: # Messages in requested dialog that contain the given information
     """Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
@@ -316,9 +317,8 @@ async def find_msgs(
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out, trunc_in=trunc_in,
-                    headers_only=headers_only, header_section=header_section)
+                    headers_only=headers_only, header_section=header_section, include_skipped=include_skipped)
     return _maybe_xml(res, as_xml=as_xml, key='msgs')
-
 
 # %% ../nbs/00_core.ipynb #9ff2a38e
 @llmtool
@@ -329,11 +329,11 @@ async def view_dlg(
     include_output:bool=False, # Include output in returned dict?
     trunc_out:bool=True, # Middle-out truncate code output to 100 characters (only applies if `include_output`)?
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
+    include_skipped:bool=False, # Include messages hidden from AI (skipped)?
 ):
     "Concise XML view of all messages (optionally filtered by type), not including metadata. Often it is more efficient to call this to see the whole dialog at once (including line numbers if needed), instead of running `find_msgs` or `view_msg` multiple times."
     return await find_msgs(msg_type=msg_type, dname=dname, as_xml=True, nums=nums,
-        include_meta=False, include_output=include_output, trunc_out=trunc_out, trunc_in=trunc_in)
-
+        include_meta=False, include_output=include_output, trunc_out=trunc_out, trunc_in=trunc_in, include_skipped=include_skipped)
 
 # %% ../nbs/00_core.ipynb #fdc5a465
 Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_end')
@@ -1043,7 +1043,7 @@ def _fmt_replies(api, owner, repo, num):
 def read_pr(
     pr_number:int, # Issue or PR number
     owner:str='answerdotai', # Owner
-    repo:str='solveit', # Repo
+    repo:str=None, # Repo
     folder:str='', # For diffs, limit to only to files in `folder`
     replies:bool=False # Include replies
 ):
