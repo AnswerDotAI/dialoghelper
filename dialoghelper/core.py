@@ -207,24 +207,24 @@ def _fire_event_scr(evt, data=None):
     if data is not None: params += f", {json.dumps(data)}"
     return Script(f"htmx.trigger(document.body, {params});", id='js-event', hx_swap_oob='true')
 
-async def fire_event_a(evt:str, data=None): await add_html_a(_fire_event_scr(evt, data))
-def fire_event(evt:str, data=None): add_html(_fire_event_scr(evt, data))
+async def fire_event_a(evt:str, **data): await add_html_a(_fire_event_scr(evt, data))
+def fire_event(evt:str, **data): add_html(_fire_event_scr(evt, data))
 
 # %% ../nbs/00_core.ipynb #25ed8a64
 def _event_prep(data):
     idx = uuid.uuid4()
     return idx, (data or {}) | {'idx': str(idx)}
 
-async def event_get_a(evt:str, timeout=15, data=None):
+async def event_get_a(evt:str, timeout=15, **data):
     "Call `fire_event` and then `pop_data` to get a response"
     idx, data = _event_prep(data)
-    await fire_event_a(evt, data=data)
+    await fire_event_a(evt, **data)
     return await pop_data_a(idx, timeout)
 
-def event_get(evt:str, timeout=15, data=None):
+def event_get(evt:str, timeout=15, **data):
     "Call `fire_event` and then `pop_data` to get a response"
     idx, data = _event_prep(data)
-    fire_event(evt, data=data)
+    fire_event(evt, **data)
     return pop_data(idx, timeout)
 
 # %% ../nbs/00_core.ipynb #e2d1a5be
@@ -696,7 +696,8 @@ returns: diff of changes, or "none: No changes.", or "error: ..."
 # %% ../nbs/00_core.ipynb #fcd412d8
 def _file_edit(f, name=None):
     async def wrapper(path:str, *args, log_changed:bool=False, **kw):
-        text = Path(path).read_text()
+        path = Path(path).expanduser()
+        text = path.read_text()
         try: new_text = await maybe_await(f(text, *args, **kw))
         except ValueError as e: return f'error: {e}'
         Path(path).write_text(new_text)
@@ -830,8 +831,7 @@ async def _pyrun_edit(
 ):
     "Edit text by running `code` in pyrun. `text` var has content, last expr is new content"
     res = await pyrun(f'text = {repr(text)}\n{code}')
-    if 'error' in res: raise ValueError(str(res['error']))
-    return res['result']
+    return res
 
 msg_pyrun =  _msg_edit (_pyrun_edit, 'msg_pyrun')
 file_pyrun = _file_edit(_pyrun_edit, 'file_pyrun')
