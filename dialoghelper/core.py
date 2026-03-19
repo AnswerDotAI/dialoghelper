@@ -590,7 +590,7 @@ async def url2note(
 ):
     "Read URL as markdown, and add note(s) below current message with the result"
     res = read_url(url, as_md=True, extract_section=extract_section, selector=selector, ai_img=ai_img)
-    if split_re: return [await add_msg(s) for s in re.split(split_re, res, flags=re.MULTILINE) if s.strip()]
+    if split_re: return [await add_msg(s) for s in re.split(split_re, res, flags=re.MULTILINE)[::-1] if s.strip()]
     return await add_msg(res)
 
 
