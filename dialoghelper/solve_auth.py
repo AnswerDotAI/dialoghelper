@@ -18,13 +18,13 @@ def _app_url(port): return f'https://{json.loads(os.environ["PUBLIC_DOMAINS"])[s
 
 # %% ../nbs/05_solve_auth.ipynb #b8c32209
 solve_signin_rt = '/solve_signin'
-def setup_solve_signin(app, port=8000, callback_rt='/signin_completed'):
+def setup_solve_signin(app, port=8000, callback_rt='/signin_completed', email_re = None, hd_re = None):
     "Add /solve_signin route to `app` that redirects to Google via SolveIt auth"
     from starlette.responses import RedirectResponse
     callback = _app_url(port) + callback_rt
     @app.route(solve_signin_rt)
     def solve_signin():
-        r = httpx.post(_AUTH_URL, headers={'Authorization': _key()}, json={'callback_url': callback})
+        r = httpx.post(_AUTH_URL, headers={'Authorization': _key()}, json={'callback_url': callback, 'email_re': email_re, 'hd_re':hd_re})
         return RedirectResponse(r.json()['signin_url'])
 
 # %% ../nbs/05_solve_auth.ipynb #69a137b0
