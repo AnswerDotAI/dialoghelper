@@ -72,19 +72,21 @@ dh_settings = {'port':5001}
 try: load_ipython_extension(get_ipython())
 except NameError: pass
 
-# pyrun = RunPython(sentinel='__dialog_name')
-# try: create_pyrun_magic(get_ipython(), pyrun=pyrun)
-# except NameError: pass
 __llmtools__.add('pyrun')
 
 # %% ../nbs/00_core.ipynb #65a8b58b
+_cached_dname = None
+
 def find_dname(dname=None):
     "Get the dialog name by searching the call stack for __dialog_name, and resolving `dname` if supplied."
+    global _cached_dname
     if dname:
         dname = dname.removesuffix('.ipynb')
         if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', None)
-    if not curr: curr = find_var('__dialog_name')
+    if not curr:
+        if _cached_dname is None: _cached_dname = find_var('__dialog_name')
+        curr = _cached_dname
     if not dname: return '/'+curr
     p = Path(curr).parent
     res = normpath((p/dname))
