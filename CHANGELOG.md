@@ -2,6 +2,18 @@
 
 <!-- do not remove -->
 
+## 0.2.23
+
+### New Features
+
+- mv doc ([#175](https://github.com/AnswerDotAI/dialoghelper/issues/175))
+- add email re and hd re ([#173](https://github.com/AnswerDotAI/dialoghelper/pull/173)), thanks to [@johnowhitaker](https://github.com/johnowhitaker)
+
+### Bugs Squashed
+
+- reverse split order in url2note for correct message ordering ([#174](https://github.com/AnswerDotAI/dialoghelper/pull/174)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.2.22
 
 ### New Features
