@@ -6,14 +6,14 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'file_replace_lines', 'msg_del_lines', 'file_del_lines', 'msg_pyrun', 'file_pyrun', 'msg_ast_replace',
            'file_ast_replace', 'add_styles', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog',
            'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data',
-           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'doc',
-           'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg',
-           'run_and_prompt', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
-           'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog',
-           'load_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
-           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
-           'import_gist', 'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs',
-           'dialog_link', 'spawn_agent', 'InputBtn', 'input']
+           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'read_msg',
+           'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt',
+           'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
+           'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
+           'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
+           'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
+           'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link',
+           'spawn_agent', 'InputBtn', 'input']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -250,16 +250,6 @@ def display_response(display:str, result:str=None):
     "Return a special response where `display` is added as markdown/HTML to the prompt output, and `result` is returned to the LLM"
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return ToolResponse({'_display': display, 'result': result})
-
-# %% ../nbs/00_core.ipynb #0afdb9f2
-def doc(sym  # Symbol to retrieve docs for
-)->str:
-    """Get documentation (signature, docstring, + docments if they exist) for `sym`.
-    **NB**: This is not an llm tool, so must be run with `%%py` or `pyrun()`. `sym` must be available in the namespace."""
-    return str(MarkdownRenderer(sym))
-
-# %% ../nbs/00_core.ipynb #f978d4aa
-allow('doc')
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
