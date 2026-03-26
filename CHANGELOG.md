@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.24
+
+### New Features
+
+- Wrap `load_dialog` response in "full" ToolResponse so it is not truncated ([#176](https://github.com/AnswerDotAI/dialoghelper/issues/176))
+
+
 ## 0.2.23
 
 ### New Features
