@@ -85,8 +85,9 @@ def find_dname(dname=None):
         if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', None)
     if not curr:
-        if _cached_dname is None: _cached_dname = find_var('__dialog_name')
-        curr = _cached_dname
+        try: curr = find_var('__dialog_name')
+        except KeyError: curr = _cached_dname
+        else: _cached_dname = curr
     if not dname: return '/'+curr
     p = Path(curr).parent
     res = normpath((p/dname))
