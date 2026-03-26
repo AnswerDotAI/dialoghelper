@@ -616,7 +616,7 @@ async def load_dialog(
     dname:str='', # Target dialog; defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents."
-    return await call_endpa('load_dialog_', dname, src_dname=src_dname)
+    return ToolResponse({'_full': await call_endpa('load_dialog_', dname, src_dname=src_dname)})
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
