@@ -16,7 +16,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'spawn_agent', 'InputBtn', 'input']
 
 # %% ../nbs/00_core.ipynb #468aa264
-import re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
+import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
 
 from typing import Dict
 from tempfile import TemporaryDirectory
@@ -75,18 +75,13 @@ except NameError: pass
 __llmtools__.add('pyrun')
 
 # %% ../nbs/00_core.ipynb #65a8b58b
-_cached_dname = None
-
 def find_dname(dname=None):
     "Get the dialog name by searching the call stack for __dialog_name, and resolving `dname` if supplied."
-    global _cached_dname
     if dname:
         dname = dname.removesuffix('.ipynb')
         if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', None)
-    if not curr:
-        if _cached_dname is None: _cached_dname = find_var('__dialog_name')
-        curr = _cached_dname
+    if not curr: curr = os.getenv('__DIALOG_NAME') or find_var('__dialog_name')
     if not dname: return '/'+curr
     p = Path(curr).parent
     res = normpath((p/dname))
