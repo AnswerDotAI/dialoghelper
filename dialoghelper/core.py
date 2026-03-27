@@ -142,6 +142,7 @@ async def curr_dialog(
 ):
     "Get the current dialog info."
     res = await call_endpa('curr_dialog_', dname, json=True, with_messages=with_messages)
+    if 'error' in res: return f"error: {res['error']}"
     if res: return {'name': res['name'], 'mode': res['mode']}
 
 # %% ../nbs/00_core.ipynb #8810450f
