@@ -2,6 +2,18 @@
 
 <!-- do not remove -->
 
+## 0.2.25
+
+### New Features
+
+- Add `InputForm` ([#181](https://github.com/AnswerDotAI/dialoghelper/issues/181))
+
+### Bugs Squashed
+
+- Handle error response in `curr_dialog` ([#180](https://github.com/AnswerDotAI/dialoghelper/pull/180)), thanks to [@ncoop57](https://github.com/ncoop57)
+- fix rename issue via use of `__DIALOG_NAME` env. ([#178](https://github.com/AnswerDotAI/dialoghelper/pull/178)), thanks to [@PiotrCzapla](https://github.com/PiotrCzapla)
+
+
 ## 0.2.24
 
 ### New Features
