@@ -13,7 +13,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile',
            'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist',
            'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link',
-           'spawn_agent', 'InputBtn', 'input']
+           'spawn_agent', 'InputBtn', 'input', 'InputForm']
 
 # %% ../nbs/00_core.ipynb #468aa264
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -1192,3 +1192,8 @@ def InputBtn(txt, value=None, btncls=(), **kw):
 def input(prompt='', *args):
     "Solveit customised input to handle fasttag prompts"
     return builtins.input(prompt if isinstance(prompt,str) else Solveit_input(prompt, *args))
+
+def InputForm(*c, **kwargs):
+    "Create an `input()` with a `Form` with needed `hx_post` and `id`"
+    return input(Form(*c,
+        hx_post="/input_reply_", id='input-request-form', **kwargs))
