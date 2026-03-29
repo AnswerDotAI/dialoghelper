@@ -40,7 +40,8 @@ from fasthtml.components import Solveit_input
 from lisette.core import ToolResponse,FullResponse,StopResponse
 from urllib.parse import urlencode
 from fastcore.imports import __llmtools__
-from safepyrun import RunPython,allow,find_var,create_pyrun_magic,load_ipython_extension
+from safepyrun import RunPython,find_var,create_pyrun_magic,load_ipython_extension
+from pyskills import __pytools__,allow
 
 # %% ../nbs/00_core.ipynb #e54b45ad
 dname_doc = """If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
