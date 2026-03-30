@@ -26,7 +26,7 @@ dependencies = [
   'restrictedpython',
   "restrictedpython-async",
   "exhash>=0.1.4",
-  "safepyrun>=0.0.5",
+  "safepyrun>=0.0.23",
   "pyjwt",
 ]
 
