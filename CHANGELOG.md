@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.27
+
+### New Features
+
+- Add `add_mod`, `event_once`, `js_run`, and `js_eval` helpers with async variants for JS module injection and browser-side evaluation ([#183](https://github.com/AnswerDotAI/dialoghelper/issues/183))
+
+
 ## 0.2.26
 
 ### New Features
