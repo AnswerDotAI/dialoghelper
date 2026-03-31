@@ -5,8 +5,9 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'msg_str_replace', 'file_str_replace', 'msg_strs_replace', 'file_strs_replace', 'msg_replace_lines',
            'file_replace_lines', 'msg_del_lines', 'file_del_lines', 'msg_pyrun', 'file_pyrun', 'msg_ast_replace',
            'file_ast_replace', 'add_styles', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog',
-           'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'pop_data_a', 'pop_data',
-           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'display_response', 'read_msg',
+           'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'add_mod', 'add_mod_a',
+           'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now',
+           'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'display_response', 'read_msg',
            'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt',
            'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header',
            'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
@@ -196,6 +197,14 @@ def iife(code: str):
     "Wrap javascript code string in an IIFE and execute it via `add_html`"
     add_scr(_iife_scr(code))
 
+def add_mod(s:str):
+    "Wrap javascript code string in a js script module and add it via `add_html`"
+    add_scr(Script(s, type="module"))
+
+async def add_mod_a(s:str):
+    "Wrap javascript code string in a js script module and add it via `add_html`"
+    await add_scr_a(Script(s, type="module"))
+
 # %% ../nbs/00_core.ipynb #99a07c05
 async def pop_data_a(idx, timeout=15):
     return dict2obj(await call_endpa('pop_data_blocking_', data_id=idx, timeout=timeout, json=True))
@@ -241,6 +250,46 @@ if (Date.now() - {ts} < {ttl} && !{guard}) {{
     {guard}=1;
     htmx.trigger(document.body, {params});
 }}</script>'''))
+
+# %% ../nbs/00_core.ipynb #0069cc4f
+def event_once(evt, timeout=15, ttl=5000, **data):
+    "Like event_get but with replay/dedup safety via trigger_now"
+    idx, data = _event_prep(data)
+    trigger_now(evt, data, ttl=ttl)
+    return pop_data(idx, timeout)
+
+async def event_once_a(evt, timeout=15, ttl=5000, **data):
+    "Like event_get_a but with replay/dedup safety via trigger_now"
+    idx, data = _event_prep(data)
+    trigger_now(evt, data, ttl=ttl)
+    await asyncio.sleep(0)
+    return await pop_data_a(idx, timeout)
+
+# %% ../nbs/00_core.ipynb #4f4a6d69
+def js_run(code):
+    "Run JS code that calls done() when finished, and wait for result"
+    idx, data = _event_prep({})
+    iife("const done = (data={}) => pushData('%s', {ready: true, ...data}); %s" % (idx, code))
+    return pop_data(idx)
+
+async def js_run_a(code):
+    "Run JS code that calls done() when finished, and wait for result"
+    idx, data = _event_prep({})
+    await iife_a("const done = (data={}) => pushData('%s', {ready: true, ...data}); %s" % (idx, code))
+    return await pop_data_a(idx)
+
+# %% ../nbs/00_core.ipynb #3f1c1de7
+def js_eval(expr):
+    "Evaluate a JS expression in the browser and return the result"
+    idx, data = _event_prep({})
+    iife("pushData('%s', (() => { %s })())" % (idx, expr))
+    return pop_data(idx)
+
+async def js_eval_a(expr):
+    "Evaluate a JS expression in the browser and return the result"
+    idx, data = _event_prep({})
+    await iife_a("pushData('%s', (() => { %s })())" % (idx, expr))
+    return await pop_data_a(idx)
 
 # %% ../nbs/00_core.ipynb #80334098
 def display_response(display:str, result:str=None):
