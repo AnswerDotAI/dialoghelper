@@ -14,7 +14,7 @@ class SolveSigninError(Exception): pass
 _AUTH_URL = 'https://auth.solve.it.com/request_signin'
 
 def _key(): return os.environ['AAI_USER_KEY']
-def _app_url(port): return f'https://{json.loads(os.environ["PUBLIC_DOMAINS"])[str(port)]}.solve.it.com'
+def _app_url(port): return f'https://{json.loads(os.environ["PUBLIC_DOMAINS"])[str(port)]}'
 
 # %% ../nbs/05_solve_auth.ipynb #b8c32209
 solve_signin_rt = '/solve_signin'
