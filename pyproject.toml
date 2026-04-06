@@ -47,5 +47,6 @@ version = {attr = "dialoghelper.__version__"}
 include = ["dialoghelper"]
 
 [tool.nbdev]
+allowed_metadata_keys = ['solveit_dialog_mode', 'solveit_ver']
 allowed_cell_metadata_keys = ['solveit_ai']
 
