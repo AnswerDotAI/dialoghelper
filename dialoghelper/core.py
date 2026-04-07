@@ -566,7 +566,7 @@ async def paste_msg(
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
 ):
     "Paste clipboard msg(s) after/before the current selected msg (id)."
-    res = await call_endpa('msg_paste_', dname, id=id, after=after)
+    res = await call_endpa('msg_paste_', dname, id=id, after=after, json=True)
     return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #13e9163a
