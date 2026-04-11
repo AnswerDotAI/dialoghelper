@@ -15,7 +15,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn', 'input',
            'InputForm']
 
-# %% ../nbs/00_core.ipynb #468aa264
+# %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
 
 from typing import Dict
