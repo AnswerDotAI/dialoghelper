@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.2.28
+
+### New Features
+
+- Add json=True parameter to `paste_msg` `call_endpa` invocation ([#185](https://github.com/AnswerDotAI/dialoghelper/issues/185))
+
+### Bugs Squashed
+
+- fix app url ([#184](https://github.com/AnswerDotAI/dialoghelper/pull/184)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+
+
 ## 0.2.27
 
 ### New Features
