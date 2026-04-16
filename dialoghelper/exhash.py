@@ -45,7 +45,8 @@ async def msg_exhash(id:str, cmds:list):
       g/pat/cmd          Global: run cmd on matching lines
       g!/pat/cmd         Inverted global (also v/pat/cmd)
 
-    `cmds` is a required list of command strings. For `a`/`i`/`c`, include the text block in the same command string after a newline."""
+    `cmds` is a required list of command strings. For `a`/`i`/`c`, include the text block in the same command string after a newline.
+    Unlike `ex`, do NOT add a trailing `.` line — the string boundary ends the block. A trailing `.` will be inserted literally (with a warning)."""
     msg = await read_msgid(id=id)
     txt = msg['content']
     res = exhash(txt, cmds)
@@ -62,7 +63,7 @@ def file_lnhashview(path:str):
 # %% ../nbs/04_exhash.ipynb #0647eeb2
 def file_exhash(path:str, cmds:list[str]):
     """Verified line-addressed editor for files. Apply commands to file at `path`, return lnhashview(result).
-    See `doc(msg_lnhashview)` for details"""
+    See `doc(msg_exhash)` for details"""
     txt = Path(path).read_text()
     res = '\n'.join(exhash(txt, cmds)['lines'])
     Path(path).write_text(res)
