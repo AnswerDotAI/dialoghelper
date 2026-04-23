@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.30
+
+### New Features
+
+- Add realpath and `list_dialogs` tools, plus termskill module for driving dialoghelper from a terminal ([#188](https://github.com/AnswerDotAI/dialoghelper/issues/188))
+
+
 ## 0.2.29
 
 ### New Features
