@@ -9,11 +9,11 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'display_response', 'read_msg', 'find_msgs', 'view_dlg',
            'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg', 'run_msg',
            'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-           'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive',
-           'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist',
-           'gist_file', 'import_string', 'mk_toollist', 'import_gist', 'update_gist', 'read_pr',
-           'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn', 'input',
-           'InputForm']
+           'realpath', 'list_dialogs', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
+           'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
+           'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist', 'update_gist',
+           'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn',
+           'input', 'InputForm']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -45,7 +45,7 @@ from pyskills import __pytools__,allow
 from pyskills.edit import *
 
 # %% ../nbs/00_core.ipynb #e54b45ad
-dname_doc = """If `dname` is None, the current dialog is used. If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
+dname_doc = """If `dname` is None, the current dialog is used (if any). If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
 
 # %% ../nbs/00_core.ipynb #cc9f963f
 md_cls_d = {
@@ -84,6 +84,7 @@ def find_dname(dname=None):
         if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', None)
     if not curr: curr = os.getenv('__DIALOG_NAME') or find_var('__dialog_name')
+    if not curr: raise ValueError("No dialog context: Please pass absolute `dname` starting with '/'")
     if not dname: return '/'+curr
     p = Path(curr).parent
     res = normpath((p/dname))
@@ -621,6 +622,25 @@ async def toggle_comment(
     id,*_ = ids.split(',')
     res = await call_endpa('toggle_comment_', dname, ids=ids, id=id)
     return _check_res(res, dname)
+
+# %% ../nbs/00_core.ipynb #3b708f2b
+@llmtool
+async def realpath(
+    subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
+):
+    "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
+    sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
+    return await call_endpa('realpath_', json=True, subpath=sub.lstrip('/'))
+
+# %% ../nbs/00_core.ipynb #d92f3d05
+@llmtool
+async def list_dialogs(
+    subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
+    depth:int=1 # Directory depth
+):
+    "List dialogs and folders under `subpath`. Folders have `/` suffix."
+    sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
+    return await call_endpa('list_dialogs_', json=True, subpath=sub.lstrip('/'), depth=depth)
 
 # %% ../nbs/00_core.ipynb #1827e124
 async def url2note(
