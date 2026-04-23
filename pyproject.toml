@@ -46,6 +46,9 @@ version = {attr = "dialoghelper.__version__"}
 [tool.setuptools.packages.find]
 include = ["dialoghelper"]
 
+[project.scripts]
+dlg_connfiles = "dialoghelper.core:connfiles"
+
 [project.entry-points.pyskills]
 "dialoghelper.termskill" = "dialoghelper.termskill"
 

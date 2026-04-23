@@ -6,14 +6,14 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a',
            'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data',
            'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a',
-           'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'display_response', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg', 'run_msg',
-           'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-           'realpath', 'list_dialogs', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
-           'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo', 'ctx_symfile', 'ctx_symfolder',
-           'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist', 'import_gist', 'update_gist',
-           'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs', 'dialog_link', 'spawn_agent', 'InputBtn',
-           'input', 'InputForm']
+           'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'display_response', 'connfiles', 'realpath', 'list_dialogs',
+           'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg',
+           'run_and_prompt', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog',
+           'load_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
+           'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
+           'import_gist', 'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs',
+           'dialog_link', 'spawn_agent', 'InputBtn', 'input', 'InputForm']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -77,13 +77,16 @@ except NameError: pass
 __llmtools__.add('pyrun')
 
 # %% ../nbs/00_core.ipynb #65a8b58b
-def find_dname(dname=None):
+def find_dname(dname=None, required=True):
     "Get the dialog name by searching the call stack for __dialog_name, and resolving `dname` if supplied."
     if dname:
         dname = dname.removesuffix('.ipynb')
         if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', None)
-    if not curr: curr = os.getenv('__DIALOG_NAME') or find_var('__dialog_name')
+    if not curr: curr = os.getenv('__DIALOG_NAME')
+    if not curr:
+        if required: curr = find_var('__dialog_name')
+        else: return None
     if not curr: raise ValueError("No dialog context: Please pass absolute `dname` starting with '/'")
     if not dname: return '/'+curr
     p = Path(curr).parent
@@ -104,9 +107,9 @@ async def xgeta(url, **kwargs):
     async with AsyncClient() as c: return await c.get (url, **kwargs)
 
 # %% ../nbs/00_core.ipynb #bdac4ecb
-def _prep_endp(path, dname, json, id, data):
-    dname = find_dname(dname).strip('/')
-    data['dlg_name'] = dname
+def _prep_endp(path, dname, json, id, data, required=True):
+    dname = find_dname(dname, required=required)
+    if dname: data['dlg_name'] = dname.strip('/')
     if id: data['id_'] = id
     url = f'http://localhost:{dh_settings["port"]}/{path}'
     headers = {'Accept': 'application/json'} if json else {}
@@ -118,13 +121,14 @@ def _handle_resp(res, json, raiseex):
     except Exception: return res.text
 
 # %% ../nbs/00_core.ipynb #5fc896fe
-def call_endp(path, dname='', json=False, raiseex=False, id=None, **data):
-    url, data, headers = _prep_endp(path, dname, json, id, data)
+def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, **data):
+    url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     return _handle_resp(xpost(url, data=data, headers=headers), json, raiseex)
 
-async def call_endpa(path, dname='', json=False, raiseex=False, id=None, **data):
-    url, data, headers = _prep_endp(path, dname, json, id, data)
+async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, **data):
+    url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     return _handle_resp(await xposta(url, data=data, headers=headers), json, raiseex)
+
 
 # %% ../nbs/00_core.ipynb #1a5b4b75
 def _check_res(res, dname):
@@ -297,6 +301,40 @@ def display_response(display:str, result:str=None):
     "Return a special response where `display` is added as markdown/HTML to the prompt output, and `result` is returned to the LLM"
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return ToolResponse({'_display': display, 'result': result})
+
+# %% ../nbs/00_core.ipynb #1f0c6004
+from fastcore.script import call_parse
+
+# %% ../nbs/00_core.ipynb #677693ee
+@call_parse
+async def connfiles(
+    dlg_name:str='' # Name of dialog to get connfile path for; if empty, return dict of all running dialogs with their paths
+):
+    "Get a running dialogs' connection file path (or dict of all of them if no `dlg_name`."
+    res = await call_endpa('connfiles_', json=True, required=False)
+    if dlg_name: return res[dlg_name.removeprefix('/').removesuffix('.ipynb')]
+    return res
+
+# %% ../nbs/00_core.ipynb #e2138315
+@llmtool
+async def realpath(
+    subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
+):
+    "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
+    sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
+    return await call_endpa('realpath_', json=True, subpath=sub.lstrip('/'))
+
+# %% ../nbs/00_core.ipynb #dab9c929
+@llmtool
+async def list_dialogs(
+    subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
+    depth:int=1 # Directory depth
+):
+    "List dialogs and folders under `subpath`. Folders have `/` suffix."
+    d = find_dname(subpath, required=False)
+    sub = (d or '') if subpath else (str(Path(d).parent) if d else '')
+    return await call_endpa('list_dialogs_', json=True, required=False, subpath=sub.lstrip('/'), depth=depth)
+
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
@@ -622,25 +660,6 @@ async def toggle_comment(
     id,*_ = ids.split(',')
     res = await call_endpa('toggle_comment_', dname, ids=ids, id=id)
     return _check_res(res, dname)
-
-# %% ../nbs/00_core.ipynb #3b708f2b
-@llmtool
-async def realpath(
-    subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
-):
-    "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
-    sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
-    return await call_endpa('realpath_', json=True, subpath=sub.lstrip('/'))
-
-# %% ../nbs/00_core.ipynb #d92f3d05
-@llmtool
-async def list_dialogs(
-    subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
-    depth:int=1 # Directory depth
-):
-    "List dialogs and folders under `subpath`. Folders have `/` suffix."
-    sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
-    return await call_endpa('list_dialogs_', json=True, subpath=sub.lstrip('/'), depth=depth)
 
 # %% ../nbs/00_core.ipynb #1827e124
 async def url2note(
