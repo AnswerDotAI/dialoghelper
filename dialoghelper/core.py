@@ -1219,17 +1219,19 @@ If the user wants more info, give them a link to https://gist.github.com/jph00/{
 # %% ../nbs/00_core.ipynb #70ec67db
 @llmtool
 def dialog_link(
-    path:str='', # Path to dialog (e.g. '/aai-ws/dialoghelper/nbs/00_core'), defaults to current dialog
+    dname:str='', # Dialog to link to (relative to current dialog's folder, or absolute if starts with '/'); empty for in-page anchor link
     msg_id:str=None # Optional message id to scroll to
 ):
     """Return an IPython HTML link to open a dialog in Solveit.
     After calling this tool, output the resulting HTML anchor tag exactly as returned—do not wrap in a fenced code block or convert to markdown link format."""
-    if not (path or msg_id): return 'err: no path or id'
-    path = path.removeprefix('/')
+    if not (dname or msg_id): return 'err: no dname or msg_id'
     url = ''
-    if path: url += f"/dialog_?{urlencode({'name': path})}"
+    if dname:
+        dname = find_dname(dname).removeprefix('/')
+        url += f"/dialog_?{urlencode({'name': dname})}"
     if msg_id: url += f"#{msg_id}"
-    return HTML(f'<a href="{url}" target="_blank">{path}</a>') if path else Markdown(f'[{url}]({url})')
+    return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')
+
 
 # %% ../nbs/00_core.ipynb #c147990d
 @llmtool
