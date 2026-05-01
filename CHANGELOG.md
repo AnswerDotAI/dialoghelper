@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.2.31
+
+### New Features
+
+- added solveitskill ([#191](https://github.com/AnswerDotAI/dialoghelper/pull/191)), thanks to [@kafkasl](https://github.com/kafkasl)
+- Unified `dialog_link` param name to dname ([#190](https://github.com/AnswerDotAI/dialoghelper/pull/190)), thanks to [@kafkasl](https://github.com/kafkasl)
+- Add connfiles CLI and allow dialog-less calls via required=False in `find_dname`/`call_endp` ([#189](https://github.com/AnswerDotAI/dialoghelper/issues/189))
+
+
 ## 0.2.30
 
 ### New Features
