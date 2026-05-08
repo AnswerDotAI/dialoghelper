@@ -371,6 +371,9 @@ async def read_msg(
 async def find_msgs(
     re_pattern:str='', # Optional regex to search for (re.DOTALL+re.MULTILINE is used)
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
+    before:int=0,  # Include additional n msgs before matches
+    after:int=0,   # Include additional n msgs before matches
+    context:int=0, # Include additional n msgs around matches (recommended: set `context=2` when searching to see ipynb context)
     use_case:bool=False, # Use case-sensitive matching?
     use_regex:bool=True, # Use regex matching?
     only_err:bool=False, # Only return messages that have errors?
@@ -385,18 +388,19 @@ async def find_msgs(
     trunc_out:bool=False, # Middle-out truncate code output to 100 characters?
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
     headers_only:bool=False, # Only return note messages that are headers (first line only); cannot be used together with `header_section`
-    header_section:str=None, # Find section starting with this header; returns it plus all children (i.e until next header of equal or more significant level)
+    header_section:str=None, # Find section starting with this header; returns it plus all children
     include_skipped:bool=False, # Include messages hidden from AI (skipped)?
     dname:str='' # Dialog to get info for; defaults to current dialog
 )->list[dict]: # Messages in requested dialog that contain the given information
-    """Often it is more efficient to call `view_dlg` to see the whole dialog at once, so you can use it all from then on, instead of using `find_msgs`.
+    """Often it is more efficient to call `view_dlg` (not `find_msgs`) to see the whole dialog, so you can use it all from then on.
     {dname}
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code or tools, use its `id` field."""
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
-                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums, trunc_out=trunc_out, trunc_in=trunc_in,
+                    include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums,
+                    trunc_out=trunc_out, trunc_in=trunc_in, before=before, after=after, context=context,
                     headers_only=headers_only, header_section=header_section, include_skipped=include_skipped)
     return _maybe_xml(res, as_xml=as_xml, key='msgs')
 
@@ -488,8 +492,7 @@ async def read_msgid(
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ):
     """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
-    Use `add_to_dlg` if the LLM or human may need to refer to the message content again later.
-    {dname}"""
+    Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
     res = await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
     if add_to_dlg: await add_msg(res['content'], msg_type='raw')
     return res
@@ -504,8 +507,7 @@ async def view_msg(
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ):
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
-    Use `add_to_dlg` if the LLM or human may need to refer to the message content again later.
-    {dname}"""
+    Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
     res = (await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname))['content']
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
