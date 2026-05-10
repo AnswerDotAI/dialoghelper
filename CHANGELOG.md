@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.2.32
+
+### New Features
+
+- Use lisette.types ([#196](https://github.com/AnswerDotAI/dialoghelper/issues/196))
+- Add before/after/context params to `find_msgs` ([#195](https://github.com/AnswerDotAI/dialoghelper/issues/195))
+- web search tools ([#193](https://github.com/AnswerDotAI/dialoghelper/issues/193))
+
+
 ## 0.2.31
 
 ### New Features
