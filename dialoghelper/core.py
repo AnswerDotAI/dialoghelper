@@ -13,7 +13,7 @@ __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 
            'load_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
            'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
            'import_gist', 'update_gist', 'read_pr', 'dialoghelper_explain_dialog_editing', 'solveit_docs',
-           'dialog_link', 'spawn_agent', 'InputBtn', 'input', 'InputForm']
+           'dialog_link', 'spawn_agent', 'InputBtn', 'input', 'InputForm', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
@@ -121,13 +121,13 @@ def _handle_resp(res, json, raiseex):
     except Exception: return res.text
 
 # %% ../nbs/00_core.ipynb #5fc896fe
-def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, **data):
+def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=5, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
-    return _handle_resp(xpost(url, data=data, headers=headers), json, raiseex)
+    return _handle_resp(xpost(url, data=data, headers=headers, timeout=timeout), json, raiseex)
 
-async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, **data):
+async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=5, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
-    return _handle_resp(await xposta(url, data=data, headers=headers), json, raiseex)
+    return _handle_resp(await xposta(url, data=data, headers=headers, timeout=timeout), json, raiseex)
 
 
 # %% ../nbs/00_core.ipynb #1a5b4b75
@@ -1255,3 +1255,25 @@ def InputForm(*c, **kwargs):
     "Create an `input()` with a `Form` with needed `hx_post` and `id`"
     return input(Form(*c,
         hx_post="/input_reply_", id='input-request-form', **kwargs))
+
+# %% ../nbs/00_core.ipynb #d7027cfb
+@llmtool
+async def search(q:str):
+    "Get search results for a query and return as text"
+    return await call_endpa('search_', json=True, q=q, timeout=60)
+
+# %% ../nbs/00_core.ipynb #0f17ca2c
+@llmtool
+async def searches(searches:list[str]):
+    "Get search results for multiple queries in parallel"
+    return await call_endpa('searches_', json=True, searches=searches, timeout=60)
+
+# %% ../nbs/00_core.ipynb #84816ccc
+@llmtool
+async def web_answer(
+    pr:str, # The prompt - i.e the question to get answered
+    qs:list[str], # A list of 1 or more web search queries that might provide useful results. Do not constrain the queries too much - make sure the agent as a range of links to choose from
+    page_chars:int=50000 # Truncate web pages beyond this size
+): # Markdown text of the answer, with sources as appropriate
+    "Use a search agent to search for all of `qs`, choose suitable pages to read, and answer `pr` based on the page contents."
+    return await call_endpa('web_answer_', json=True, pr=pr, qs=qs, page_chars=page_chars, timeout=60)
