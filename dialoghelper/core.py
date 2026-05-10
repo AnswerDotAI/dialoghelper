@@ -37,12 +37,14 @@ from monsterui.all import franken_class_map,apply_classes
 from toolslm.xml import *
 from fasthtml.common import *
 from fasthtml.components import Solveit_input
-from lisette.core import ToolResponse,FullResponse,StopResponse
 from urllib.parse import urlencode
 from fastcore.imports import __llmtools__
 from safepyrun import RunPython,find_var,create_pyrun_magic,load_ipython_extension
 from pyskills import __pytools__,allow
 from pyskills.edit import *
+
+# %% ../nbs/00_core.ipynb #c9936691
+_lt = import_no_init('lisette.types')
 
 # %% ../nbs/00_core.ipynb #e54b45ad
 dname_doc = """If `dname` is None, the current dialog is used (if any). If it is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**"""
@@ -300,7 +302,7 @@ async def js_eval_a(expr):
 def display_response(display:str, result:str=None):
     "Return a special response where `display` is added as markdown/HTML to the prompt output, and `result` is returned to the LLM"
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
-    return ToolResponse({'_display': display, 'result': result})
+    return _lt.ToolResponse({'_display': display, 'result': result})
 
 # %% ../nbs/00_core.ipynb #1f0c6004
 from fastcore.script import call_parse
@@ -540,7 +542,7 @@ async def run_and_prompt(
     "Run `code` and then run `prompt`, returning the resulting message ID."
     id = await add_msg(code, msg_type="code", run=True)
     await add_msg(prompt, msg_type="prompt", run=True, id=id)
-    return StopResponse('Code has been added and queued for execution. Tool loop is finishing now. Summarize progress so far and planned next steps, and await "Continue." prompt.')
+    return _lt.StopResponse('Code has been added and queued for execution. Tool loop is finishing now. Summarize progress so far and planned next steps, and await "Continue." prompt.')
 
 # %% ../nbs/00_core.ipynb #023dcb74
 def _umsg(
@@ -703,7 +705,7 @@ async def load_dialog(
     dname:str='', # Target dialog; defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents."
-    return ToolResponse({'_full': await call_endpa('load_dialog_', dname, src_dname=src_dname)})
+    return _lt.ToolResponse({'_full': await call_endpa('load_dialog_', dname, src_dname=src_dname)})
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
