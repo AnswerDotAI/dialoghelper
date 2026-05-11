@@ -1234,8 +1234,8 @@ def dialog_link(
         dname = find_dname(dname).removeprefix('/')
         url += f"/dialog_?{urlencode({'name': dname})}"
     if msg_id: url += f"#{msg_id}"
-    return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')
-
+    label = f'{dname}/{msg_id}' if msg_id else dname
+    return HTML(f'<a href="{url}" target="_blank">{label}</a>') if dname else Markdown(f'[{url}]({url})')
 
 # %% ../nbs/00_core.ipynb #c147990d
 @llmtool
