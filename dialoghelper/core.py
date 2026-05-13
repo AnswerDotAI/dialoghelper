@@ -1091,13 +1091,15 @@ def _fmt_replies(api, owner, repo, num):
 # %% ../nbs/00_core.ipynb #6d26d0ed
 @llmtool
 def read_pr(
-    pr_number:int, # Issue or PR number
+    pr_number:int|str, # Issue/PR number, or GitHub issue/PR URL
     owner:str='answerdotai', # Owner
     repo:str=None, # Repo
     folder:str='', # For diffs, limit to only to files in `folder`
     replies:bool=False # Include replies
 ):
     "Fetch a GitHub PR or issue's title, body, optionally replies, and diff (if PR)"
+    if '/' in str(pr_number): *_,owner,repo,typ,pr_number = str(pr_number).rstrip('/').split('/')
+    pr_number = int(pr_number)
     if folder: folder = f"{folder}/"
     api = GhApi()
     res = None
