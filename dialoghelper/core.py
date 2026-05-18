@@ -3,12 +3,12 @@
 # %% auto #0
 __all__ = ['dname_doc', 'md_cls_d', 'dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_str_replace',
            'msg_strs_replace', 'msg_replace_lines', 'msg_del_lines', 'msg_pyrun', 'msg_ast_replace', 'add_styles',
-           'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a',
-           'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data',
-           'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a',
-           'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'display_response', 'connfiles', 'realpath', 'list_dialogs',
-           'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg',
-           'run_and_prompt', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
+           'names_containing', 'find_dname', 'xposta', 'xgeta', 'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx',
+           'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a',
+           'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get', 'trigger_now', 'event_once',
+           'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'display_response', 'connfiles', 'realpath',
+           'list_dialogs', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref',
+           'del_msg', 'run_and_prompt', 'update_msg', 'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog',
            'load_dialog', 'rm_dialog', 'run_code_interactive', 'ast_py', 'ast_grep', 'ctx_folder', 'ctx_repo',
            'ctx_symfile', 'ctx_symfolder', 'ctx_sympkg', 'load_gist', 'gist_file', 'import_string', 'mk_toollist',
@@ -77,6 +77,14 @@ try: load_ipython_extension(get_ipython())
 except NameError: pass
 
 __llmtools__.add('pyrun')
+
+# %% ../nbs/00_core.ipynb #9ec900cf
+def names_containing(s:str):
+    "Names containing `s` in IPython user namespace, or caller globals"
+    try: ip = get_ipython()
+    except NameError: ip = None
+    ns = getattr(ip, 'user_ns', None) or currentframe().f_back.f_globals
+    return [o for o in ns if s in o]
 
 # %% ../nbs/00_core.ipynb #65a8b58b
 def find_dname(dname=None, required=True):
