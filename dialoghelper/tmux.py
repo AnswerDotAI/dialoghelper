@@ -2,6 +2,8 @@
 
 ## Common Use Cases with Solveit's AI
 
+### Debug failing commands
+
 When something breaks in one pane, the AI can see all your terminals at once to understand context:
 
 > My script is failing in pane 1, can you help?
