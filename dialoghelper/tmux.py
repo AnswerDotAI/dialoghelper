@@ -7,14 +7,6 @@ pane(host='hack')
 windows(ip='1.2.3.4', user='ubuntu', keyfile='~/.ssh/id_rsa')
 ```
 
-`pane` captures the scrollback history from a specific tmux pane as a string. Specify any combination of `session`, `window`, `pane` to target. Also accepts `pane(pane='%xyz')` for global pane identifiers. If no arguments are provided it defaults to the current pane. Examples:
-
-```python
-pane()
-pane(pane='%7')
-pane(n=200,pane=1,session='my-session',window=0)
-```
-
 `windows()` and `sessions()` return nested dicts. Use `flatten_dict` to search them as `(path, content)` tuples, where `path` identifies the session/window/pane source. 
 The `path` string uses `//` separators showing the hierarchy, e.g. `"mysession//0:bash//1"` means session `"mysession"`, window `0` named `"bash"`, pane `1`.
 
