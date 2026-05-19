@@ -1,44 +1,4 @@
-"""Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with Solveit's AI, debugging across multiple terminals, or monitoring long-running processes.
-
-## Common Use Cases with Solveit's AI
-
-### Debug failing commands
-
-When something breaks in one pane, the AI can see all your terminals at once to understand context:
-
-> My script is failing in pane 1, can you help?
-
-The AI sees your error messages, the commands you ran, and even what's happening in other panes (like log files you might be tailing).
-
-```python
-panes()
-```
-
-### Monitor long-running processes
-
-Check on multiple jobs without switching windows:
-
-> How are my training runs doing?
-
-The AI can inspect all your windows - seeing if processes completed, checking for errors, or summarizing outputs from different experiments running in parallel.
-
-```python
-windows()
-```
-
-### Reconstruct lost commands
-
-When you can't remember what you typed earlier:
-
-> What was that curl command I used in the other window?
-
-The AI can search through all your session history to find specific commands, even if they've scrolled off screen or are in a different window.
-
-```python
-found = {path: content for path, content in flatten_dict(windows(n=2000)) if 'curl' in content}
-```
-
-### SSH
+"""Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with LLMs, debugging across multiple terminals, or monitoring long-running processes.
 
 All capture and list functions accept SSH kwargs to target a remote machine: use `host` for an SSH alias, or `ip` + `user` + optional `keyfile`.
 
@@ -47,72 +7,13 @@ pane(host='hack')
 windows(ip='1.2.3.4', user='ubuntu', keyfile='~/.ssh/id_rsa')
 ```
 
-### Scrollback length
-
-Capture functions default to 500 lines of scrollback. Override per call with `n=...`, or set globally with `set_default_history(n)`.
-
-```python
-pane(n=2000)
-set_default_history(2000)
-```
-
-### pane
-
-Captures the scrollback history from a specific tmux pane as a string. Specify any combination of `session`, `window`, `pane` to target; defaults to the current pane.
+`pane` captures the scrollback history from a specific tmux pane as a string. Specify any combination of `session`, `window`, `pane` to target. Also accepts `pane(pane='%xyz')` for global pane identifiers. If no arguments are provided it defaults to the current pane. Examples:
 
 ```python
 pane()
+pane(pane='%7')
+pane(n=200,pane=1,session='my-session',window=0)
 ```
-
-### list_panes
-
-Returns raw pane info for the current (or given) window: pane numbers, dimensions, and active status.
-
-```python
-list_panes(window=0)
-```
-
-### panes
-
-Returns `{pane_num: content}` for all panes in a session/window. One call gets a snapshot of every pane.
-
-```python
-panes(window=0)
-```
-
-### list_windows
-
-Lists all windows in the current (or given) session: numbers, names, pane counts, and active (*) / previous (-) markers.
-
-```python
-list_windows()
-```
-
-### windows
-
-Returns a nested dict `{'win_num:name': {pane_num: content}}` capturing an entire session's structure in one call.
-
-```python
-windows(session='work')
-```
-
-### list_sessions
-
-Lists all tmux sessions: names, window counts, creation time, and attachment status.
-
-```python
-list_sessions()
-```
-
-### sessions
-
-Returns the full tmux state — all sessions, all windows, all panes — nested as `{session: {'win_num:name': {pane_num: content}}}`.
-
-```python
-sessions()
-```
-
-### Searching nested results
 
 `windows()` and `sessions()` return nested dicts. Use `flatten_dict` to search them as `(path, content)` tuples, where `path` identifies the session/window/pane source. 
 The `path` string uses `//` separators showing the hierarchy, e.g. `"mysession//0:bash//1"` means session `"mysession"`, window `0` named `"bash"`, pane `1`.
@@ -174,7 +75,7 @@ def set_default_history(n:int):
 @delegates(shell_ret)
 def pane(
     n:int=None, # Number of scrollback lines to capture, in addition to visible area (None uses default_tmux_lines, which is 500 if not otherwise set)
-    pane:int=None,     # Pane number to capture from
+    pane:int|str=None, # Pane number to capture from (accepts both integers for window IDs and "%{int}" for global pane IDs)
     session:str=None,  # Session name to target
     window:int=None,   # Window number to target
     **kwargs
@@ -243,7 +144,7 @@ def windows(
     n:int=None,        # Number of scrollback lines to capture
     **kwargs
 ):
-    'Grab history from all panes in all windows of a session'
+    "Grab history from all panes in all windows of a session as `{'win_num:name': {pane_num: content}}`"
     windows_info = list_windows(session, **kwargs).strip().split('\n')
     return dict(_window_data(line, n, session, **kwargs) for line in windows_info)
 
@@ -264,7 +165,7 @@ def sessions(
     n:int=None,        # Number of scrollback lines to capture
     **kwargs
 ):
-    'Grab history from all panes in all windows of all sessions'
+    "Grab history from all panes in all windows of all sessions as `{session: {'win_num:name': {pane_num: content}}}`"
     sessions_info = list_sessions(**kwargs).strip().split('\n')
     return dict(_session_data(line, n, **kwargs) for line in sessions_info)
 
