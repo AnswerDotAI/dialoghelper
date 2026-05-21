@@ -149,4 +149,5 @@ d = { 'settings': { 'branch': 'main',
             'dialoghelper.tracetools': { 'dialoghelper.tracetools._collapse': ('tracetools.html#_collapse', 'dialoghelper/tracetools.py'),
                                          'dialoghelper.tracetools._process': ('tracetools.html#_process', 'dialoghelper/tracetools.py'),
                                          'dialoghelper.tracetools.fmt_trace': ('tracetools.html#fmt_trace', 'dialoghelper/tracetools.py'),
-                                         'dialoghelper.tracetools.tracetool': ('tracetools.html#tracetool', 'dialoghelper/tracetools.py')}}}
+                                         'dialoghelper.tracetools.tracetool': ('tracetools.html#tracetool', 'dialoghelper/tracetools.py')},
+            'dialoghelper.websearchskill': {}}}
