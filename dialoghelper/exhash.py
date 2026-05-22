@@ -15,6 +15,7 @@ async def msg_lnhashview(
 ):
     "Show lnhash-addressed lines of a message"
     msg = await read_msgid(id=id, dname=dname)
+    if not msg: return 'No such message.'
     return '\n'.join(lnhashview(msg['content']))
 
 # %% ../nbs/04_exhash.ipynb #9bdae034
@@ -23,7 +24,7 @@ async def msg_exhash(
     cmds:list, # List of exhash command strings to apply
     dname:str='', # Dialog containing message; defaults to current dialog
 ):
-    """Verified line-addressed editor. Apply commands to msg `id` contents, return lnhashview(result).
+    """Verified line-addressed editor. Apply commands to msg `id` contents, return lnhash diff.
     **NB**: *all* exhash commands *must* start with an address.
     The *only* allowed addresses are a single lnhash, or a pair separated by `,`. (I.e no `%`, `.`, etc.)
     **NB**: hashes are checked before each command is run. So be sure to have commands go last->first order to avoid changing earlier lines.
@@ -55,12 +56,13 @@ async def msg_exhash(
     `cmds` is a required list of command strings. For `a`/`i`/`c`, include the text block in the same command string after a newline.
     Unlike `ex`, do NOT add a trailing `.` line — the string boundary ends the block. A trailing `.` will be inserted literally (with a warning)."""
     msg = await read_msgid(id=id, dname=dname)
+    if not msg: return 'No such message.'
     txt = msg['content']
-    res = exhash(txt, cmds)
-    res = '\n'.join(res['lines'])
+    edit = exhash(txt, cmds)
+    res = '\n'.join(edit['lines'])
     upres = await update_msg(id=id, content=res, dname=dname)
     assert upres.startswith('_'), f"Message update failed: {upres}"
-    return '\n'.join(lnhashview(res))
+    return edit.format_diff()
 
 # %% ../nbs/04_exhash.ipynb #b57b7099
 def file_lnhashview(path:str):
@@ -69,9 +71,6 @@ def file_lnhashview(path:str):
 
 # %% ../nbs/04_exhash.ipynb #0647eeb2
 def file_exhash(path:str, cmds:list[str]):
-    """Verified line-addressed editor for files. Apply commands to file at `path`, return lnhashview(result).
+    """Verified line-addressed editor for files. Apply commands to file at `path`, return lnhash diff.
     See `doc(msg_exhash)` for details"""
-    txt = Path(path).read_text()
-    res = '\n'.join(exhash(txt, cmds)['lines'])
-    Path(path).write_text(res)
-    return '\n'.join(lnhashview(res))
+    return exhash_file(path, cmds, inplace=True)
