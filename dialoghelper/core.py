@@ -113,8 +113,10 @@ def _diff_dialog(pred, dname, err="`id` parameter must be provided when target d
     if dname or ('dname' in dh_settings): raise ValueError(err)
 
 # %% ../nbs/00_core.ipynb #39232620
+@allow
 async def xposta(url, **kwargs):
     async with AsyncClient() as c: return await c.post(url, **kwargs)
+@allow
 async def xgeta(url, **kwargs):
     async with AsyncClient() as c: return await c.get (url, **kwargs)
 
@@ -140,7 +142,6 @@ def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True,
 async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=5, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     return _handle_resp(await xposta(url, data=data, headers=headers, timeout=timeout), json, raiseex)
-
 
 # %% ../nbs/00_core.ipynb #1a5b4b75
 def _check_res(res, dname):
@@ -417,7 +418,6 @@ async def find_msgs(
     return _maybe_xml(res, as_xml=as_xml, key='msgs')
 
 # %% ../nbs/00_core.ipynb #9ff2a38e
-@llmtool
 async def view_dlg(
     dname:str='', # Dialog to get info for; defaults to current dialog
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
@@ -970,6 +970,8 @@ async def ctx_folder(
 
 
 # %% ../nbs/00_core.ipynb #2dc4dc40
+allow(repo2ctx)
+
 @delegates(repo2ctx)
 async def ctx_repo(
     owner:str,  # GitHub repo owner
@@ -985,7 +987,6 @@ async def ctx_repo(
     if exts: types=None
     if not raw: res = f'```\n{res}\n```'
     return await add_msg(res, msg_type='raw' if raw else 'note')
-
 
 # %% ../nbs/00_core.ipynb #5bd8915b
 async def ctx_symfile(sym):
@@ -1012,6 +1013,7 @@ async def ctx_sympkg(
 
 
 # %% ../nbs/00_core.ipynb #eb4c6bf4
+@allow
 def load_gist(gist_id:str):
     "Retrieve a gist"
     api = GhApi()
@@ -1099,7 +1101,7 @@ def _fmt_replies(api, owner, repo, num):
     return '\n\n## Replies\n' + '\n\n---\n'.join(f"**@{c.user.login}** ({c.created_at[:10]}):\n{c.body}" for c in comments)
 
 # %% ../nbs/00_core.ipynb #6d26d0ed
-@llmtool
+@allow
 def read_pr(
     pr_number:int|str, # Issue/PR number, or GitHub issue/PR URL
     owner:str='answerdotai', # Owner
