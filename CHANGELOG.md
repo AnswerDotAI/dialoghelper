@@ -2,6 +2,19 @@
 
 <!-- do not remove -->
 
+## 0.2.33
+
+### New Features
+
+- Add allows ([#204](https://github.com/AnswerDotAI/dialoghelper/issues/204))
+- exhash: return diff instead of full view; handle missing msg; delegate `file_exhash` to `exhash_file` ([#203](https://github.com/AnswerDotAI/dialoghelper/issues/203))
+- `websearchskill` ([#201](https://github.com/AnswerDotAI/dialoghelper/issues/201))
+- tmux as pyskill compatible module ([#200](https://github.com/AnswerDotAI/dialoghelper/pull/200)), thanks to [@RensDimmendaal](https://github.com/RensDimmendaal)
+- Add dname parameter to `msg_lnhashview` and `msg_exhash` for cross-dialog message access ([#199](https://github.com/AnswerDotAI/dialoghelper/issues/199))
+- Add `names_containing` ([#198](https://github.com/AnswerDotAI/dialoghelper/issues/198))
+- Allow `read_pr` to accept a GitHub issue/PR URL in addition to a number ([#197](https://github.com/AnswerDotAI/dialoghelper/issues/197))
+
+
 ## 0.2.32
 
 ### New Features
