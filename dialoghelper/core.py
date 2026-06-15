@@ -40,7 +40,7 @@ from toolslm.xml import *
 from fasthtml.common import *
 from fasthtml.components import Solveit_input
 from urllib.parse import urlencode
-from safepyrun import RunPython,find_var,create_pyrun_magic,load_ipython_extension
+from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from pyskills import allow
 from pyskills.edit import *
 
