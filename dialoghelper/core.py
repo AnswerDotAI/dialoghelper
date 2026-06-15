@@ -125,7 +125,7 @@ def _check_res(res, dname):
 async def curr_dialog(
     with_messages:bool=False,  # Include messages as well?
     dname:str='' # Dialog to get info for; defaults to current dialog
-):
+) -> dict|str:
     "Get the current dialog info."
     res = await call_endpa('curr_dialog_', dname, json=True, with_messages=with_messages)
     if 'error' in res: return f"error: {res['error']}"
@@ -135,7 +135,7 @@ async def curr_dialog(
 async def msg_idx(
     id:str=None,  # Message id to find (defaults to current message)
     dname:str='' # Dialog to get message index from; defaults to current dialog
-):
+) -> int:
     "Get absolute index of message in dialog."
     _diff_dialog(True, dname, id=id)
     res = await call_endpa('msg_idx_', dname, json=True, id=id)
@@ -301,7 +301,7 @@ async def connfiles(
 # %% ../nbs/00_core.ipynb #e2138315
 async def realpath(
     subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
-):
+) -> str:
     "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
     sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
     return await call_endpa('realpath_', json=True, subpath=sub.lstrip('/'))
@@ -310,12 +310,11 @@ async def realpath(
 async def list_dialogs(
     subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
     depth:int=1 # Directory depth
-):
+) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
     d = find_dname(subpath, required=False)
     sub = (d or '') if subpath else (str(Path(d).parent) if d else '')
     return await call_endpa('list_dialogs_', json=True, required=False, subpath=sub.lstrip('/'), depth=depth)
-
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
@@ -333,7 +332,7 @@ async def read_msg(
     view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
     nums:bool=False, # Whether to show line numbers
     dname:str='' # Dialog to get info for; defaults to current dialog
-    ):
+    ) -> dict:
     """Get the message indexed in the current dialog.
     NB: Messages in the current dialog above the current message are *already* visible; use this only when you need line numbers for editing operations, or for messages not in the current dialog or below the current message.
     - To get the exact message use `n=0` and `relative=True` together with `id`.
@@ -392,7 +391,7 @@ async def view_dlg(
     trunc_out:bool=True, # Middle-out truncate code output to 100 characters (only applies if `include_output`)?
     trunc_in:bool=False, # Middle-out truncate cell content to 80 characters?
     include_skipped:bool=False, # Include messages hidden from AI (skipped)?
-):
+) -> str:
     "Concise XML view of all messages (optionally filtered by type), not including metadata. Often it is more efficient to call this to see the whole dialog at once (including line numbers if needed), instead of running `find_msgs` or `view_msg` multiple times."
     return await find_msgs(msg_type=msg_type, dname=dname, as_xml=True, nums=nums,
         include_meta=False, include_output=include_output, trunc_out=trunc_out, trunc_in=trunc_in, include_skipped=include_skipped)
@@ -466,7 +465,7 @@ async def read_msgid(
     nums:bool=False, # Whether to show line numbers
     dname:str='', # Dialog to get message from; defaults to current dialog
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
-):
+) -> dict:
     """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
     res = await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
@@ -480,7 +479,7 @@ async def view_msg(
     nums:bool=True, # Whether to show line numbers
     view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF. Rarely needed--read whole message in nearly all cases instead
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
-):
+) -> str:
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
     res = (await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname))['content']
@@ -498,13 +497,12 @@ async def del_msg(
     id:str=None, # id of message to delete
     dname:str='', # Dialog to get info for; defaults to current dialog
     log_changed:bool=False # Add a note showing the deleted content?
-):
+) -> dict:
     "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     if log_changed: msg = await read_msgid(id, dname=dname)
     res = await call_endpa('rm_msg_', dname, raiseex=True, msid=id, json=True)
     if log_changed: await add_msg(f"> Deleted {msg_ref(id, dname)}\n\n```\n{msg.content}\n```")
     return res
-
 
 # %% ../nbs/00_core.ipynb #30e90bf9
 async def run_and_prompt(
@@ -537,7 +535,7 @@ async def update_msg(
     msg:Optional[Dict]=None, # Dictionary of field keys/values to update
     dname:str='', # Dialog to get info for; defaults to current dialog
     log_changed:bool=False, # Add a note showing the diff?
-    **kwargs):
+    **kwargs) -> str:
     """Update an existing message. Provide either `msg` OR field key/values to update.
     - Use `content` param to update contents.
     - Only include parameters to update--missing ones will be left unchanged.
@@ -565,7 +563,7 @@ async def copy_msg(
     ids:str=None, # Comma-separated ids of message(s) to copy
     cut:bool=False, # Cut message(s)? (If not, copies)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
-):
+) -> dict:
     "Add `ids` to clipboard."
     id,*_ = ids.split(',')
     res = await call_endpa('msg_clipboard_', dname, ids=ids, id=id, cmd='cut' if cut else 'copy')
@@ -576,7 +574,7 @@ async def paste_msg(
     id:str=None, # Message id to paste next to
     after:bool=True, # Paste after id? (If not, pastes before)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
-):
+) -> dict:
     "Paste clipboard msg(s) after/before the current selected msg (id)."
     res = await call_endpa('msg_paste_', dname, id=id, after=after, json=True)
     return _check_res(res, dname)
@@ -606,7 +604,7 @@ def mermaid(code, cls="mermaid", **kwargs):
 async def toggle_header(
     id:str, # id of markdown header note message to toggle collapsed state
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
-):
+) -> dict:
     "Toggle collapsed header state for `id`"
     res = await call_endpa('toggle_header_collapse_', dname, id=id)
     return _check_res(res, dname)
@@ -616,7 +614,7 @@ async def toggle_bookmark(
     id:str, # id of message to toggle bookmark on
     n:int, # Bookmark number (1-9)
     dname:str='' # Dialog to set bookmark in; defaults to current dialog
-):
+) -> dict:
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
     return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
 
@@ -624,7 +622,7 @@ async def toggle_bookmark(
 async def toggle_comment(
     id:str, # id of code message (or comma-separated ids) to toggle comments on
     dname:str='' # Dialog to toggle comments in; defaults to current dialog. (Note dialog *must* be running for this function)
-):
+) -> dict:
     "Toggle line comments on code message(s). If any lines are uncommented, comments all; otherwise uncomments all."
     ids = id
     id,*_ = ids.split(',')
