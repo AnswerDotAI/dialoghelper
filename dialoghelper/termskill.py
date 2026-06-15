@@ -2,7 +2,7 @@
 
 dialoghelper's tools can run *inside* a Solveit kernel where the active dialog is auto-detected; however this pyskill explains how to drive the same tools from *outside* a Solveit kernel — e.g. from a terminal tool such as an AI coding system. Whilst it's possible to use direct ipynb editing tools (such as pyskills.edit's functions), these won't cause open dialogs to dynamically update. Also reading and updating prompt message format is directly supported in dialoghelper. Therefore it's preferred to use dialoghelper.
 
-All dialoghelper.termskill functions are usable from a pyrun sandbox.
+All dialoghelper.termskill functions are usable from a python sandbox.
 
 ## Requirements
 
@@ -76,7 +76,7 @@ from dialoghelper.core import *
 
 __all__ = ['set_dialog', 'curr_dialog', 'msg_idx', 'read_msg', 'read_msgid', 'view_msg', 'view_dlg', 'find_msgs',
     'add_msg', 'update_msg', 'del_msg', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_insert_line',
-    'msg_del_lines', 'msg_ast_replace', 'msg_pyrun', 'create_or_run_dialog', 'stop_dialog', 'realpath', 'list_dialogs']
+    'msg_del_lines', 'msg_ast_replace', 'msg_python', 'create_or_run_dialog', 'stop_dialog', 'realpath', 'list_dialogs']
 
 def set_dialog(dname:str):
     "Set active dialog path for subsequent calls (absolute, no `.ipynb`)"
