@@ -109,11 +109,11 @@ def _handle_resp(res, json, raiseex):
     except Exception: return res.text
 
 # %% ../nbs/00_core.ipynb #5fc896fe
-def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=5, **data):
+def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     return _handle_resp(xpost(url, data=data, headers=headers, timeout=timeout), json, raiseex)
 
-async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=5, **data):
+async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     return _handle_resp(await xposta(url, data=data, headers=headers, timeout=timeout), json, raiseex)
 
