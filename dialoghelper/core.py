@@ -30,6 +30,7 @@ from fastcore.xtras import asdict,acache
 from fastcore.docments import MarkdownRenderer
 from ghapi.all import *
 from inspect import currentframe,Parameter,signature
+from ipymini import unlock
 from httpx import AsyncClient, get as xget, post as xpost
 from IPython.display import display,Markdown,HTML
 from monsterui.all import franken_class_map,apply_classes
@@ -670,6 +671,7 @@ async def load_dialog(
     dname:str='', # Target dialog; defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents."
+    unlock()
     return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
 
 # %% ../nbs/00_core.ipynb #e393f14b

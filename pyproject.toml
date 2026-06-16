@@ -17,6 +17,7 @@ dependencies = [
   'fastcore>=1.13.4',
   'ghapi',
   'ipykernel-helper>=0.0.28',
+  'ipymini>=0.1.9',
   'MonsterUI',
   'lisette>=0.1.30',
   'toolslm>=0.3.30',
