@@ -1,5 +1,6 @@
 from dialoghelper import *
 from dialoghelper.solveitskill import *
+from ipykernel_helper import *
 from fastcore.tools import *
 from toolslm.xml import *
 from toolslm.inspecttools import *

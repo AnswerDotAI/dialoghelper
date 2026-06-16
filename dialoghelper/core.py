@@ -26,7 +26,7 @@ from fastcore.xml import to_xml
 from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from fastcore.xtras import asdict
+from fastcore.xtras import asdict,acache
 from fastcore.docments import MarkdownRenderer
 from ghapi.all import *
 from inspect import currentframe,Parameter,signature
@@ -38,6 +38,7 @@ from fasthtml.common import *
 from fasthtml.components import Solveit_input
 from urllib.parse import urlencode
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
+from functools import cache
 from pyskills import allow
 from pyskills.edit import *
 
@@ -299,6 +300,7 @@ async def connfiles(
     return res
 
 # %% ../nbs/00_core.ipynb #e2138315
+@acache
 async def realpath(
     subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
 ):
