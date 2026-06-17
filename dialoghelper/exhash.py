@@ -12,7 +12,7 @@ from exhash import *
 async def msg_lnhashview(
     id:str, # id of message to view
     dname:str='', # Dialog containing message; defaults to current dialog
-):
+) -> str:
     "Show lnhash-addressed lines of a message"
     msg = await read_msgid(id=id, dname=dname)
     if not msg: return 'No such message.'
@@ -23,7 +23,7 @@ async def msg_exhash(
     id:str, # id of message to edit
     cmds:list, # List of exhash command strings to apply
     dname:str='', # Dialog containing message; defaults to current dialog
-):
+) -> str:
     """Verified line-addressed editor. Apply commands to msg `id` contents, return lnhash diff.
     **NB**: *all* exhash commands *must* start with an address.
     The *only* allowed addresses are a single lnhash, or a pair separated by `,`. (I.e no `%`, `.`, etc.)
