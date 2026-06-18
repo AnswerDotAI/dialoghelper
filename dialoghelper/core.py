@@ -272,13 +272,13 @@ async def js_run_a(code):
 def js_eval(expr):
     "Evaluate a JS expression in the browser and return the result"
     idx, data = _event_prep({})
-    iife("pushData('%s', (() => { %s })())" % (idx, expr))
+    iife("pushData('%s', { result: await (async () => { %s })() })" % (idx, expr))
     return pop_data(idx)
 
 async def js_eval_a(expr):
     "Evaluate a JS expression in the browser and return the result"
     idx, data = _event_prep({})
-    await iife_a("pushData('%s', (() => { %s })())" % (idx, expr))
+    await iife_a("pushData('%s', { result: await (async () => { %s })() })" % (idx, expr))
     return await pop_data_a(idx)
 
 # %% ../nbs/00_core.ipynb #80334098
