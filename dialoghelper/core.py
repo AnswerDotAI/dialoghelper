@@ -98,6 +98,7 @@ def _prep_endp(path, dname, json, id, data, required=True):
     dname = find_dname(dname, required=required)
     if dname: data['dlg_name'] = dname.strip('/')
     if id: data['id_'] = id
+    data = {k:v for k,v in data.items() if v is not None}
     url = f'http://localhost:{dh_settings["port"]}/{path}'
     headers = {'Accept': 'application/json'} if json else {}
     return url, data, headers
