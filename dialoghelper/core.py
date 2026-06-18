@@ -306,7 +306,7 @@ async def realpath(
 ) -> str:
     "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
     sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
-    return await call_endpa('realpath_', json=True, subpath=sub.lstrip('/'))
+    return await call_endpa('realpath_', subpath=sub.lstrip('/'))
 
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(

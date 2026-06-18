@@ -4,7 +4,7 @@ from ipykernel_helper import *
 from fastcore.tools import *
 from toolslm.xml import *
 from toolslm.inspecttools import *
-from pyskills import allow,doc,list_pyskills
+from pyskills import *
 from pyskills.edit import *
 from pyskills.files import *
 from exhash.skill import *
