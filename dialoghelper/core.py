@@ -15,7 +15,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
-import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess
+import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess,sys
 
 from typing import Dict
 from tempfile import TemporaryDirectory
@@ -109,12 +109,14 @@ def _handle_resp(res, json, raiseex):
     except Exception: return res.text
 
 # %% ../nbs/00_core.ipynb #5fc896fe
-def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, **data):
+def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
+    if audit: sys.audit("dialoghelper.endp", path, data)
     return _handle_resp(xpost(url, data=data, headers=headers, timeout=timeout), json, raiseex)
 
-async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, **data):
+async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
+    if audit: sys.audit("dialoghelper.endp", path, data)
     return _handle_resp(await xposta(url, data=data, headers=headers, timeout=timeout), json, raiseex)
 
 # %% ../nbs/00_core.ipynb #1a5b4b75
@@ -436,7 +438,7 @@ async def _add_msg_unsafe(
         "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
     assert not (wait and not dname), "Can not wait in current dialog"
     res = await call_endpa('add_relative_', dname, json=True, content=content, placement=placement, id=id, msg_type=msg_type,
-        run=run, **kwargs)
+        run=run, audit=True, **kwargs)
     if 'error' in res: return f"error: {res['error']}"
     rmsg_id = res['id']
     if not wait or not run: return rmsg_id
@@ -503,7 +505,7 @@ async def del_msg(
 ) -> dict:
     "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     if log_changed: msg = await read_msgid(id, dname=dname)
-    res = await call_endpa('rm_msg_', dname, raiseex=True, msid=id, json=True)
+    res = await call_endpa('rm_msg_', dname, raiseex=True, msid=id, json=True, audit=True)
     if log_changed: await add_msg(f"> Deleted {msg_ref(id, dname)}\n\n```\n{msg.content}\n```")
     return res
 
@@ -679,7 +681,7 @@ async def rm_dialog(
 ):
     "Delete a dialog (or folder) and associated records, stopping the kernel if running"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('rm_dialog_', name=name, sess='{}', json=True)
+    return await call_endpa('rm_dialog_', name=name, sess='{}', json=True, audit=True)
 
 # %% ../nbs/00_core.ipynb #5617305b
 async def run_code_interactive(
