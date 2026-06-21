@@ -6,7 +6,6 @@ from toolslm.xml import *
 from toolslm.inspecttools import *
 from pyskills import *
 from pyskills.edit import *
-from pyskills.files import *
 from exhash.skill import *
 from safepyrun.core import allow_imports
 from safecmd import bash
