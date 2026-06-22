@@ -6,10 +6,11 @@ from toolslm.xml import *
 from toolslm.inspecttools import *
 from pyskills import *
 from pyskills.edit import *
+from rgapi import *
 from exhash.skill import *
 from safepyrun.core import allow_imports
 from safecmd import bash
 from safepyrun import RunPython
 
-for o in ('fastllm', 'PIL', 'fastspec'): allow_imports.add(o)
+for o in ('PIL',): allow_imports.add(o)
 
