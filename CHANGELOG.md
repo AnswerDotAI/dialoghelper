@@ -2,6 +2,24 @@
 
 <!-- do not remove -->
 
+## 0.2.34
+
+### New Features
+
+- Add audit events ([#217](https://github.com/AnswerDotAI/dialoghelper/issues/217))
+- feat: support top-level await in `js_eval` via async IIFE wrapper ([#216](https://github.com/AnswerDotAI/dialoghelper/pull/216)), thanks to [@ncoop57](https://github.com/ncoop57)
+- realpath is a str now ([#213](https://github.com/AnswerDotAI/dialoghelper/issues/213))
+- Add unlock() call to `load_dialog` and ipymini dependency ([#212](https://github.com/AnswerDotAI/dialoghelper/pull/212)), thanks to [@ncoop57](https://github.com/ncoop57)
+- Add xdir to pyskills imports in stdtools ([#210](https://github.com/AnswerDotAI/dialoghelper/pull/210)), thanks to [@kafkasl](https://github.com/kafkasl)
+- Renamed `create_pyrun_magic` to `create_python_magic` ([#209](https://github.com/AnswerDotAI/dialoghelper/pull/209)), thanks to [@kafkasl](https://github.com/kafkasl)
+- Split .core into .utils and .core ([#208](https://github.com/AnswerDotAI/dialoghelper/issues/208))
+- Updates for move to pyrun ([#206](https://github.com/AnswerDotAI/dialoghelper/issues/206))
+
+### Bugs Squashed
+
+- Remove None-valued keys from request data in `_prep_endp` ([#214](https://github.com/AnswerDotAI/dialoghelper/issues/214))
+
+
 ## 0.2.33
 
 ### New Features
