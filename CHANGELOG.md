@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.36
+
+### Bugs Squashed
+
+- Missing dep
+
+
 ## 0.2.35
 
 ### New Features
