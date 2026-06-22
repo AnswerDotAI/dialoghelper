@@ -43,7 +43,7 @@ from pyskills import allow
 from pyskills.edit import *
 
 # %% ../nbs/00_core.ipynb #c9936691
-_lt = import_no_init('lisette.types')
+_lt = import_no_init('fastllm.chat')
 
 # %% ../nbs/00_core.ipynb #eb1636a6
 dh_settings = {'port':5001}

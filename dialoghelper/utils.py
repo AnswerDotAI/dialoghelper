@@ -38,7 +38,7 @@ from .core import *
 from .core import _msg_edit
 
 # %% ../nbs/06_utils.ipynb #c9936691
-_lt = import_no_init('lisette.types')
+_lt = import_no_init('fastllm.chat')
 
 # %% ../nbs/06_utils.ipynb #cc9f963f
 md_cls_d = {

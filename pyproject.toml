@@ -19,7 +19,7 @@ dependencies = [
   'ipykernel-helper>=0.0.28',
   'ipymini>=0.1.9',
   'MonsterUI',
-  'lisette>=0.1.30',
+  'fastllm',
   'toolslm>=0.3.30',
   "exhash>=0.1.4",
   "safepyrun>=0.0.23",
