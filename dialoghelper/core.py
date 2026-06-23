@@ -670,7 +670,7 @@ async def load_dialog(
     src_dname:str, # Dialog to load code from (path relative to solveit data dir, no .ipynb)
     dname:str='', # Target dialog; defaults to current dialog
 ):
-    "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents."
+    "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
     unlock = getattr(get_ipython().kernel, 'unlock', None)
     if unlock: unlock()
     return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
