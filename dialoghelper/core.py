@@ -885,12 +885,12 @@ async def spawn_agent(prompt:str):
 
 # %% ../nbs/00_core.ipynb #d7027cfb
 async def search(q:str):
-    "Get search results for a query and return as text"
+    "Get search results for a query and return as text. Rarely used instead of `web_answer`."
     return await call_endpa('search_', json=True, q=q, timeout=60)
 
 # %% ../nbs/00_core.ipynb #0f17ca2c
 async def searches(searches:list[str]):
-    "Get search results for multiple queries in parallel"
+    "Get search results for multiple queries in parallel. Rarely used instead of `web_answer`."
     return await call_endpa('searches_', json=True, searches=searches, timeout=60)
 
 # %% ../nbs/00_core.ipynb #84816ccc
