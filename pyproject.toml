@@ -15,7 +15,7 @@ classifiers = ["Natural Language :: English", "Intended Audience :: Developers",
   "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 dependencies = [
   'fastcore>=1.13.4',
-  'ghapi',
+  'ghapi>=1.0.16',
   'ipykernel-helper>=0.0.28',
   'ipymini>=0.1.9',
   'MonsterUI',
