@@ -732,68 +732,16 @@ def _msg_edit(f, name=None):
     return res
 
 # %% ../nbs/00_core.ipynb #ceb1ad3b
-def _insert_line(
-    text:str,
-    insert_line:int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
-    new_str:str, # The text to insert
-):
-    "Insert new_str at specified line number"
-    lines = text.splitlines()
-    if not (0 <= insert_line <= len(lines)): raise ValueError(f'Invalid line {insert_line}. Valid range: 0-{len(lines)}')
-    lines.insert(insert_line, new_str)
-    return '\n'.join(lines)
+msg_insert_line  = _msg_edit (insert_line, 'msg_insert_line')
 
-msg_insert_line  = _msg_edit (_insert_line, 'msg_insert_line')
 
 # %% ../nbs/00_core.ipynb #e6b2a19b
-def _str_replace(
-    text:str,
-    old_str:str, # Text to find and replace
-    new_str:str, # Text to replace with
-    start_line:int=None, # Optional 1-based start line to limit search
-    end_line:int=None, # Optional 1-based end line to limit search
-    n_matches:int=None, # Max replacements (None=all)
-    re_filter:str=None, # If provided, only process lines matching this regex (like g// in ex)
-    invert_filter:bool=False, # Invert the filter (like g!// in ex)
-):
-    "Replace occurrence(s) of old_str with new_str"
-    def _repl(s, label=''):
-        if s.count(old_str) == 0: raise ValueError(f"Text not found{label}: {repr(old_str)}")
-        return s.replace(old_str, new_str) if n_matches is None else s.replace(old_str, new_str, n_matches)
-    if re_filter or start_line or end_line:
-        lines = text.splitlines(True)
-        s,e = (start_line or 1)-1, end_line or len(lines)
-        if not re_filter: return ''.join(lines[:s]) + _repl(''.join(lines[s:e]), f' in lines {s+1}-{e}') + ''.join(lines[e:])
-        pat = re.compile(re_filter)
-        matched = [i for i in range(s,e) if bool(pat.search(lines[i])) != invert_filter]
-        if not matched: return text
-        for i in matched: lines[i] = _repl(lines[i], f' on line {i+1}')
-        return ''.join(lines)
-    return _repl(text)
+msg_str_replace =  _msg_edit (str_replace, 'msg_str_replace')
 
-msg_str_replace =  _msg_edit (_str_replace, 'msg_str_replace')
 
 # %% ../nbs/00_core.ipynb #983ce14a
-def _strs_replace(
-    text:str,
-    old_strs:list[str], # List of strings to find and replace
-    new_strs:list[str], # List of replacement strings (must match length of old_strs)
-    start_line:int=None, # Optional 1-based start line to limit search
-    end_line:int=None, # Optional 1-based end line to limit search
-    n_matches:int=None, # Max replacements per string (None=all)
-    re_filter:str=None, # If provided, only process lines matching this regex (like g// in ex)
-    invert_filter:bool=False, # Invert the filter (like g!// in ex)
-):
-    "Replace multiple strings simultaneously"
-    if not isinstance(old_strs, list): raise ValueError(f"`old_strs` should be a list[str] but got {type(old_strs)}")
-    if not isinstance(new_strs, list): raise ValueError(f"`new_strs` should be a list[str] but got {type(new_strs)}")
-    if len(old_strs) != len(new_strs): raise ValueError(f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs")
-    for idx,(old_str,new_str) in enumerate(zip(old_strs, new_strs)):
-        text = _str_replace(text, old_str, new_str, start_line=start_line, end_line=end_line,
-                            n_matches=n_matches, re_filter=re_filter, invert_filter=invert_filter)
-    return text
+msg_strs_replace =  _msg_edit (strs_replace, 'msg_strs_replace')
 
-msg_strs_replace =  _msg_edit (_strs_replace, 'msg_strs_replace')
 
 # %% ../nbs/00_core.ipynb #7b11e714
 def _norm_lines(n:int, start:int, end:int=None):
@@ -805,41 +753,12 @@ def _norm_lines(n:int, start:int, end:int=None):
     return start, end
 
 # %% ../nbs/00_core.ipynb #1002423f
-def _replace_lines(
-    text:str,
-    start_line:int, # Starting line number to replace (1-based indexing)
-    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
-    new_content:str='', # New content to replace the specified lines
-):
-    "Replace line range with new content"
-    lines = text.splitlines(keepends=True)
-    s,e = _norm_lines(len(lines), start_line, end_line)
-    if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
-    lines[s-1:e] = [new_content] if new_content else []
-    return ''.join(lines)
+msg_replace_lines =  _msg_edit (replace_lines, 'msg_replace_lines')
 
-msg_replace_lines =  _msg_edit (_replace_lines, 'msg_replace_lines')
 
 # %% ../nbs/00_core.ipynb #cbd87701
-def _del_lines(
-    text:str,
-    start_line:int, # Starting line number to delete (1-based indexing)
-    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
-    re_filter:str=None, # If provided, only delete lines matching this regex (like g// in ex)
-    invert_filter:bool=False, # Invert the filter (like g!// in ex)
-):
-    "Delete line range"
-    lines = text.splitlines(keepends=True)
-    s,e = _norm_lines(len(lines), start_line, end_line)
-    if re_filter:
-        pat = re.compile(re_filter)
-        matched = {i for i in range(s-1,e) if bool(pat.search(lines[i])) != invert_filter}
-        if not matched: return text
-        lines = [l for i,l in enumerate(lines) if i not in matched]
-    else: del lines[s-1:e]
-    return ''.join(lines)
+msg_del_lines =  _msg_edit (del_lines, 'msg_del_lines')
 
-msg_del_lines =  _msg_edit (_del_lines, 'msg_del_lines')
 
 # %% ../nbs/00_core.ipynb #73cb7c93
 async def _python_edit(
