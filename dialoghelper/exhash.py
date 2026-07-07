@@ -23,40 +23,44 @@ async def msg_lnhashview(
 # %% ../nbs/04_exhash.ipynb #9bdae034
 async def msg_exhash(
     id:str, # id of message to edit
-    cmds:list, # List of exhash command strings to apply
+    cmds:list, # List of exhash command tuples to apply
     dname:str='', # Dialog containing message; defaults to current dialog
 ) -> str:
-    """Verified line-addressed editor. Apply commands to msg `id` contents, return lnhash diff.
-    **NB**: *all* exhash commands *must* start with an address.
-    The *only* allowed addresses are a single lnhash, or a pair separated by `,`. (I.e no `%`, `.`, etc.)
-    **NB**: hashes are checked before each command is run. So be sure to have commands go last->first order to avoid changing earlier lines.
+    """Verified line-addressed editor. Apply command tuples to msg `id` contents, return lnhash diff.
+    **NB**: every command is a tuple whose first element is an address string.
+    **NB**: hashes are checked against the current text immediately before each command runs; order commands last->first.
 
-    Commands are like `ex`, but use lnhash addresses instead of bare line numbers: ``lineno|hash|cmd`` where hash is a 4-char hex content hash.
-    Use `msg_lnhashview(text)` to get addresses before first use.
+    Use `msg_lnhashview(id)` to get hash-verified addresses before first use.
 
-    Addressing:
-        Single:   ``12|a3f2|cmd``
-        Range:    ``12|a3f2|,15|b1c3|cmd``
+    Address strings:
+        Single:   ``12|a3f2|``
+        Range:    ``12|a3f2|,15|b1c3|``
+        Last:     ``$`` (last line)
+        Whole:    ``%`` (whole file, same as ``1,$``)
         Special:  ``0|0000|`` targets before line 1 (only with a or i)
 
-    Commands:
-        s/pat/rep/[flags]  Substitute (regex). Flags: g=all, i=case-insensitive
-        d                  Delete line(s)
-        a                  Append text after line
-        i                  Insert text before line
-        c                  Change/replace line(s)
-        j                  Join with next line; with range, joins all
-        m dest             Move line(s) after dest address
-        t dest             Copy line(s) after dest address
-        >[n]               Indent n levels (default 1, 4 spaces each)
-        <[n]               Dedent n levels (default 1)
-        sort               Sort lines alphabetically
-        p                  Print (include in output without changing)
-        g/pat/cmd          Global: run cmd on matching lines
-        g!/pat/cmd         Inverted global (also v/pat/cmd)
+    Command tuples:
+        (addr, "s", pattern, replacement[, flags])
+                           Substitute (Rust regex syntax). Replacement supports $1, $0, ${name}.
+                           Flags: g=all, i=case-insensitive. args may contain literal / & newlines
+        (addr, "d")        Delete line(s)
+        (addr, "a", text)  Append payload after line
+        (addr, "i", text)  Insert payload before line
+        (addr, "c", text)  Change/replace with payload
+        (addr, "j")        Join with next line; with range, joins all
+        (addr, "m", dest)  Move line(s) after dest address
+        (addr, "t", dest)  Copy line(s) after dest address
+        (addr, ">", n)     Indent n levels (default 1, 4 spaces each)
+        (addr, "<", n)     Dedent n levels (default 1)
+        (addr, "sort")     Sort lines alphabetically
+        (addr, "p")        Print (include in output without changing)
+        (addr, "g", payload), (addr, "g!", payload), (addr, "v", payload)
+                           Global commands; payload uses compact ex syntax such as ``/pattern/d``
+        (addr, "y", payload) Transliterate; payload uses compact ex syntax such as ``/abc/ABC/``
 
-    `cmds` is a required list of command strings. For `a`/`i`/`c`, include the text block in the same command string after a newline.
-    Unlike `ex`, do NOT add a trailing `.` line — the string boundary ends the block. A trailing `.` will be inserted literally (with a warning)."""
+    `cmds` is a required list of command tuples. Text fields may contain newlines, including
+    multiline a/i/c payloads and s pattern/replacement fields; payloads are inserted literally.
+    Do NOT add a trailing `.` line — the string boundary ends the block. A trailing `.` will be inserted literally (with a warning)."""
     msg = await read_msgid(id=id, dname=dname)
     if not msg: return 'No such message.'
     txt = msg['content']
