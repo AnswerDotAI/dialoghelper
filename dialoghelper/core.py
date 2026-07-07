@@ -11,8 +11,9 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
-           'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
-           'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
+           'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'import_dlg',
+           'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches',
+           'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess,sys
@@ -719,6 +720,23 @@ async def load_dialog(
     unlock = getattr(get_ipython().kernel, 'unlock', None)
     if unlock: unlock()
     return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
+
+# %% ../nbs/00_core.ipynb #092d1b5a
+_meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
+
+async def import_dlg(
+    src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
+    dname:str='',  # Target dialog; defaults to current dialog
+    id:str=None,   # id of message that placement is relative to (if None, uses current message)
+):
+    "Append all messages from `src_dname` into `dname` starting at `id`. If `id` is None messages will append after current."
+    msgs = await find_msgs(dname=src_dname)
+    ids = []
+    for m in msgs:
+        meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
+        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, **meta)
+        ids.append(id)
+    return ids
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
