@@ -144,7 +144,7 @@ async def ctx_repo(
     **kwargs
 ):
     "Convert GitHub repo to XML context and place in a new message"
-    res = repo2ctx(owner, repo, out=out, types=types, exts=exts, **kwargs)
+    res = await repo2ctx(owner, repo, out=out, types=types, exts=exts, **kwargs)
     if exts: types=None
     if not raw: res = f'```\n{res}\n```'
     return await add_msg(res, msg_type='raw' if raw else 'note')
@@ -193,7 +193,7 @@ def import_string(
 def mk_toollist(syms):
     return "\n".join(f"- &`{sym.__name__}`: {sym.__doc__}" for sym in syms if is_usable_tool(sym))
 
-# %% ../nbs/06_utils.ipynb #84868ea2
+# %% ../nbs/06_utils.ipynb #4d3e1b46
 def import_gist(
     gist_id:str, # user/id or just id of gist to import as a module
     mod_name:str=None, # module name to create (taken from gist filename if not passed)
@@ -202,7 +202,7 @@ def import_gist(
     create_msg:bool=False # Add a message that lists usable tools
 ):
     "Import gist directly from string without saving to disk"
-    fil = GhApi().gist_file(gist_id)
+    fil = GhApi(sync=True).gist_file(gist_id)
     mod_name = mod_name or Path(fil['filename']).stem
     module = import_string(fil['content'], mod_name)
     glbs = currentframe().f_back.f_globals
