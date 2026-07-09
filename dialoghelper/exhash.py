@@ -12,13 +12,14 @@ from exhash import *
 async def msg_lnhashview(
     id:str, # id of message to view
     dname:str='', # Dialog containing message; defaults to current dialog
-    start:int=None, # Starting line (1-based) to view (defaults to 1st line if None)
-    end:int=None, # End line (defaults to last line if None)
+    start_line:int=None, # Starting line (1-based) to view (defaults to 1st line if None)
+    end_line:int=None, # End line (defaults to last line if None)
 ) -> str:
     "Show lnhash-addressed lines of a message"
     msg = await read_msgid(id=id, dname=dname)
     if not msg: return 'No such message.'
-    return PrettyString('\n'.join(lnhashview(msg['content'], start=start, end=end)))
+    return PrettyString('\n'.join(lnhashview(msg['content'], start=start_line, end=end_line)))
+
 
 # %% ../nbs/04_exhash.ipynb #9bdae034
 async def msg_exhash(

@@ -27,7 +27,8 @@ from fastcore.xml import to_xml
 from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from fastcore.xtras import asdict,acache
+from fastcore.xtras import asdict
+from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
 from ghapi.all import *
 from inspect import currentframe,Parameter,signature
@@ -761,15 +762,6 @@ msg_str_replace =  _msg_edit (str_replace, 'msg_str_replace')
 msg_strs_replace =  _msg_edit (strs_replace, 'msg_strs_replace')
 
 
-# %% ../nbs/00_core.ipynb #7b11e714
-def _norm_lines(n:int, start:int, end:int=None):
-    "Normalize and validate line range. Returns (start, end) or raises ValueError."
-    if end is None: end = start
-    if end < 0: end = n + end + 1
-    if not (1 <= start <= n): raise ValueError(f'Invalid start line {start}. Valid range: 1-{n}')
-    if not (start <= end <= n): raise ValueError(f'Invalid end line {end}. Valid range: {start}-{n}')
-    return start, end
-
 # %% ../nbs/00_core.ipynb #1002423f
 msg_replace_lines =  _msg_edit (replace_lines, 'msg_replace_lines')
 
@@ -790,13 +782,13 @@ async def _python_edit(
 msg_python =  _msg_edit (_python_edit, 'msg_python')
 
 # %% ../nbs/00_core.ipynb #11ee26d9
-def solveit_docs():
+async def solveit_docs():
     """Full reference documentation for Solveit - use this to answer questions about how to use Solveit.
     **NB**: The whole docs fit in LLM context, so read the whole thing, don't search/filter it. *Always* re-run rather than relying on truncated history or assumptions."""
     _ref_gist_id = '9e7b444aba5ecf6d14295ba2cee890c3'
     pre = f"""⚠️ This content will be truncated in your next turn. Re-call this function if you need it again.
 If the user wants more info, give them a link to https://gist.github.com/jph00/{_ref_gist_id}."""
-    return pre + GhApi().gist_file(_ref_gist_id)['content']
+    return pre + (await GhApi().gist_file(_ref_gist_id))['content']
 
 # %% ../nbs/00_core.ipynb #70ec67db
 def dialog_link(
