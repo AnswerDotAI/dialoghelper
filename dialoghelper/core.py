@@ -12,7 +12,8 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
            'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
-           'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
+           'save_dialog', 'checkpoint_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
+           'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess,sys
@@ -727,6 +728,21 @@ async def rm_dialog(
     "Delete a dialog (or folder) and associated records, stopping the kernel if running"
     name = find_dname(name).lstrip('/')
     return await call_endpa('rm_dialog_', name=name, sess='{}', json=True, audit=True)
+
+# %% ../nbs/00_core.ipynb #627bc8a9
+async def save_dialog(
+    dname:str='' # Dialog to save; defaults to current dialog
+) -> dict:
+    "Git commit the dialog's folder, like pressing `s` in the UI"
+    return await call_endpa('commit_dialog_', dname, json=True)
+
+# %% ../nbs/00_core.ipynb #e7789428
+async def checkpoint_dialog(
+    msg:str='', # Checkpoint name
+    dname:str='' # Dialog to checkpoint; defaults to current dialog
+) -> dict:
+    "Squash 'save commits' into a named checkpoint (like `⇧-c` in the UI), enabling versioning if needed"
+    return await call_endpa('checkpoint_dialog_', dname, json=True, msg=msg)
 
 # %% ../nbs/00_core.ipynb #5617305b
 async def run_code_interactive(
