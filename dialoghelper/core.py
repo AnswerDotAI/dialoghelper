@@ -26,7 +26,8 @@ from fastcore.xml import to_xml
 from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from fastcore.xtras import asdict,acache
+from fastcore.xtras import asdict
+from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
 from ghapi.all import *
 from inspect import currentframe,Parameter,signature
