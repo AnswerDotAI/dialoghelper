@@ -66,9 +66,10 @@ def names_containing(s:str):
 
 # %% ../nbs/00_core.ipynb #65a8b58b
 def find_dname(dname=None, required=True):
-    "Get the dialog name by searching the call stack for __dialog_name, and resolving `dname` if supplied."
+    "Get the dialog name by searching the call stack for __dialog_name, and resolving `dname` if supplied; a `/` or `~/` prefix resolves from the solveit data root (home)."
     if dname:
         dname = dname.removesuffix('.ipynb')
+        if dname=='~' or dname.startswith('~/'): dname = dname.removeprefix('~') or '/'
         if dname.startswith('/'): return dname
     curr = dh_settings.get('dname', None)
     if not curr: curr = os.getenv('__DIALOG_NAME')
@@ -351,7 +352,7 @@ async def connfiles(
 # %% ../nbs/00_core.ipynb #e2138315
 @acache
 async def realpath(
-    subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
+    subpath:str='/' # Path under data root (absolute with `/` or `~/`, else relative to current dialog's folder)
 ) -> str:
     "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
     sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
@@ -359,7 +360,7 @@ async def realpath(
 
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(
-    subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
+    subpath:str='', # Path under data root (absolute with `/` or `~/`, else relative to current dialog's folder)
     depth:int=1 # Directory depth
 ) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
@@ -696,7 +697,7 @@ async def url2note(
 
 # %% ../nbs/00_core.ipynb #f26259cf
 async def create_or_run_dialog(
-    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
+    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute with '/' or '~/' prefix)
     template:bool=True, # Include TEMPLATE.ipynb files when creating a new dialog
 ):
     "Create a new dialog, or set an existing one running"
@@ -705,7 +706,7 @@ async def create_or_run_dialog(
 
 # %% ../nbs/00_core.ipynb #80433dd1
 async def stop_dialog(
-    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
+    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute with '/' or '~/' prefix)
 ):
     "Stop a running dialog kernel"
     name = find_dname(name).lstrip('/')
@@ -713,19 +714,19 @@ async def stop_dialog(
 
 # %% ../nbs/00_core.ipynb #62101e04
 async def load_dialog(
-    src_dname:str, # Dialog to load code from (path relative to solveit data dir, no .ipynb)
+    src_dname:str, # Dialog to load code from (`~/` or path relative to solveit data dir, no .ipynb)
     dname:str='', # Target dialog; defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
     unlock = getattr(get_ipython().kernel, 'unlock', None)
     if unlock: unlock()
-    return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
+    return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname.removeprefix('~/')))
 
 # %% ../nbs/00_core.ipynb #092d1b5a
 _meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
 
 async def import_dlg(
-    src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
+    src_dname:str, # Dialog to import code from (`~/` or path relative to solveit data dir, no .ipynb)
     dname:str='',  # Target dialog; defaults to current dialog
     id:str=None,   # id of message that placement is relative to (if None, uses current message)
 ):
@@ -740,7 +741,7 @@ async def import_dlg(
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
-    name:str, # Name/path of the dialog to delete (relative to current dialog's folder, or absolute if starts with '/')
+    name:str, # Name/path of the dialog to delete (relative to current dialog's folder, or absolute with '/' or '~/' prefix)
 ):
     "Delete a dialog (or folder) and associated records, stopping the kernel if running"
     name = find_dname(name).lstrip('/')
@@ -836,7 +837,7 @@ If the user wants more info, give them a link to https://gist.github.com/jph00/{
 
 # %% ../nbs/00_core.ipynb #70ec67db
 def dialog_link(
-    dname:str='', # Dialog to link to (relative to current dialog's folder, or absolute if starts with '/'); empty for in-page anchor link
+    dname:str='', # Dialog to link to (relative to current dialog's folder, or absolute with '/' or '~/' prefix); empty for in-page anchor link
     msg_id:str=None # Optional message id to scroll to
 ):
     """Return an IPython HTML link to open a dialog in Solveit.
