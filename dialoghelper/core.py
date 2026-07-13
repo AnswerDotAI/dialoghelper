@@ -8,7 +8,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
            'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
            'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
-           'js_eval_a', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
+           'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
            'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
@@ -16,6 +16,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess,sys
+import websockets
 
 from typing import Dict
 from tempfile import TemporaryDirectory
@@ -283,6 +284,49 @@ async def js_eval_a(expr):
     idx, data = _event_prep({})
     await iife_a("pushData('%s', { result: await (async () => { %s })() })" % (idx, expr))
     return await pop_data_a(idx)
+
+# %% ../nbs/00_core.ipynb #84469f4e
+class Channel:
+    "Duplex JSON messaging with the other peers on a named `/wsx` relay channel"
+    def __init__(self, chan, url=None):
+        self.url = url or f"ws://localhost:{dh_settings['port']}/wsx?chan={chan}"
+        self._replies,self.events = {},asyncio.Queue()
+
+    @classmethod
+    async def connect(cls,
+        chan, # Channel name; peers connecting to the same name hear each other
+        url=None # Full relay url (defaults to local solveit's `/wsx`)
+    ):
+        "Connect to `chan` and start reading frames"
+        self = cls(chan, url=url)
+        self._ws = await websockets.connect(self.url)
+        self._reader = asyncio.create_task(self._read_loop())
+        return self
+
+    async def _read_loop(self):
+        async for frame in self._ws:
+            msg = dict2obj(json.loads(frame))
+            if (f := self._replies.pop(msg.get('id'), None)): f.set_result(msg)
+            else: await self.events.put(msg)
+
+    async def send(self, **msg): await self._ws.send(json.dumps(msg))
+
+    async def request(self, timeout=15, **msg):
+        "Send `msg` with a correlation `id` and await the reply frame bearing that id"
+        mid = msg['id'] = str(uuid.uuid4())
+        f = asyncio.get_running_loop().create_future()
+        self._replies[mid] = f
+        try:
+            await self._ws.send(json.dumps(msg))
+            return await asyncio.wait_for(f, timeout)
+        finally: self._replies.pop(mid, None)
+
+    async def close(self):
+        self._reader.cancel()
+        await self._ws.close()
+
+    @property
+    def is_open(self): return self._ws.state.name == 'OPEN'
 
 # %% ../nbs/00_core.ipynb #80334098
 def display_response(display:str, result:str=None):
