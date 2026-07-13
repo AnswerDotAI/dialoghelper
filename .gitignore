@@ -1,4 +1,6 @@
 SOLVEIT.ipynb
+.DS_Store
+.omx/
 tags
 nbs/sidebar.yml
 *.swp
