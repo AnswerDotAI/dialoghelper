@@ -52,6 +52,7 @@ dlg_connfiles = "dialoghelper.core:connfiles"
 [project.entry-points.pyskills]
 "dialoghelper.termskill" = "dialoghelper.termskill"
 "dialoghelper.solveitskill" = "dialoghelper.solveitskill"
+"dialoghelper.dojo" = "dialoghelper.dojo"
 
 [tool.nbdev]
 allowed_metadata_keys = ['solveit']
