@@ -715,7 +715,7 @@ async def stop_dialog(
 # %% ../nbs/00_core.ipynb #62101e04
 async def load_dialog(
     src_dname:str, # Dialog to load code from (`~/` or path relative to solveit data dir, no .ipynb)
-    dname:str='', # Target dialog; defaults to current dialog
+    dname:str='', # Target dialog (relative to current dialog's folder, or absolute with '/' or '~/' prefix); defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
     unlock = getattr(get_ipython().kernel, 'unlock', None)
@@ -727,7 +727,7 @@ _meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
 
 async def import_dlg(
     src_dname:str, # Dialog to import code from (`~/` or path relative to solveit data dir, no .ipynb)
-    dname:str='',  # Target dialog; defaults to current dialog
+    dname:str='',  # Target dialog (relative to current dialog's folder, or absolute with '/' or '~/' prefix); defaults to current dialog
     id:str=None,   # id of message that placement is relative to (if None, uses current message)
 ):
     "Append all messages from `src_dname` into `dname` starting at `id`. If `id` is None messages will append after current."
