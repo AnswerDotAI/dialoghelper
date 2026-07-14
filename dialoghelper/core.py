@@ -690,7 +690,7 @@ async def import_dlg(
     ids = []
     for m in msgs:
         meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
-        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, **meta)
+        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, **meta)
         ids.append(id)
     return ids
 
