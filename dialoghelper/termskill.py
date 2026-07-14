@@ -73,6 +73,7 @@ This workflow is usually safer and clearer than jumping straight into mutation.
 """
 
 from dialoghelper.core import *
+from dialoghelper.utils import msg_ast_replace
 
 __all__ = ['set_dialog', 'curr_dialog', 'msg_idx', 'read_msg', 'read_msgid', 'view_msg', 'view_dlg', 'find_msgs',
     'add_msg', 'update_msg', 'del_msg', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_insert_line',

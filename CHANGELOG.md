@@ -2,6 +2,16 @@
 
 <!-- do not remove -->
 
+## 0.2.39
+
+### New Features
+
+- Add Channel class for persistent WebSocket duplex messaging via /wsx relay ([#226](https://github.com/AnswerDotAI/dialoghelper/issues/226))
+- Convert GhApi calls to async and bump fastcore/ghapi deps; rename lnhashview params ([#222](https://github.com/AnswerDotAI/dialoghelper/issues/222))
+- Document new exhash ([#220](https://github.com/AnswerDotAI/dialoghelper/issues/220))
+- Add start/end line range params to `msg_lnhashview` and wrap result in PrettyString ([#219](https://github.com/AnswerDotAI/dialoghelper/issues/219))
+- Remove redundant gist/PR helpers from utils in favor of GhApi methods ([#218](https://github.com/AnswerDotAI/dialoghelper/issues/218))
+
 ## 0.2.38
 
 ### Bugs Squashed
