@@ -42,7 +42,7 @@ from urllib.parse import urlencode
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from functools import cache
 from pyskills import allow
-from pyskills.edit import *
+from fastcore.tools import *
 
 # %% ../nbs/00_core.ipynb #c9936691
 _lt = import_no_init('fastllm.chat')
