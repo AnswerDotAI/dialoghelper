@@ -68,5 +68,5 @@ async def msg_exhash(
     edit = exhash(txt, cmds)
     res = '\n'.join(edit['lines'])
     upres = await update_msg(id=id, content=res, dname=dname)
-    assert upres.startswith('_'), f"Message update failed: {upres}"
+    assert not upres.startswith('error:'), f"Message update failed: {upres}"
     return edit.format_diff()
