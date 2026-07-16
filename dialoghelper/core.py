@@ -11,12 +11,12 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
-           'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'import_dlg',
-           'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches',
-           'web_answer']
+           'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
+           'import_dlg', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search',
+           'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
-import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess,sys
+import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
 import websockets
 
 from typing import Dict
@@ -28,7 +28,7 @@ from fastcore.xml import to_xml
 from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from fastcore.xtras import asdict
+from fastcore.xtras import asdict, str_diff
 from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
 from ghapi.all import *
@@ -454,7 +454,7 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 def _add_msg(
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
-    is_exported: int | None = 0, # Export message to a module?
+    exported: int | None = 0, # Include the `#| export` first line of content?
     skipped: int | None = 0, # Hide message from prompt?
     i_collapsed: int | None = 0, # Collapse input?
     o_collapsed: int | None = 0, # Collapse output?
@@ -539,7 +539,8 @@ async def view_msg(
 
 # %% ../nbs/00_core.ipynb #79cdeb39
 def msg_ref(id, dname=None):
-    "Markdown ref to a message — same-dialog `#id` or cross-dialog `#dname/id`"
+    "Markdown ref to a message — same-dialog `#_id` or cross-dialog `#dname/_id` (anchors target DOM ids, which carry a `_` prefix)"
+    id = '_'+str(id).removeprefix('_')
     if not dname: return f'#{id}'
     return f'#{find_dname(dname).strip("/")}/{id}'
 
@@ -571,7 +572,7 @@ def _umsg(
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
     output:str|None = None, # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = None, # When was message executed
-    is_exported: int | None = None, # Export message to a module?
+    exported: int | None = None, # Add or remove the `#| export` first line of content?
     skipped: int | None = None, # Hide message from prompt?
     i_collapsed: int | None = None, # Collapse input?
     o_collapsed: int | None = None, # Collapse output?
@@ -668,6 +669,15 @@ async def toggle_bookmark(
 ) -> dict:
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
     return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
+
+# %% ../nbs/00_core.ipynb #a91f99fc
+async def toggle_export(
+    ids:str|list, # Message id(s) to toggle (comma-separated str, or list)
+    dname:str='' # Dialog to get info for; defaults to current dialog
+) -> dict:
+    "Toggle whether message(s) carry the `#| export` content directive (like the UI export button); all follow the first message's new state"
+    if isinstance(ids, list): ids = ','.join(ids)
+    return await call_endpa('toggle_export_', dname, json=True, ids=ids)
 
 # %% ../nbs/00_core.ipynb #334395f8
 async def toggle_comment(
@@ -770,7 +780,7 @@ log_changed: Add a note showing the deleted content?
 
 returns:
 - For single id: diff of changes, or "none: No changes.", or "error: ..."
-- For id list (or 'all'): list of tuples of (id,diff) for changed messages"""
+- For id list (or 'all'): list of (id,res) tuples for each message that changed or errored ("error: ..." as the res); unchanged messages are omitted"""
 
 # %% ../nbs/00_core.ipynb #ee87e70d
 def _msg_edit(f, name=None):
@@ -783,11 +793,11 @@ def _msg_edit(f, name=None):
             try: new_text = await maybe_await(f(text, *args, **kw))
             except ValueError as e: return f'error: {e}'
             await update_msg(id=mid, **{field: new_text}, dname=dname, log_changed=log_changed)
-            diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
+            diff = str_diff(text, new_text)
             return diff or 'none: No changes.'
         if isinstance(id, list) or id == 'all':
             if id=='all': id = [m['id'] for m in (await find_msgs(dname=dname, include_meta=False, include_output=False))]
-            return [(mid, r) for mid in id if not (r:=await _one(mid)).startswith(('error:', 'none:'))]
+            return [(mid, r) for mid in id if not (r:=await _one(mid)).startswith('none:')]
         return await _one(id)
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
@@ -846,7 +856,7 @@ def dialog_link(
     if dname:
         dname = find_dname(dname).removeprefix('/')
         url += f"/dialog_?{urlencode({'name': dname})}"
-    if msg_id: url += f"#{msg_id}"
+    if msg_id: url += '#_'+str(msg_id).removeprefix('_')  # the fragment targets the DOM id, which carries a `_` prefix
     return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')
 
 

@@ -4,7 +4,7 @@
 
 - **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's
   runtime data path (with leading `/`; but NOT from the disk root path). The `.ipynb` extension is never included.
-- **Message addressing**: Messages have stable `id` strings (e.g., `_a9cb5512`). Solveit sets the "current message" to the most recently run message.
+- **Message addressing**: Messages have stable `id` strings (e.g., `a9cb5512`). Solveit sets the "current message" to the most recently run message. Markdown refs to a message are anchors to its DOM id, so they carry a `_` prefix (`#_a9cb5512`); `msg_ref` builds them.
 - **Implicit state**: After `add_msg`/`update_msg`, the "current message" is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
 
 ## Workflow Patterns
