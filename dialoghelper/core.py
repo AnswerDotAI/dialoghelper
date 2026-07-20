@@ -375,13 +375,21 @@ def _maybe_xml(res, as_xml, key=None):
     if key: res = res[key]
     return dict2obj(res)
 
+# %% ../nbs/00_core.ipynb #57ee78dd
+def _lnhashs_content(s, start_line=1, end_line=None):
+    "Render `s` as `lineno|hash|` prefixed lines, sliced by optional 1-based line range (`end_line` None or -1 for EOF)"
+    lines = [lnhash(i,l)+l for i,l in enumerate(s.splitlines(), 1)]
+    return '\n'.join(lines[start_line-1:len(lines) if end_line in (None,-1) else end_line])
+
 # %% ../nbs/00_core.ipynb #558c6aa7
 async def read_msg(
     n:int=-1,      # Message index (if relative, +ve is downwards)
     relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
     id:str=None,  # Message id to find (defaults to current message)
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     nums:bool=False, # Whether to show line numbers
+    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     dname:str='' # Dialog to get info for; defaults to current dialog
     ) -> dict:
     """Get the message indexed in the current dialog.
@@ -392,9 +400,12 @@ async def read_msg(
     {dname}"""
     _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
     data = dict(n=n, relative=relative, id=id)
-    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
-    if nums: data['nums'] = nums
-    return await call_endpa('read_msg_', dname, json=True, **data)
+    rng = [start_line, -1 if end_line is None else end_line] if (start_line!=1 or end_line is not None) else None
+    if rng and not lnhashs: data['view_range'] = rng # None gets converted to '' so we avoid passing it to use the p.default
+    if nums and not lnhashs: data['nums'] = nums
+    res = await call_endpa('read_msg_', dname, json=True, **data)
+    if lnhashs and isinstance(res,dict) and res.get('content'): res['content'] = _lnhashs_content(res['content'], start_line, end_line)
+    return res
 
 # %% ../nbs/00_core.ipynb #6a4aa03b
 async def find_msgs(
@@ -512,14 +523,16 @@ async def add_msg(
 # %% ../nbs/00_core.ipynb #afc62c45
 async def read_msgid(
     id:str,  # Message id to find
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     nums:bool=False, # Whether to show line numbers
+    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     dname:str='', # Dialog to get message from; defaults to current dialog
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ) -> dict:
     """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
+    res = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
     if add_to_dlg: await add_msg(res['content'], msg_type='raw')
     return res
 
@@ -528,12 +541,14 @@ async def view_msg(
     id:str,  # Message id to view
     dname:str='', # Dialog to get message from; defaults to current dialog
     nums:bool=True, # Whether to show line numbers
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF. Rarely needed--read whole message in nearly all cases instead
+    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
+    start_line:int=1, # Starting line to view. Rarely needed--read whole message in nearly all cases instead
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ) -> str:
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = (await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname))['content']
+    res = (await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname))['content']
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
 

@@ -47,9 +47,9 @@ Message editing uses exhash. View `doc(exhash.skill)` first. Then follow these s
 
 ```
 0. Find message id in dynamic contenxt, or using `view_dlg` or  `find_msgs`
-1. msg_lnhashview(id)
+1. lnhashview_msg(id)
 2. Identify lines to change
-3. msg_exhash(...)
+3. exhash_msg(...)
 4. If more edits needed: re-read, then repeat from step 2
 ```
 
@@ -61,7 +61,7 @@ from dialoghelper.exhash import *
 from pyskills.core import allow
 
 __all__ = [
-    'curr_dialog', 'msg_idx', 'realpath', 'list_dialogs', 'msg_lnhashview', 'msg_exhash',
+    'curr_dialog', 'msg_idx', 'realpath', 'list_dialogs', 'lnhashview_msg', 'exhash_msg',
     'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg',
     'del_msg', 'update_msg', 'copy_msg', 'paste_msg', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
     'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
@@ -70,5 +70,5 @@ __all__ = [
 allow(
     curr_dialog, msg_idx, realpath, list_dialogs, read_msg, find_msgs, view_dlg, add_msg, read_msgid, view_msg,
     del_msg, update_msg, copy_msg, paste_msg, toggle_header, toggle_bookmark, toggle_comment,
-    create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, msg_lnhashview, msg_exhash
+    create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, exhash_msg
 )
