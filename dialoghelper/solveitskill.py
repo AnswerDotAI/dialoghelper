@@ -23,8 +23,8 @@
 - `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
   - **NB** When not passing a message id, it defaults to the *current* message. So if you call it multiple times with no message id, the messages will be added in REVERSE! Instead, get the return value of `add_msg` after each call, and use that for the next call
 - `update_msg` — partial updates; only pass fields to change
-- `del_msg` — use sparingly, only when explicitly requested
-`copy_msg` → `paste_msg` — for moving/duplicating messages within running dialogs.
+- `del_msgs` — use sparingly, only when explicitly requested
+`copy_msgs` → `paste_msgs` — for moving/duplicating messages within running dialogs.
 
 ## Non-decorated Functions Worth Knowing
 
@@ -47,7 +47,7 @@ Message editing uses exhash. View `doc(exhash.skill)` first. Then follow these s
 
 ```
 0. Find message id in dynamic contenxt, or using `view_dlg` or  `find_msgs`
-1. msg_lnhashview(id)
+1. lnhashview_msg(id)
 2. Identify lines to change
 3. msg_exhash(...)
 4. If more edits needed: re-read, then repeat from step 2
@@ -61,14 +61,14 @@ from dialoghelper.exhash import *
 from pyskills.core import allow
 
 __all__ = [
-    'curr_dialog', 'msg_idx', 'realpath', 'list_dialogs', 'msg_lnhashview', 'msg_exhash',
+    'curr_dialog', 'msg_idx', 'realpath', 'list_dialogs', 'lnhashview_msg', 'msg_exhash',
     'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg',
-    'del_msg', 'update_msg', 'copy_msg', 'paste_msg', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
+    'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
     'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
 ]
 
 allow(
     curr_dialog, msg_idx, realpath, list_dialogs, read_msg, find_msgs, view_dlg, add_msg, read_msgid, view_msg,
-    del_msg, update_msg, copy_msg, paste_msg, toggle_header, toggle_bookmark, toggle_comment,
-    create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, msg_lnhashview, msg_exhash
+    del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment,
+    create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, msg_exhash
 )
