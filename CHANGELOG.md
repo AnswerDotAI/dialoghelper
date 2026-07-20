@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.2.40
+
+### New Features
+
+- Refactor read/view message functions to use `start_line`/`end_line` params and add lnhashs support; rename `msg_lnhashview`→`lnhashview_msg` and `msg_exhash`→`exhash_msg` ([#229](https://github.com/AnswerDotAI/dialoghelper/issues/229))
+- Rename `is_exported`→`exported`, add `toggle_export`, use `str_diff`, and add `_` prefix to message id refs ([#228](https://github.com/AnswerDotAI/dialoghelper/issues/228))
+
+
 ## 0.2.39
 
 ### New Features

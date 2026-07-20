@@ -4,19 +4,19 @@
 
 # %% auto #0
 __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'msg_python', 'names_containing', 'find_dname', 'xposta', 'xgeta',
-           'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
-           'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
-           'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
-           'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg',
-           'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
+           'msg_replace_lines', 'msg_del_lines', 'names_containing', 'find_dname', 'xposta', 'xgeta', 'call_endp',
+           'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
+           'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
+           'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'Channel',
+           'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg',
+           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs',
+           'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export',
            'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
            'save_dialog', 'checkpoint_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
            'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
-import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,difflib,uuid,builtins,subprocess,sys
+import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
 import websockets
 
 from typing import Dict
@@ -28,7 +28,7 @@ from fastcore.xml import to_xml
 from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
-from fastcore.xtras import asdict
+from fastcore.xtras import asdict, str_diff
 from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
 from ghapi.all import *
@@ -43,7 +43,7 @@ from urllib.parse import urlencode
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from functools import cache
 from pyskills import allow
-from pyskills.edit import *
+from fastcore.tools import *
 
 # %% ../nbs/00_core.ipynb #c9936691
 _lt = import_no_init('fastllm.chat')
@@ -375,13 +375,21 @@ def _maybe_xml(res, as_xml, key=None):
     if key: res = res[key]
     return dict2obj(res)
 
+# %% ../nbs/00_core.ipynb #57ee78dd
+def _lnhashs_content(s, start_line=1, end_line=None):
+    "Render `s` as `lineno|hash|` prefixed lines, sliced by optional 1-based line range (`end_line` None or -1 for EOF)"
+    lines = [lnhash(i,l)+l for i,l in enumerate(s.splitlines(), 1)]
+    return '\n'.join(lines[start_line-1:len(lines) if end_line in (None,-1) else end_line])
+
 # %% ../nbs/00_core.ipynb #558c6aa7
 async def read_msg(
     n:int=-1,      # Message index (if relative, +ve is downwards)
     relative:bool=True,  # Is `n` relative to current message (True) or absolute (False)?
     id:str=None,  # Message id to find (defaults to current message)
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     nums:bool=False, # Whether to show line numbers
+    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     dname:str='' # Dialog to get info for; defaults to current dialog
     ) -> dict:
     """Get the message indexed in the current dialog.
@@ -392,17 +400,20 @@ async def read_msg(
     {dname}"""
     _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
     data = dict(n=n, relative=relative, id=id)
-    if view_range: data['view_range'] = view_range # None gets converted to '' so we avoid passing it to use the p.default
-    if nums: data['nums'] = nums
-    return await call_endpa('read_msg_', dname, json=True, **data)
+    rng = [start_line, -1 if end_line is None else end_line] if (start_line!=1 or end_line is not None) else None
+    if rng and not lnhashs: data['view_range'] = rng # None gets converted to '' so we avoid passing it to use the p.default
+    if nums and not lnhashs: data['nums'] = nums
+    res = await call_endpa('read_msg_', dname, json=True, **data)
+    if lnhashs and isinstance(res,dict) and res.get('content'): res['content'] = _lnhashs_content(res['content'], start_line, end_line)
+    return res
 
 # %% ../nbs/00_core.ipynb #6a4aa03b
 async def find_msgs(
     re_pattern:str='', # Optional regex to search for (re.DOTALL+re.MULTILINE is used)
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
     before:int=0,  # Include additional n msgs before matches
-    after:int=0,   # Include additional n msgs before matches
-    context:int=0, # Include additional n msgs around matches (recommended: set `context=2` when searching to see ipynb context)
+    after:int=0,   # Include additional n msgs after matches
+    context:int=None, # Include additional n msgs around matches (default 1, or 0 when `headers_only`)
     use_case:bool=False, # Use case-sensitive matching?
     use_regex:bool=True, # Use regex matching?
     only_err:bool=False, # Only return messages that have errors?
@@ -426,6 +437,7 @@ async def find_msgs(
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code, use its `id` field."""
+    if context is None: context = 0 if headers_only else 1
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums,
@@ -454,7 +466,7 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 def _add_msg(
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
-    is_exported: int | None = 0, # Export message to a module?
+    exported: int | None = 0, # Include the `#| export` first line of content?
     skipped: int | None = 0, # Hide message from prompt?
     i_collapsed: int | None = 0, # Collapse input?
     o_collapsed: int | None = 0, # Collapse output?
@@ -512,14 +524,16 @@ async def add_msg(
 # %% ../nbs/00_core.ipynb #afc62c45
 async def read_msgid(
     id:str,  # Message id to find
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF
+    start_line:int=1, # Starting line to view
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     nums:bool=False, # Whether to show line numbers
+    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     dname:str='', # Dialog to get message from; defaults to current dialog
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ) -> dict:
     """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname)
+    res = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
     if add_to_dlg: await add_msg(res['content'], msg_type='raw')
     return res
 
@@ -528,31 +542,37 @@ async def view_msg(
     id:str,  # Message id to view
     dname:str='', # Dialog to get message from; defaults to current dialog
     nums:bool=True, # Whether to show line numbers
-    view_range:list[int,int]=None, # Optional 1-indexed (start, end) line range for files, end=-1 for EOF. Rarely needed--read whole message in nearly all cases instead
+    lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
+    start_line:int=1, # Starting line to view. Rarely needed--read whole message in nearly all cases instead
+    end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ) -> str:
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = (await read_msg(0, id=id, view_range=view_range, nums=nums, dname=dname))['content']
+    res = (await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname))['content']
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
 
 # %% ../nbs/00_core.ipynb #79cdeb39
 def msg_ref(id, dname=None):
-    "Markdown ref to a message — same-dialog `#id` or cross-dialog `#dname/id`"
+    "Markdown ref to a message — same-dialog `#_id` or cross-dialog `#dname/_id` (anchors target DOM ids, which carry a `_` prefix)"
+    id = '_'+str(id).removeprefix('_')
     if not dname: return f'#{id}'
     return f'#{find_dname(dname).strip("/")}/{id}'
 
 # %% ../nbs/00_core.ipynb #f1ee1903
-async def del_msg(
-    id:str=None, # id of message to delete
+async def del_msgs(
+    ids:str=None, # Comma-separated ids of message(s) to delete
     dname:str='', # Dialog to get info for; defaults to current dialog
     log_changed:bool=False # Add a note showing the deleted content?
-) -> dict:
-    "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
-    if log_changed: msg = await read_msgid(id, dname=dname)
-    res = await call_endpa('rm_msg_', dname, raiseex=True, msid=id, json=True, audit=True)
-    if log_changed: await add_msg(f"> Deleted {msg_ref(id, dname)}\n\n```\n{msg.content}\n```")
+) -> list:
+    "Delete messages from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
+    res = []
+    for i in ([o.strip() for o in ids.split(',')] if isinstance(ids, str) else listify(ids)):
+        if log_changed: msg = await read_msgid(i, dname=dname)
+        r = await call_endpa('rm_msg_', dname, raiseex=True, msid=i, json=True, audit=True)
+        if log_changed: await add_msg(f"> Deleted {msg_ref(i, dname)}\n\n```\n{msg.content}\n```")
+        res.append(r)
     return res
 
 # %% ../nbs/00_core.ipynb #30e90bf9
@@ -571,7 +591,7 @@ def _umsg(
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
     output:str|None = None, # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = None, # When was message executed
-    is_exported: int | None = None, # Export message to a module?
+    exported: int | None = None, # Add or remove the `#| export` first line of content?
     skipped: int | None = None, # Hide message from prompt?
     i_collapsed: int | None = None, # Collapse input?
     o_collapsed: int | None = None, # Collapse output?
@@ -610,7 +630,7 @@ async def run_msg(
     return await call_endpa('add_runq_', dname, ids=ids, json=True)
 
 # %% ../nbs/00_core.ipynb #73025e57
-async def copy_msg(
+async def copy_msgs(
     ids:str=None, # Comma-separated ids of message(s) to copy
     cut:bool=False, # Cut message(s)? (If not, copies)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
@@ -621,7 +641,7 @@ async def copy_msg(
     return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #80def27e
-async def paste_msg(
+async def paste_msgs(
     id:str=None, # Message id to paste next to
     after:bool=True, # Paste after id? (If not, pastes before)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
@@ -668,6 +688,15 @@ async def toggle_bookmark(
 ) -> dict:
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
     return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
+
+# %% ../nbs/00_core.ipynb #a91f99fc
+async def toggle_export(
+    ids:str|list, # Message id(s) to toggle (comma-separated str, or list)
+    dname:str='' # Dialog to get info for; defaults to current dialog
+) -> dict:
+    "Toggle whether message(s) carry the `#| export` content directive (like the UI export button); all follow the first message's new state"
+    if isinstance(ids, list): ids = ','.join(ids)
+    return await call_endpa('toggle_export_', dname, json=True, ids=ids)
 
 # %% ../nbs/00_core.ipynb #334395f8
 async def toggle_comment(
@@ -763,29 +792,29 @@ Message editing standard parameters:
 
 id: Message id to edit, or list of ids, or 'all' for all messages in dialog
 dname: Dialog to get info for; defaults to current dialog
-update_output: If True, replace in output instead of content
+out: If True, replace in output instead of content
 log_changed: Add a note showing the deleted content?
 
 returns:
 - For single id: diff of changes, or "none: No changes.", or "error: ..."
-- For id list (or 'all'): list of tuples of (id,diff) for changed messages"""
+- For id list (or 'all'): list of (id,res) tuples for each message that changed or errored ("error: ..." as the res); unchanged messages are omitted"""
 
 # %% ../nbs/00_core.ipynb #ee87e70d
 def _msg_edit(f, name=None):
-    async def wrapper(id:str|list[str], *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
+    async def wrapper(id:str|list[str], *args, out:bool=False, dname:str='', log_changed:bool=False, **kw):
         async def _one(mid):
             msg = await read_msg(n=0, id=mid, dname=dname)
-            field = 'output' if update_output else 'content'
+            field = 'output' if out else 'content'
             text = msg.get(field, '')
             if not text: return f"error: Message has no {field}"
             try: new_text = await maybe_await(f(text, *args, **kw))
             except ValueError as e: return f'error: {e}'
             await update_msg(id=mid, **{field: new_text}, dname=dname, log_changed=log_changed)
-            diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
+            diff = str_diff(text, new_text)
             return diff or 'none: No changes.'
         if isinstance(id, list) or id == 'all':
             if id=='all': id = [m['id'] for m in (await find_msgs(dname=dname, include_meta=False, include_output=False))]
-            return [(mid, r) for mid in id if not (r:=await _one(mid)).startswith(('error:', 'none:'))]
+            return [(mid, r) for mid in id if not (r:=await _one(mid)).startswith('none:')]
         return await _one(id)
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
@@ -812,17 +841,6 @@ msg_replace_lines =  _msg_edit (replace_lines, 'msg_replace_lines')
 msg_del_lines =  _msg_edit (del_lines, 'msg_del_lines')
 
 
-# %% ../nbs/00_core.ipynb #73cb7c93
-async def _python_edit(
-    text:str,
-    code:str, # Python code; `text` var has content, last expr is new content
-):
-    "Edit text by running `code` in python. `text` var has content, last expr is new content"
-    res = await python(f'text = {repr(text)}\n{code}')
-    return res
-
-msg_python =  _msg_edit (_python_edit, 'msg_python')
-
 # %% ../nbs/00_core.ipynb #11ee26d9
 async def solveit_docs():
     """Full reference documentation for Solveit - use this to answer questions about how to use Solveit.
@@ -844,7 +862,7 @@ def dialog_link(
     if dname:
         dname = find_dname(dname).removeprefix('/')
         url += f"/dialog_?{urlencode({'name': dname})}"
-    if msg_id: url += f"#{msg_id}"
+    if msg_id: url += '#_'+str(msg_id).removeprefix('_')  # the fragment targets the DOM id, which carries a `_` prefix
     return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')
 
 

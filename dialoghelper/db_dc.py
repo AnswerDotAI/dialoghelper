@@ -70,7 +70,6 @@ class Message:
     output_tokens: int | None = '0'
     msg_type: str | None = 'code'
     time_run: str | None = ''
-    is_exported: int | None = '0'
     skipped: int | None = '0'
     did: int | None = None
     i_collapsed: int | None = '0'

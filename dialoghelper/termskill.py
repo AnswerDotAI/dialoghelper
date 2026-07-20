@@ -76,8 +76,8 @@ from dialoghelper.core import *
 from dialoghelper.utils import msg_ast_replace
 
 __all__ = ['set_dialog', 'curr_dialog', 'msg_idx', 'read_msg', 'read_msgid', 'view_msg', 'view_dlg', 'find_msgs',
-    'add_msg', 'update_msg', 'del_msg', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_insert_line',
-    'msg_del_lines', 'msg_ast_replace', 'msg_python', 'create_or_run_dialog', 'stop_dialog', 'realpath', 'list_dialogs']
+    'add_msg', 'update_msg', 'del_msgs', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_insert_line',
+    'msg_del_lines', 'msg_ast_replace', 'create_or_run_dialog', 'stop_dialog', 'realpath', 'list_dialogs']
 
 def set_dialog(dname:str):
     "Set active dialog path for subsequent calls (absolute, no `.ipynb`)"
