@@ -4,16 +4,15 @@
 
 # %% auto #0
 __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'msg_python', 'names_containing', 'find_dname', 'xposta', 'xgeta',
-           'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
-           'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
-           'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
-           'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msg', 'run_and_prompt', 'update_msg',
-           'run_msg', 'copy_msg', 'paste_msg', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
-           'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
-           'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches',
-           'web_answer']
+           'msg_replace_lines', 'msg_del_lines', 'names_containing', 'find_dname', 'xposta', 'xgeta', 'call_endp',
+           'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
+           'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
+           'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'Channel',
+           'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg',
+           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs',
+           'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export',
+           'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog',
+           'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -412,8 +411,8 @@ async def find_msgs(
     re_pattern:str='', # Optional regex to search for (re.DOTALL+re.MULTILINE is used)
     msg_type:str=None, # optional limit by message type ('code', 'note', or 'prompt')
     before:int=0,  # Include additional n msgs before matches
-    after:int=0,   # Include additional n msgs before matches
-    context:int=0, # Include additional n msgs around matches (recommended: set `context=2` when searching to see ipynb context)
+    after:int=0,   # Include additional n msgs after matches
+    context:int=None, # Include additional n msgs around matches (default 1, or 0 when `headers_only`)
     use_case:bool=False, # Use case-sensitive matching?
     use_regex:bool=True, # Use regex matching?
     only_err:bool=False, # Only return messages that have errors?
@@ -437,6 +436,7 @@ async def find_msgs(
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code, use its `id` field."""
+    if context is None: context = 0 if headers_only else 1
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
                     use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums,
@@ -560,15 +560,18 @@ def msg_ref(id, dname=None):
     return f'#{find_dname(dname).strip("/")}/{id}'
 
 # %% ../nbs/00_core.ipynb #f1ee1903
-async def del_msg(
-    id:str=None, # id of message to delete
+async def del_msgs(
+    ids:str=None, # Comma-separated ids of message(s) to delete
     dname:str='', # Dialog to get info for; defaults to current dialog
     log_changed:bool=False # Add a note showing the deleted content?
-) -> dict:
-    "Delete a message from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
-    if log_changed: msg = await read_msgid(id, dname=dname)
-    res = await call_endpa('rm_msg_', dname, raiseex=True, msid=id, json=True, audit=True)
-    if log_changed: await add_msg(f"> Deleted {msg_ref(id, dname)}\n\n```\n{msg.content}\n```")
+) -> list:
+    "Delete messages from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
+    res = []
+    for i in ([o.strip() for o in ids.split(',')] if isinstance(ids, str) else listify(ids)):
+        if log_changed: msg = await read_msgid(i, dname=dname)
+        r = await call_endpa('rm_msg_', dname, raiseex=True, msid=i, json=True, audit=True)
+        if log_changed: await add_msg(f"> Deleted {msg_ref(i, dname)}\n\n```\n{msg.content}\n```")
+        res.append(r)
     return res
 
 # %% ../nbs/00_core.ipynb #30e90bf9
@@ -626,7 +629,7 @@ async def run_msg(
     return await call_endpa('add_runq_', dname, ids=ids, json=True)
 
 # %% ../nbs/00_core.ipynb #73025e57
-async def copy_msg(
+async def copy_msgs(
     ids:str=None, # Comma-separated ids of message(s) to copy
     cut:bool=False, # Cut message(s)? (If not, copies)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
@@ -637,7 +640,7 @@ async def copy_msg(
     return _check_res(res, dname)
 
 # %% ../nbs/00_core.ipynb #80def27e
-async def paste_msg(
+async def paste_msgs(
     id:str=None, # Message id to paste next to
     after:bool=True, # Paste after id? (If not, pastes before)
     dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
@@ -773,7 +776,7 @@ Message editing standard parameters:
 
 id: Message id to edit, or list of ids, or 'all' for all messages in dialog
 dname: Dialog to get info for; defaults to current dialog
-update_output: If True, replace in output instead of content
+out: If True, replace in output instead of content
 log_changed: Add a note showing the deleted content?
 
 returns:
@@ -782,10 +785,10 @@ returns:
 
 # %% ../nbs/00_core.ipynb #ee87e70d
 def _msg_edit(f, name=None):
-    async def wrapper(id:str|list[str], *args, update_output:bool=False, dname:str='', log_changed:bool=False, **kw):
+    async def wrapper(id:str|list[str], *args, out:bool=False, dname:str='', log_changed:bool=False, **kw):
         async def _one(mid):
             msg = await read_msg(n=0, id=mid, dname=dname)
-            field = 'output' if update_output else 'content'
+            field = 'output' if out else 'content'
             text = msg.get(field, '')
             if not text: return f"error: Message has no {field}"
             try: new_text = await maybe_await(f(text, *args, **kw))
@@ -821,17 +824,6 @@ msg_replace_lines =  _msg_edit (replace_lines, 'msg_replace_lines')
 # %% ../nbs/00_core.ipynb #cbd87701
 msg_del_lines =  _msg_edit (del_lines, 'msg_del_lines')
 
-
-# %% ../nbs/00_core.ipynb #73cb7c93
-async def _python_edit(
-    text:str,
-    code:str, # Python code; `text` var has content, last expr is new content
-):
-    "Edit text by running `code` in python. `text` var has content, last expr is new content"
-    res = await python(f'text = {repr(text)}\n{code}')
-    return res
-
-msg_python =  _msg_edit (_python_edit, 'msg_python')
 
 # %% ../nbs/00_core.ipynb #11ee26d9
 async def solveit_docs():
