@@ -465,7 +465,7 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 def _add_msg(
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
-    exported: int | None = 0, # Include the `#| export` first line of content?
+    exported: int | None = 0, # Mark message as exported (stored as nbdev `export` metadata)?
     skipped: int | None = 0, # Hide message from prompt?
     i_collapsed: int | None = 0, # Collapse input?
     o_collapsed: int | None = 0, # Collapse output?
@@ -590,7 +590,7 @@ def _umsg(
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
     output:str|None = None, # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = None, # When was message executed
-    exported: int | None = None, # Add or remove the `#| export` first line of content?
+    exported: int | None = None, # Set export state (stored as nbdev `export` metadata, migrating any `#| export` content line)?
     skipped: int | None = None, # Hide message from prompt?
     i_collapsed: int | None = None, # Collapse input?
     o_collapsed: int | None = None, # Collapse output?
