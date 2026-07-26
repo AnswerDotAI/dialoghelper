@@ -533,6 +533,7 @@ async def read_msgid(
     """Get message `id`. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
     res = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
+    if 'error' in res: return res
     if add_to_dlg: await add_msg(res['content'], msg_type='raw')
     return res
 
@@ -551,6 +552,7 @@ async def view_msg(
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
     r = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
+    if 'error' in r: return f"error: {r['error']}"
     res = r['content']
     if incl_out and (o := r.get('output')): res += f"\n<out>\n{truncstr(o, 512) if trunc_out else o}\n</out>"
     if add_to_dlg: await add_msg(res, msg_type='raw')
