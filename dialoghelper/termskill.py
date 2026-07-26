@@ -79,6 +79,8 @@ __all__ = ['set_dialog', 'curr_dialog', 'msg_idx', 'read_msg', 'read_msgid', 'vi
     'add_msg', 'update_msg', 'del_msgs', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines', 'msg_insert_line',
     'msg_del_lines', 'msg_ast_replace', 'create_or_run_dialog', 'stop_dialog', 'realpath', 'list_dialogs']
 
+__pyskill_params__ = {'replace_params': ('start_line', 'end_line', 'n_matches', 're_filter', 'invert_filter', 'use_regex')}
+
 def set_dialog(dname:str):
     "Set active dialog path for subsequent calls (absolute, no `.ipynb`)"
     dh_settings['dname'] = dname.removeprefix('/').removesuffix('.ipynb')

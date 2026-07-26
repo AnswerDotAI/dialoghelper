@@ -544,11 +544,15 @@ async def view_msg(
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     start_line:int=1, # Starting line to view. Rarely needed--read whole message in nearly all cases instead
     end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
+    incl_out:bool=False, # Append the message's output in an `<out>` block?
+    trunc_out:bool=True, # Truncate an included output to ~512 chars?
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ) -> str:
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = (await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname))['content']
+    r = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
+    res = r['content']
+    if incl_out and (o := r.get('output')): res += f"\n<out>\n{truncstr(o, 512) if trunc_out else o}\n</out>"
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
 
