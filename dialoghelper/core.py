@@ -423,6 +423,8 @@ async def find_msgs(
     only_err:bool=False, # Only return messages that have errors?
     only_exp:bool=False, # Only return messages that are exported?
     only_chg:bool=False, # Only return messages that have changed vs git HEAD?
+    only_pin:bool=False, # Only return pinned messages?
+    only_bmk:bool=False, # Only return bookmarked messages?
     ids:str='', # Optionally filter by comma-separated list of message ids
     limit:int=None, # Optionally limit number of returned items
     include_output:bool=True, # Include output in returned dict?
@@ -443,7 +445,7 @@ async def find_msgs(
     To refer to a found message from code, use its `id` field."""
     if context is None: context = 0 if headers_only else 1
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
-                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
+                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg, only_pin=only_pin, only_bmk=only_bmk,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums,
                     trunc_out=trunc_out, trunc_in=trunc_in, before=before, after=after, context=context,
                     headers_only=headers_only, header_section=header_section, include_skipped=include_skipped)
