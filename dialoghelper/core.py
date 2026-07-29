@@ -759,13 +759,15 @@ async def load_dialog(
 # %% ../nbs/00_core.ipynb #092d1b5a
 _meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
 
+@delegates(find_msgs, but=['context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta'])
 async def import_dlg(
     src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
     dname:str='',  # Target dialog (path relative to solveit data dir, no .ipynb); defaults to current dialog
     id:str=None,   # id of message that placement is relative to (if None, uses current message)
+    **kwargs,
 ):
-    "Append all messages from `src_dname` into `dname` starting at `id`. If `id` is None messages will append after current."
-    msgs = await find_msgs(dname=src_dname)
+    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current."
+    msgs = await find_msgs(dname=src_dname, context=0, **kwargs)
     ids = []
     for m in msgs:
         meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
