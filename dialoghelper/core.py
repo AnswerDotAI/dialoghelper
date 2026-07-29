@@ -4,16 +4,16 @@
 
 # %% auto #0
 __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
-           'msg_replace_lines', 'msg_del_lines', 'names_containing', 'find_dname', 'xposta', 'xgeta', 'call_endp',
-           'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife',
-           'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
-           'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'Channel',
-           'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg',
-           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs',
-           'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export',
-           'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'import_dlg',
-           'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches',
-           'web_answer']
+           'msg_replace_lines', 'msg_del_lines', 'names_containing', 'find_dname', 'xposta', 'xgeta', 'DialogAPIError',
+           'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
+           'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
+           'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
+           'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
+           'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg',
+           'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
+           'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
+           'import_dlg', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search',
+           'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -106,10 +106,15 @@ def _prep_endp(path, dname, json, id, data, required=True):
     headers = {'Accept': 'application/json'} if json else {}
     return url, data, headers
 
+class DialogAPIError(Exception):
+    "A Solveit API endpoint reported an error (its JSON response carried an `error` key)"
+
 def _handle_resp(res, json, raiseex):
     if raiseex: res.raise_for_status()
-    try: return adict(res.json()) if json else res.text
+    try: res = adict(res.json()) if json else res.text
     except Exception: return res.text
+    if isinstance(res, dict) and 'error' in res: raise DialogAPIError(res['error'])
+    return res
 
 # %% ../nbs/00_core.ipynb #5fc896fe
 def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, **data):
@@ -124,8 +129,8 @@ async def call_endpa(path, dname='', json=False, raiseex=False, id=None, require
 
 # %% ../nbs/00_core.ipynb #1a5b4b75
 def _check_res(res, dname):
-    "Check if a route call succeeded; return success or error dict"
-    if not res: return {'error': f'Dialog {dname} may not be running, or message not found'}
+    "Raise if a route call came back empty; return a success dict"
+    if not res: raise DialogAPIError(f'Dialog {dname} may not be running, or message not found')
     return {'success': 'complete'}
 
 # %% ../nbs/00_core.ipynb #a9cb5512
@@ -135,7 +140,6 @@ async def curr_dialog(
 ) -> dict|str:
     "Get the current dialog info."
     res = await call_endpa('curr_dialog_', dname, json=True, with_messages=with_messages)
-    if 'error' in res: return f"error: {res['error']}"
     if res: return {'name': res['name'], 'mode': res['mode']}
 
 # %% ../nbs/00_core.ipynb #8810450f
@@ -371,7 +375,7 @@ async def list_dialogs(
 def _maybe_xml(res, as_xml, key=None):
     if as_xml: return res
     res = loads(res)
-    if 'error' in res: return res
+    if isinstance(res, dict) and 'error' in res: raise DialogAPIError(res['error'])
     if key: res = res[key]
     return dict2obj(res)
 
@@ -466,7 +470,7 @@ Placements = str_enum('Placements', 'add_after', 'add_before', 'at_start', 'at_e
 def _add_msg(
     output:str='', # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = '', # When was message executed
-    exported: int | None = 0, # Include the `#| export` first line of content?
+    exported: int | None = 0, # Mark message as exported (stored as nbdev `export` metadata)?
     skipped: int | None = 0, # Hide message from prompt?
     i_collapsed: int | None = 0, # Collapse input?
     o_collapsed: int | None = 0, # Collapse output?
@@ -497,7 +501,6 @@ async def _add_msg_unsafe(
     assert not (wait and not dname), "Can not wait in current dialog"
     res = await call_endpa('add_relative_', dname, json=True, content=content, placement=placement, id=id, msg_type=msg_type,
         run=run, audit=True, **kwargs)
-    if 'error' in res: return f"error: {res['error']}"
     rmsg_id = res['id']
     if not wait or not run: return rmsg_id
     while True:
@@ -545,11 +548,15 @@ async def view_msg(
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     start_line:int=1, # Starting line to view. Rarely needed--read whole message in nearly all cases instead
     end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
+    incl_out:bool=False, # Append the message's output in an `<out>` block?
+    trunc_out:bool=True, # Truncate an included output to ~512 chars?
     add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
 ) -> str:
     """Views the *content* of message `id`. Same as `read_msgid(...)['content']`, defaulting to `nums=True`.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = (await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname))['content']
+    r = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
+    res = r['content']
+    if incl_out and (o := r.get('output')): res += f"\n<out>\n{truncstr(o, 512) if trunc_out else o}\n</out>"
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
 
@@ -591,7 +598,7 @@ def _umsg(
     msg_type: str|None = None, # Message type, can be 'code', 'note', or 'prompt'
     output:str|None = None, # Prompt/code output; Code outputs must be .ipynb-compatible JSON array
     time_run: str | None = None, # When was message executed
-    exported: int | None = None, # Add or remove the `#| export` first line of content?
+    exported: int | None = None, # Set export state (stored as nbdev `export` metadata, migrating any `#| export` content line)?
     skipped: int | None = None, # Hide message from prompt?
     i_collapsed: int | None = None, # Collapse input?
     o_collapsed: int | None = None, # Collapse output?
@@ -615,7 +622,6 @@ async def update_msg(
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
     res = await call_endpa('update_msg_', dname, json=True, id=id, log_changed=log_changed, **kwargs)
-    if 'error' in res: return f"error: {res['error']}"
     if log_changed:
         diff = res.get('diff', '')
         await add_msg(f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.'))
