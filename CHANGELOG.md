@@ -2,6 +2,22 @@
 
 <!-- do not remove -->
 
+## 0.2.41
+
+### New Features
+
+- Raise `DialogAPIError` on API errors instead of returning error dicts ([#234](https://github.com/AnswerDotAI/dialoghelper/pull/234)), thanks to [@jph00](https://github.com/jph00)
+- Add `incl_out` and `trunc_out` params to `view_msg` to optionally append message output ([#232](https://github.com/AnswerDotAI/dialoghelper/issues/232))
+- docs: clarify `exported` parameter as nbdev metadata, not content line ([#231](https://github.com/AnswerDotAI/dialoghelper/pull/231)), thanks to [@ncoop57](https://github.com/ncoop57)
+- Rename msg functions to plural forms, replace `update_output` with out param, default `find_msgs` context to 1, and remove `msg_python` ([#230](https://github.com/AnswerDotAI/dialoghelper/issues/230))
+
+### Bugs Squashed
+
+- Update msg imports from fastllm -> aidialog ([#235](https://github.com/AnswerDotAI/dialoghelper/pull/235)), thanks to [@curtis-allan](https://github.com/curtis-allan)
+- Fix KeyError when reading/viewing a missing or errored message ([#233](https://github.com/AnswerDotAI/dialoghelper/pull/233)), thanks to [@ncoop57](https://github.com/ncoop57)
+- Added missing import to termskill ([#224](https://github.com/AnswerDotAI/dialoghelper/pull/224)), thanks to [@kafkasl](https://github.com/kafkasl)
+
+
 ## 0.2.40
 
 ### New Features
@@ -821,4 +837,3 @@
 ## 0.0.1
 
 - init version
-
