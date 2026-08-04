@@ -12,8 +12,8 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
            'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
-           'import_dlg', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search',
-           'searches', 'web_answer']
+           'import_dlg', 'fill_msgs', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
+           'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -44,6 +44,7 @@ from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extens
 from functools import cache
 from pyskills import allow
 from fastcore.tools import *
+from mdhtml.mustache import fill_md
 
 # %% ../nbs/00_core.ipynb #c9936691
 _lt = import_no_init('aidialog.msg_parts')
@@ -776,6 +777,21 @@ async def import_dlg(
         id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, **meta)
         ids.append(id)
     return ids
+
+# %% ../nbs/00_core.ipynb #23e9670b
+@delegates(find_msgs, but=['context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta', 'include_output'])
+async def fill_msgs(
+    values:dict, # Values to fill mustache template tokens with
+    dname:str='', # Dialog to fill; defaults to current dialog
+    dry_run:bool=False, # Return would-be changes without writing?
+    **kwargs,
+)->dict: # `{id: new_content}` for each message the fill changes
+    "Fill mustache tokens with `values` in messages matched by `find_msgs` criteria, updating each changed message in place."
+    msgs = await find_msgs(dname=dname, context=0, **kwargs)
+    changed = {m['id']: filled for m in msgs if (filled:=str(fill_md(m['content'], values, strict=False))) != m['content']}
+    if not dry_run:
+        for id,content in changed.items(): await update_msg(id, content=content, dname=dname)
+    return changed
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
