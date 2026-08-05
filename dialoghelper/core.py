@@ -785,13 +785,17 @@ async def fill_msgs(
     dname:str='', # Dialog to fill; defaults to current dialog
     dry_run:bool=False, # Return would-be changes without writing?
     **kwargs,
-)->dict: # `{id: new_content}` for each message the fill changes
+)->dict: # `{id: new_content|error}` for each message the fill attempts to change
     "Fill mustache tokens with `values` in messages matched by `find_msgs` criteria, updating each changed message in place."
     msgs = await find_msgs(dname=dname, context=0, **kwargs)
-    changed = {m['id']: filled for m in msgs if (filled:=str(fill_md(m['content'], values, strict=False))) != m['content']}
-    if not dry_run:
-        for id,content in changed.items(): await update_msg(id, content=content, dname=dname)
-    return changed
+    changed, errors = {}, {}
+    for m in msgs: 
+        filled = fill_md(m['content'], values, strict=False)
+        if filled.warnings: errors[m['id']] = f'error: {filled.warnings}'    
+        elif filled != m['content']: 
+            changed[m['id']] = filled
+            if not dry_run: await update_msg(id, content=filled, dname=dname)
+    return changed|errors
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
