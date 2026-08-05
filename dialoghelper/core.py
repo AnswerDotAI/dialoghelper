@@ -767,6 +767,7 @@ async def import_dlg(
     src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
     dname:str='',  # Target dialog (path relative to solveit data dir, no .ipynb); defaults to current dialog
     id:str=None,   # id of message that placement is relative to (if None, uses current message)
+    placement:str='', # Location to place messages. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
     **kwargs,
 ):
     "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current."
@@ -774,7 +775,8 @@ async def import_dlg(
     ids = []
     for m in msgs:
         meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
-        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, **meta)
+        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, placement=placement, **meta)
+        placement='add_after'
         ids.append(id)
     return ids
 
