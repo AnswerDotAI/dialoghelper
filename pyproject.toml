@@ -39,7 +39,7 @@ Documentation = "https://AnswerDotAI.github.io/dialoghelper"
 dialoghelper = "dialoghelper._modidx:d"
 
 [project.optional-dependencies]
-dev = ['python-fasthtml', 'tracefunc']
+dev = ['python-fasthtml', 'tracefunc', 'nbdev']
 
 [tool.setuptools.dynamic]
 version = {attr = "dialoghelper.__version__"}
@@ -49,6 +49,7 @@ include = ["dialoghelper"]
 
 [project.scripts]
 dlg_connfiles = "dialoghelper.core:connfiles"
+solveit-test = "dialoghelper.test:solveit_test"
 
 [project.entry-points.pyskills]
 "dialoghelper.termskill" = "dialoghelper.termskill"

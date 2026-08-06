@@ -11,9 +11,9 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
-           'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'stop_dialog', 'load_dialog',
-           'import_dlg', 'fill_msgs', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
-           'search', 'searches', 'web_answer']
+           'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog',
+           'load_dialog', 'import_dlg', 'fill_msgs', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link',
+           'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -110,23 +110,23 @@ def _prep_endp(path, dname, json, id, data, required=True):
 class DialogAPIError(Exception):
     "A Solveit API endpoint reported an error (its JSON response carried an `error` key)"
 
-def _handle_resp(res, json, raiseex):
+def _handle_resp(res, json, raiseex, chkerr=True):
     if raiseex: res.raise_for_status()
     try: res = adict(res.json()) if json else res.text
     except Exception: return res.text
-    if isinstance(res, dict) and 'error' in res: raise DialogAPIError(res['error'])
+    if chkerr and isinstance(res, dict) and 'error' in res: raise DialogAPIError(res['error'])
     return res
 
 # %% ../nbs/00_core.ipynb #5fc896fe
-def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, **data):
+def call_endp(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, chkerr=True, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     if audit: sys.audit("dialoghelper.endp", path, data)
-    return _handle_resp(xpost(url, data=data, headers=headers, timeout=timeout), json, raiseex)
+    return _handle_resp(xpost(url, data=data, headers=headers, timeout=timeout), json, raiseex, chkerr)
 
-async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, **data):
+async def call_endpa(path, dname='', json=False, raiseex=False, id=None, required=True, timeout=10, audit=False, chkerr=True, **data):
     url, data, headers = _prep_endp(path, dname, json, id, data, required=required)
     if audit: sys.audit("dialoghelper.endp", path, data)
-    return _handle_resp(await xposta(url, data=data, headers=headers, timeout=timeout), json, raiseex)
+    return _handle_resp(await xposta(url, data=data, headers=headers, timeout=timeout), json, raiseex, chkerr)
 
 # %% ../nbs/00_core.ipynb #1a5b4b75
 def _check_res(res, dname):
@@ -207,10 +207,10 @@ async def add_mod_a(s:str):
 
 # %% ../nbs/00_core.ipynb #99a07c05
 async def pop_data_a(idx, timeout=15):
-    return dict2obj(await call_endpa('pop_data_blocking_', data_id=idx, timeout=timeout, json=True))
+    return dict2obj(await call_endpa('pop_data_blocking_', data_id=idx, timeout=timeout, json=True, chkerr=False))
 
 def pop_data(idx, timeout=15):
-    return dict2obj(call_endp('pop_data_blocking_', data_id=idx, timeout=timeout, json=True))
+    return dict2obj(call_endp('pop_data_blocking_', data_id=idx, timeout=timeout, json=True, chkerr=False))
 
 # %% ../nbs/00_core.ipynb #ddcee8d5
 def _fire_event_scr(evt, data=None):
@@ -606,7 +606,9 @@ def _umsg(
     i_collapsed: int | None = None, # Collapse input?
     o_collapsed: int | None = None, # Collapse output?
     heading_collapsed: int | None = None, # Collapse heading section?
-    pinned: int | None = None # Pin to context?
+    pinned: int | None = None, # Pin to context?
+    meta: dict | None = None, # Replace message meta wholesale
+    mergemeta: dict | None = None # Deep-merge into message meta; a `None` value deletes its key
 ): ...
 
 # %% ../nbs/00_core.ipynb #38875a12
@@ -624,6 +626,8 @@ async def update_msg(
     if msg: kwargs |= msg.get('msg', msg)
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
+    for k in ('meta','mergemeta'):
+        if kwargs.get(k) is not None: kwargs[k] = json.dumps(kwargs[k])
     res = await call_endpa('update_msg_', dname, json=True, id=id, log_changed=log_changed, **kwargs)
     if log_changed:
         diff = res.get('diff', '')
@@ -739,7 +743,15 @@ async def create_or_run_dialog(
 ):
     "Create a new dialog, or set an existing one running"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('create_dialog_', name=name, template=template, json=True)
+    return await call_endpa('create_dialog_', name=name, template=template, json=True, required=False)
+
+# %% ../nbs/00_core.ipynb #a9c83c4b
+async def restart_dialog(
+    name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
+):
+    "Restart a dialog's kernel, starting the dialog first if needed"
+    name = find_dname(name).lstrip('/')
+    return await call_endpa('restart_kernel_', name=name, json=True, timeout=60, required=False)
 
 # %% ../nbs/00_core.ipynb #80433dd1
 async def stop_dialog(
@@ -747,7 +759,7 @@ async def stop_dialog(
 ):
     "Stop a running dialog kernel"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('stop_kernel_', name=name, json=True)
+    return await call_endpa('stop_kernel_', name=name, json=True, required=False)
 
 # %% ../nbs/00_core.ipynb #62101e04
 async def load_dialog(
@@ -805,7 +817,7 @@ async def rm_dialog(
 ):
     "Delete a dialog (or folder) and associated records, stopping the kernel if running"
     name = find_dname(name).lstrip('/')
-    return await call_endpa('rm_dialog_', name=name, sess='{}', json=True, audit=True)
+    return await call_endpa('rm_dialog_', name=name, sess='{}', json=True, audit=True, required=False)
 
 # %% ../nbs/00_core.ipynb #5617305b
 async def run_code_interactive(
