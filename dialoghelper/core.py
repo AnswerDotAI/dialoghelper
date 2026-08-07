@@ -12,7 +12,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
            'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog',
-           'load_dialog', 'import_dlg', 'fill_msgs', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link',
+           'load_dialog', 'import_dlg', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link',
            'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
@@ -44,7 +44,7 @@ from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extens
 from functools import cache
 from pyskills import allow
 from fastcore.tools import *
-from mdhtml.mustache import fill_md
+
 
 # %% ../nbs/00_core.ipynb #c9936691
 _lt = import_no_init('aidialog.msg_parts')
@@ -791,25 +791,6 @@ async def import_dlg(
         placement='add_after'
         ids.append(id)
     return ids
-
-# %% ../nbs/00_core.ipynb #23e9670b
-@delegates(find_msgs, but=['context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta', 'include_output'])
-async def fill_msgs(
-    values:dict, # Values to fill mustache template tokens with
-    dname:str='', # Dialog to fill; defaults to current dialog
-    dry_run:bool=False, # Return would-be changes without writing?
-    **kwargs,
-)->dict: # `{id: new_content|error}` for each message the fill attempts to change
-    "Fill mustache tokens with `values` in messages matched by `find_msgs` criteria, updating each changed message in place."
-    msgs = await find_msgs(dname=dname, context=0, **kwargs)
-    changed, errors = {}, {}
-    for m in msgs: 
-        filled = fill_md(m['content'], values, strict=False)
-        if filled.warnings: errors[m['id']] = f'error: {filled.warnings}'    
-        elif filled != m['content']: 
-            changed[m['id']] = filled
-            if not dry_run: await update_msg(id, content=filled, dname=dname)
-    return changed|errors
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
