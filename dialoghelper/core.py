@@ -782,11 +782,15 @@ async def import_dlg(
     placement:str='', # Location to place messages. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
     **kwargs,
 ):
-    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current."
+    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current. A leading frontmatter message in `src_dname` is instead placed first in `dname` (any existing frontmatter becomes the second message)."
     msgs = await find_msgs(dname=src_dname, context=0, **kwargs)
+    def _is_fm(m): return m['msg_type'] in ('raw','note') and m['content'].startswith('---')
     ids = []
-    for m in msgs:
+    for i, m in enumerate(msgs):
         meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
+        if i == 0 and _is_fm(m):
+            ids.append(await add_msg(m['content'], msg_type=m['msg_type'], dname=dname, placement='at_start', **meta))
+            continue
         id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, placement=placement, **meta)
         placement='add_after'
         ids.append(id)
