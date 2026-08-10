@@ -45,10 +45,12 @@ def _runnable_ids(path):
     "Code cell ids that `nbdev-test` would run, or None when the whole notebook is skipped"
     from nbdev.process import NBProcessor
     from nbdev.frontmatter import nb_frontmatter
+    from fastcore.nbio import fm_default_eval, does_cell_eval
     nb = NBProcessor(path, rm_directives=False, process=True).nb
-    if str2bool(nb_frontmatter(nb).get('skip_exec', False)): return None
-    def _ok(c): return c.cell_type=='code' and 'nbdev_export'+'(' not in c.source and (c.directives_ or {}).get('eval', '').lower()!='false'
-    return [c.id for c in nb.cells if _ok(c)]
+    fm = nb_frontmatter(nb)
+    if str2bool(fm.get('skip_exec', False)): return None
+    dflt = fm_default_eval(fm)
+    return [c.id for c in nb.cells if c.cell_type=='code' and does_cell_eval(c, dflt)]
 
 # %% ../nbs/07_test.ipynb #3d4119a0
 async def test_nbs(
