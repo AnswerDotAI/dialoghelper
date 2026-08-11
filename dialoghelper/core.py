@@ -12,8 +12,8 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg',
            'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
            'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog',
-           'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent', 'search',
-           'searches', 'web_answer']
+           'load_dialog', 'rm_dialog', 'run_code_interactive', 'Message', 'Dialog', 'solveit_docs', 'dialog_link',
+           'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -40,6 +40,9 @@ from toolslm.xml import *
 from fasthtml.common import *
 from fasthtml.components import Solveit_input
 from urllib.parse import urlencode
+import aidialog.dialog as adlg
+import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `Message.cell_meta` below extends)
+from fastcore.nbio import select_cells
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from functools import cache
 from pyskills import allow
@@ -786,6 +789,46 @@ async def run_code_interactive(
     and wait for user response. Never call additional tools after this one."""
     await add_msg('# Please run this:\n'+code, msg_type='code')
     return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
+
+# %% ../nbs/00_core.ipynb #5e149eb4
+class Message(adlg.Message):
+    "aidialog `Message` with solveit's persisted fields declared"
+    meta_attrs = dict(adlg.Message.meta_attrs, heading_collapsed='heading_collapsed',
+        bookmark='bookmark', o_collapsed='collapsed', i_collapsed='hide_input')
+
+    def cell_meta(self):
+        "Solveit stores its flags as ints; the file convention (and the ipynb schema) is booleans"
+        meta = super().cell_meta()
+        for k in ('skipped','pinned','collapsed','hide_input'):
+            if k in meta: meta[k] = bool(meta[k])
+        return meta
+
+class Dialog(adlg.Dialog):
+    "aidialog `Dialog` producing dialoghelper `Message`s"
+    msg_cls = Message
+
+# %% ../nbs/00_core.ipynb #80863b63
+async def _run_msgs_srv(ids):
+    "Ask the server to run `ids` in the current dialog now, awaiting completion; unlocks so the kernel is free meanwhile"
+    unlock = getattr(get_ipython().kernel, 'unlock', None)
+    if unlock: unlock()
+    res = await call_endpa('run_msgs_', '', ids=','.join(ids), json=True)
+    if err := res.get('error'): raise ValueError(err)
+    return res['outputs']
+
+@patch
+async def execute(self:Message):
+    "Run this message in the current dialog's kernel, with normal run semantics; returns its output"
+    return first(await _run_msgs_srv([self.id]))
+
+@patch
+@delegates(select_cells)
+async def execute(self:Dialog, *ids, **kwargs):
+    "Run code messages in the current dialog's kernel, with normal run semantics; returns their outputs"
+    if not ids and not any(map(kwargs.get, ('above','below','all'))): kwargs['all'] = True
+    msgs = select_cells(self, *ids, **kwargs)
+    if not msgs: return []
+    return await _run_msgs_srv([m.id for m in msgs])
 
 # %% ../nbs/00_core.ipynb #5250fa23
 _msg_edit_doc = f"""
