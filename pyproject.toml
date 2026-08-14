@@ -14,7 +14,8 @@ keywords = ['nbdev', 'jupyter', 'notebook', 'python']
 classifiers = ["Natural Language :: English", "Intended Audience :: Developers", "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3", "Programming Language :: Python :: 3 :: Only"]
 dependencies = [
-  'fastcore>=2.1.3',
+  'aidialog>=0.0.19',
+  'fastcore>=2.2.7',
   'ghapi>=2.0.0',
   'ipykernel-helper>=0.0.28',
   'ipymini>=0.1.9',
@@ -47,11 +48,9 @@ version = {attr = "dialoghelper.__version__"}
 include = ["dialoghelper"]
 
 [project.scripts]
-dlg_connfiles = "dialoghelper.core:connfiles"
 solveit-test = "dialoghelper.test:solveit_test"
 
 [project.entry-points.pyskills]
-"dialoghelper.termskill" = "dialoghelper.termskill"
 "dialoghelper.solveitskill" = "dialoghelper.solveitskill"
 
 [tool.nbdev]

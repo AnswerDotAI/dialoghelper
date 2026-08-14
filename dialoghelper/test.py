@@ -45,10 +45,12 @@ def _runnable_ids(path):
     "Code cell ids that `nbdev-test` would run, or None when the whole notebook is skipped"
     from nbdev.process import NBProcessor
     from nbdev.frontmatter import nb_frontmatter
+    from fastcore.nbio import fm_default_eval, does_cell_eval
     nb = NBProcessor(path, rm_directives=False, process=True).nb
-    if str2bool(nb_frontmatter(nb).get('skip_exec', False)): return None
-    def _ok(c): return c.cell_type=='code' and 'nbdev_export'+'(' not in c.source and (c.directives_ or {}).get('eval', '').lower()!='false'
-    return [c.id for c in nb.cells if _ok(c)]
+    fm = nb_frontmatter(nb)
+    if str2bool(fm.get('skip_exec', False)): return None
+    dflt = fm_default_eval(fm)
+    return [c.id for c in nb.cells if c.cell_type=='code' and does_cell_eval(c, dflt)]
 
 # %% ../nbs/07_test.ipynb #3d4119a0
 async def test_nbs(
@@ -58,7 +60,7 @@ async def test_nbs(
     n_workers:int=None, # Max dialogs tested concurrently (default: min(num_cpus(), 8))
 )->dict: # Failures per notebook name: erroring message ids, or a repr'd exception
     "Test each notebook under `path` as a dialog on the local solveit instance, printing progress `nbdev-test`-style"
-    root = Path(await call_endpa('realpath_', required=False))
+    root = data_root()
     p = Path(path)
     files = sorted(p.glob('*.ipynb')) if p.is_dir() else [p]
     if n_workers is None: n_workers = min(num_cpus(), 8)
