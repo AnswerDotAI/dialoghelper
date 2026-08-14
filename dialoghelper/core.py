@@ -8,12 +8,12 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
            'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
            'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
-           'js_eval_a', 'Channel', 'display_response', 'connfiles', 'realpath', 'list_dialogs', 'read_msg', 'find_msgs',
-           'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'run_and_prompt', 'update_msg',
-           'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
-           'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog',
-           'load_dialog', 'rm_dialog', 'run_code_interactive', 'Message', 'Dialog', 'solveit_docs', 'dialog_link',
-           'spawn_agent', 'search', 'searches', 'web_answer']
+           'js_eval_a', 'Channel', 'display_response', 'realpath', 'list_dialogs', 'Message', 'Dialog', 'data_root',
+           'dlg_path', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
+           'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
+           'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
+           'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -42,6 +42,7 @@ from fasthtml.components import Solveit_input
 from urllib.parse import urlencode
 import aidialog.dialog as adlg
 import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `Message.cell_meta` below extends)
+import aidialog.dlgskill
 from fastcore.nbio import select_cells
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from functools import cache
@@ -138,12 +139,13 @@ def _check_res(res, dname):
 
 # %% ../nbs/00_core.ipynb #a9cb5512
 async def curr_dialog(
-    with_messages:bool=False,  # Include messages as well?
+    with_messages:bool=False,  # Unused; kept for signature compatibility
     dname:str='' # Dialog to get info for; defaults to current dialog
 ) -> dict|str:
     "Get the current dialog info."
-    res = await call_endpa('curr_dialog_', dname, json=True, with_messages=with_messages)
-    if res: return {'name': res['name'], 'mode': res['mode']}
+    d = _dlg(dname)
+    sv = d.meta.get('solveit', {})
+    return {'name': find_dname(dname).strip('/'), 'mode': sv.get('mode', 'learning')}
 
 # %% ../nbs/00_core.ipynb #8810450f
 async def msg_idx(
@@ -152,8 +154,9 @@ async def msg_idx(
 ) -> int:
     "Get absolute index of message in dialog."
     _diff_dialog(True, dname, id=id)
-    res = await call_endpa('msg_idx_', dname, json=True, id=id)
-    return (await call_endpa('msg_idx_', dname, json=True, id=id))['idx']
+    d = _dlg(dname)
+    if not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
+    return d.messages.index(id)
 
 # %% ../nbs/00_core.ipynb #c43c4361
 async def add_html_a(
@@ -342,19 +345,6 @@ def display_response(display:str, result:str=None):
     if result is None: result = f"The following has been added to the user's markdown/HTML dialog response:\n{display}"
     return _lt.ToolResponse({'_display': display, 'result': result})
 
-# %% ../nbs/00_core.ipynb #1f0c6004
-from fastcore.script import call_parse
-
-# %% ../nbs/00_core.ipynb #677693ee
-@call_parse
-async def connfiles(
-    dlg_name:str='' # Name of dialog to get connfile path for; if empty, return dict of all running dialogs with their paths
-):
-    "Get a running dialogs' connection file path (or dict of all of them if no `dlg_name`."
-    res = await call_endpa('connfiles_', json=True, required=False)
-    if dlg_name: return res[dlg_name.removeprefix('/').removesuffix('.ipynb')]
-    return res
-
 # %% ../nbs/00_core.ipynb #e2138315
 @acache
 async def realpath(
@@ -362,7 +352,7 @@ async def realpath(
 ) -> str:
     "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
     sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
-    return await call_endpa('realpath_', subpath=sub.lstrip('/'))
+    return str((data_root()/sub.lstrip('/')).resolve())
 
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(
@@ -372,7 +362,47 @@ async def list_dialogs(
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
     d = find_dname(subpath, required=False)
     sub = (d or '') if subpath else (str(Path(d).parent) if d else '')
-    return await call_endpa('list_dialogs_', json=True, required=False, subpath=sub.lstrip('/'), depth=depth)
+    base = data_root()/sub.lstrip('/')
+    if not base.is_dir(): return {'error': f'{subpath} not a directory'}
+    def fmt(a,b):
+        j = os.path.join(a,b)
+        res = os.path.relpath(j, base)
+        return (res + ('/' if os.path.isdir(j) else '')).removesuffix('.ipynb')
+    items = globtastic(base, maxdepth=depth, exts=('ipynb',''), ret_folders=True,
+        skip_folder_re=r'^\.', sort=True, func=fmt)
+    return {'items': items}
+
+# %% ../nbs/00_core.ipynb #5e149eb4
+class Message(adlg.Message):
+    "aidialog `Message` with solveit's persisted fields declared"
+    meta_attrs = dict(adlg.Message.meta_attrs, heading_collapsed='heading_collapsed',
+        bookmark='bookmark', o_collapsed='collapsed', i_collapsed='hide_input')
+
+    def cell_meta(self):
+        "Solveit stores its flags as ints; the file convention (and the ipynb schema) is booleans"
+        meta = super().cell_meta()
+        for k in ('skipped','pinned','collapsed','hide_input'):
+            if k in meta: meta[k] = bool(meta[k])
+        return meta
+
+class Dialog(adlg.Dialog):
+    "aidialog `Dialog` producing dialoghelper `Message`s"
+    msg_cls = Message
+
+# %% ../nbs/00_core.ipynb #92879524
+def data_root():
+    "The data directory dialog names are relative to"
+    if r := dh_settings.get('root'): return Path(r)
+    nm = find_dname().strip('/')
+    root = Path.cwd()
+    for _ in Path(nm).parent.parts: root = root.parent
+    return root
+
+def dlg_path(dname:str=''):
+    "The `.ipynb` file for `dname` (default: the current dialog)"
+    return data_root()/f"{find_dname(dname).strip('/')}.ipynb"
+
+def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog)
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
@@ -405,13 +435,28 @@ async def read_msg(
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
     {dname}"""
+    if id and not relative: raise ValueError('`id` provided while `relative=False`')
     _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
-    data = dict(n=n, relative=relative, id=id)
-    rng = [start_line, -1 if end_line is None else end_line] if (start_line!=1 or end_line is not None) else None
-    if rng and not lnhashs: data['view_range'] = rng # None gets converted to '' so we avoid passing it to use the p.default
-    if nums and not lnhashs: data['nums'] = nums
-    res = await call_endpa('read_msg_', dname, json=True, **data)
-    if lnhashs and isinstance(res,dict) and res.get('content'): res['content'] = _lnhashs_content(res['content'], start_line, end_line)
+    d = _dlg(dname)
+    msgs = d.messages
+    if relative:
+        if not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
+        try: idx = msgs.index(id)+n
+        except ValueError: return {'msg':None}
+        if not 0<=idx<len(msgs): return {'msg':None}
+    else: idx = n
+    if not -len(msgs)<=idx<len(msgs): return {'msg':None}
+    m = msgs[idx]
+    res = dict2obj(m.todict())
+    if lnhashs: res['content'] = _lnhashs_content(res['content'], start_line, end_line)
+    elif start_line!=1 or end_line is not None:
+        lines = res['content'].splitlines()
+        e = len(lines) if end_line in (None,-1) else end_line
+        lines = lines[start_line-1:e]
+        if nums: lines = [f'{i+start_line:6d} │ {l}' for i,l in enumerate(lines)]
+        res['content'] = '\n'.join(lines)
+    elif nums:
+        res['content'] = '\n'.join(f'{i:6d} │ {l}' for i,l in enumerate(res['content'].splitlines(), 1))
     return res
 
 # %% ../nbs/00_core.ipynb #6a4aa03b
@@ -487,29 +532,28 @@ async def _add_msg_unsafe(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     placement:str='', # Location to place message. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
     id:str=None, # id of message that placement is relative to (if None, uses current message)
-    dname:str='', # Dialog to add to; defaults to current dialog (`run` only has a effect if dialog is currently running)
+    dname:str='', # Dialog to add to; defaults to current dialog (`run` only has an effect if dialog is currently running)
     msg_type: str='note', # Message type, can be 'code', 'note', or 'prompt'
     run:bool=False, # Run the message?
-    wait:bool=False, # Wait for and return response? (if `run`)
-    poll:float=0.5, # Frequency of polling to check for completion (if `wait`)
     **kwargs
 )->str: # Message ID of newly created message
-    """Add/update a message to the queue to show after code execution completes, and optionally run it.
+    """Add a message to the dialog, and optionally run it.
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
     otherwise messages will appear in the dialog in REVERSE order.
     *WARNING*--This can execute arbitrary code, so check carefully what you run!--*WARNING"""
     if not placement: placement = 'add_after' if id or not dname else 'at_end'
     _diff_dialog(placement not in ('at_start','at_end'), dname,
-        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)    
-    assert not (wait and not dname), "Can not wait in current dialog"
-    res = await call_endpa('add_relative_', dname, json=True, content=content, placement=placement, id=id, msg_type=msg_type,
-        run=run, audit=True, **kwargs)
-    rmsg_id = res['id']
-    if not wait or not run: return rmsg_id
-    while True:
-        res = await read_msgid(rmsg_id, dname=dname)
-        if not res.get('run', False): return res['output']
-        await asyncio.sleep(poll)
+        "`id` or `placement='at_end'`/`placement='at_start'` must be provided when target dialog is different", id=id)
+    d = _dlg(dname)
+    if placement in ('add_after','add_before') and not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
+    if   placement=='add_after':  kw = dict(after=id)
+    elif placement=='add_before': kw = dict(before=id)
+    elif placement=='at_start':   kw = dict(before=d.messages[0].id) if d.messages else {}
+    else:                         kw = dict(after=d.messages[-1].id) if d.messages else {}
+    m = d.mk_message(content, msg_type=msg_type, **{k:v for k,v in kwargs.items() if v}, **kw)
+    d.save()
+    if run: await run_msg(m.id, dname=dname)
+    return m.id
 
 # %% ../nbs/00_core.ipynb #3ad14786
 @delegates(_add_msg_unsafe)
@@ -576,13 +620,18 @@ async def del_msgs(
     dname:str='', # Dialog to get info for; defaults to current dialog
     log_changed:bool=False # Add a note showing the deleted content?
 ) -> list:
-    "Delete messages from the dialog. DO NOT USE THIS unless you have been explicitly instructed to delete messages."
-    res = []
-    for i in ([o.strip() for o in ids.split(',')] if isinstance(ids, str) else listify(ids)):
-        if log_changed: msg = await read_msgid(i, dname=dname)
-        r = await call_endpa('rm_msg_', dname, raiseex=True, msid=i, json=True, audit=True)
-        if log_changed: await add_msg(f"> Deleted {msg_ref(i, dname)}\n\n```\n{msg.content}\n```")
-        res.append(r)
+    "Delete messages from the dialog (a collapsed heading takes its hidden section with it). DO NOT USE THIS unless you have been explicitly instructed to delete messages."
+    ids = [o.strip() for o in ids.split(',')] if isinstance(ids, str) else listify(ids)
+    d = _dlg(dname)
+    res,logs = [],[]
+    for i in ids:
+        m = d.msg(i)
+        if log_changed: logs.append(f"> Deleted {msg_ref(i, dname)}\n\n```\n{m.content}\n```")
+        to_rm = adlg.section_msgs(d.messages, m) if m.heading_collapsed else [m]
+        d.remove_msgs(to_rm)
+        res += [m.id for m in to_rm]
+    d.save()
+    for l in logs: await add_msg(l)
     return res
 
 # %% ../nbs/00_core.ipynb #30e90bf9
@@ -626,13 +675,15 @@ async def update_msg(
     if msg: kwargs |= msg.get('msg', msg)
     if not id: id = kwargs.pop('id', None)
     if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
-    for k in ('meta','mergemeta'):
-        if kwargs.get(k) is not None: kwargs[k] = json.dumps(kwargs[k])
-    res = await call_endpa('update_msg_', dname, json=True, id=id, log_changed=log_changed, **kwargs)
+    d = _dlg(dname)
+    m = d.msg(id)
+    old = m.content
+    m.update(**{k:v for k,v in kwargs.items() if v is not None})
+    d.save()
     if log_changed:
-        diff = res.get('diff', '')
+        diff = str_diff(old, m.content)
         await add_msg(f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.'))
-    return res['id']
+    return m.id
 
 # %% ../nbs/00_core.ipynb #316bd7a0
 async def run_msg(
@@ -687,11 +738,14 @@ def mermaid(code, cls="mermaid", **kwargs):
 # %% ../nbs/00_core.ipynb #b220e29b
 async def toggle_header(
     id:str, # id of markdown header note message to toggle collapsed state
-    dname:str='' # Running dialog to copy messages from; defaults to current dialog. (Note dialog *must* be running for this function)
+    dname:str='' # Dialog to toggle in; defaults to current dialog
 ) -> dict:
     "Toggle collapsed header state for `id`"
-    res = await call_endpa('toggle_header_collapse_', dname, id=id)
-    return _check_res(res, dname)
+    d = _dlg(dname)
+    m = d.msg(id)
+    m.heading_collapsed = not m.heading_collapsed
+    d.save()
+    return {'success': True, 'id': m.id}
 
 # %% ../nbs/00_core.ipynb #90b55ef4
 async def toggle_bookmark(
@@ -700,27 +754,45 @@ async def toggle_bookmark(
     dname:str='' # Dialog to set bookmark in; defaults to current dialog
 ) -> dict:
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
-    return await call_endpa('bookmark_', dname, json=True, id=id, n=n)
+    d = _dlg(dname)
+    m = d.msg(id)
+    if o := first(x for x in d.messages if x.bookmark==n and x is not m): o.bookmark = None
+    m.bookmark = n if m.bookmark != n else None
+    d.save()
+    return {'success': True, 'id': m.id}
 
 # %% ../nbs/00_core.ipynb #a91f99fc
 async def toggle_export(
     ids:str|list, # Message id(s) to toggle (comma-separated str, or list)
     dname:str='' # Dialog to get info for; defaults to current dialog
 ) -> dict:
-    "Toggle whether message(s) carry the `#| export` content directive (like the UI export button); all follow the first message's new state"
-    if isinstance(ids, list): ids = ','.join(ids)
-    return await call_endpa('toggle_export_', dname, json=True, ids=ids)
+    "Toggle whether message(s) carry the nbdev `export` directive (like the UI export button); all follow the first message's new state"
+    ids = [o.strip() for o in ids.split(',')] if isinstance(ids, str) else listify(ids)
+    d = _dlg(dname)
+    msgs = [d.msg(i) for i in ids]
+    new = not msgs[0].meta_exported
+    for m in msgs: m.update(export=new)
+    d.save()
+    return {'success': True, 'exported': new}
 
 # %% ../nbs/00_core.ipynb #334395f8
+def _toggle_comment(s):
+    "Comment every line when any is uncommented, else uncomment all"
+    lines = s.splitlines()
+    if any(l.strip() and not l.lstrip().startswith('#') for l in lines): return '\n'.join('# '+l for l in lines)
+    return '\n'.join(l[2:] if l.startswith('# ') else l[1:] if l.startswith('#') else l for l in lines)
+
 async def toggle_comment(
     id:str, # id of code message (or comma-separated ids) to toggle comments on
-    dname:str='' # Dialog to toggle comments in; defaults to current dialog. (Note dialog *must* be running for this function)
+    dname:str='' # Dialog to toggle comments in; defaults to current dialog
 ) -> dict:
     "Toggle line comments on code message(s). If any lines are uncommented, comments all; otherwise uncomments all."
-    ids = id
-    id,*_ = ids.split(',')
-    res = await call_endpa('toggle_comment_', dname, ids=ids, id=id)
-    return _check_res(res, dname)
+    d = _dlg(dname)
+    ids = [o.strip() for o in id.split(',')]
+    for m in [d.msg(i) for i in ids]:
+        if m.msg_type=='code': m.content = _toggle_comment(m.content)
+    d.save()
+    return {'success': True}
 
 # %% ../nbs/00_core.ipynb #1827e124
 async def url2note(
@@ -789,23 +861,6 @@ async def run_code_interactive(
     and wait for user response. Never call additional tools after this one."""
     await add_msg('# Please run this:\n'+code, msg_type='code')
     return {'success': "CRITICAL: Message added to user dialog. STOP IMMEDIATELY. Do NOT call any more tools. Wait for user to run code and respond."}
-
-# %% ../nbs/00_core.ipynb #5e149eb4
-class Message(adlg.Message):
-    "aidialog `Message` with solveit's persisted fields declared"
-    meta_attrs = dict(adlg.Message.meta_attrs, heading_collapsed='heading_collapsed',
-        bookmark='bookmark', o_collapsed='collapsed', i_collapsed='hide_input')
-
-    def cell_meta(self):
-        "Solveit stores its flags as ints; the file convention (and the ipynb schema) is booleans"
-        meta = super().cell_meta()
-        for k in ('skipped','pinned','collapsed','hide_input'):
-            if k in meta: meta[k] = bool(meta[k])
-        return meta
-
-class Dialog(adlg.Dialog):
-    "aidialog `Dialog` producing dialoghelper `Message`s"
-    msg_cls = Message
 
 # %% ../nbs/00_core.ipynb #80863b63
 async def _run_msgs_srv(ids):

@@ -60,7 +60,7 @@ async def test_nbs(
     n_workers:int=None, # Max dialogs tested concurrently (default: min(num_cpus(), 8))
 )->dict: # Failures per notebook name: erroring message ids, or a repr'd exception
     "Test each notebook under `path` as a dialog on the local solveit instance, printing progress `nbdev-test`-style"
-    root = Path(await call_endpa('realpath_', required=False))
+    root = data_root()
     p = Path(path)
     files = sorted(p.glob('*.ipynb')) if p.is_dir() else [p]
     if n_workers is None: n_workers = min(num_cpus(), 8)

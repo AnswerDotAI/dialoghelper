@@ -48,7 +48,6 @@ version = {attr = "dialoghelper.__version__"}
 include = ["dialoghelper"]
 
 [project.scripts]
-dlg_connfiles = "dialoghelper.core:connfiles"
 solveit-test = "dialoghelper.test:solveit_test"
 
 [project.entry-points.pyskills]
