@@ -5,15 +5,15 @@
 # %% auto #0
 __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
            'msg_replace_lines', 'msg_del_lines', 'names_containing', 'find_dname', 'xposta', 'xgeta', 'DialogAPIError',
-           'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
-           'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
-           'js_eval_a', 'Channel', 'display_response', 'realpath', 'list_dialogs', 'Message', 'Dialog', 'data_root',
-           'dlg_path', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
+           'call_endp', 'call_endpa', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'add_mod',
+           'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
+           'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'Channel',
+           'display_response', 'realpath', 'list_dialogs', 'Message', 'Dialog', 'data_root', 'dlg_path', 'curr_dialog',
+           'msg_idx', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
-           'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
-           'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
+           'restart_dialog', 'stop_dialog', 'load_dialog', 'import_dlg', 'rm_dialog', 'run_code_interactive',
+           'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -48,6 +48,7 @@ from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extens
 from functools import cache
 from pyskills import allow
 from fastcore.tools import *
+
 
 # %% ../nbs/00_core.ipynb #c9936691
 _lt = import_no_init('aidialog.msg_parts')
@@ -136,27 +137,6 @@ def _check_res(res, dname):
     "Raise if a route call came back empty; return a success dict"
     if not res: raise DialogAPIError(f'Dialog {dname} may not be running, or message not found')
     return {'success': 'complete'}
-
-# %% ../nbs/00_core.ipynb #a9cb5512
-async def curr_dialog(
-    with_messages:bool=False,  # Unused; kept for signature compatibility
-    dname:str='' # Dialog to get info for; defaults to current dialog
-) -> dict|str:
-    "Get the current dialog info."
-    d = _dlg(dname)
-    sv = d.meta.get('solveit', {})
-    return {'name': find_dname(dname).strip('/'), 'mode': sv.get('mode', 'learning')}
-
-# %% ../nbs/00_core.ipynb #8810450f
-async def msg_idx(
-    id:str=None,  # Message id to find (defaults to current message)
-    dname:str='' # Dialog to get message index from; defaults to current dialog
-) -> int:
-    "Get absolute index of message in dialog."
-    _diff_dialog(True, dname, id=id)
-    d = _dlg(dname)
-    if not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
-    return d.messages.index(id)
 
 # %% ../nbs/00_core.ipynb #c43c4361
 async def add_html_a(
@@ -377,6 +357,7 @@ class Message(adlg.Message):
     "aidialog `Message` with solveit's persisted fields declared"
     meta_attrs = dict(adlg.Message.meta_attrs, heading_collapsed='heading_collapsed',
         bookmark='bookmark', o_collapsed='collapsed', i_collapsed='hide_input')
+    heading_collapsed, o_collapsed, i_collapsed, bookmark = 0, 0, 0, None  # class-level defaults, as `adlg.Message.skipped`/`pinned`
 
     def cell_meta(self):
         "Solveit stores its flags as ints; the file convention (and the ipynb schema) is booleans"
@@ -403,6 +384,27 @@ def dlg_path(dname:str=''):
     return data_root()/f"{find_dname(dname).strip('/')}.ipynb"
 
 def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog)
+
+# %% ../nbs/00_core.ipynb #a9cb5512
+async def curr_dialog(
+    with_messages:bool=False,  # Unused; kept for signature compatibility
+    dname:str='' # Dialog to get info for; defaults to current dialog
+) -> dict|str:
+    "Get the current dialog info."
+    d = _dlg(dname)
+    sv = d.meta.get('solveit', {})
+    return {'name': find_dname(dname).strip('/'), 'mode': sv.get('mode', 'learning')}
+
+# %% ../nbs/00_core.ipynb #8810450f
+async def msg_idx(
+    id:str=None,  # Message id to find (defaults to current message)
+    dname:str='' # Dialog to get message index from; defaults to current dialog
+) -> int:
+    "Get absolute index of message in dialog."
+    _diff_dialog(True, dname, id=id)
+    d = _dlg(dname)
+    if not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
+    return d.messages.index(id)
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
@@ -471,6 +473,8 @@ async def find_msgs(
     only_err:bool=False, # Only return messages that have errors?
     only_exp:bool=False, # Only return messages that are exported?
     only_chg:bool=False, # Only return messages that have changed vs git HEAD?
+    only_pin:bool=False, # Only return pinned messages?
+    only_bmk:bool=False, # Only return bookmarked messages?
     ids:str='', # Optionally filter by comma-separated list of message ids
     limit:int=None, # Optionally limit number of returned items
     include_output:bool=True, # Include output in returned dict?
@@ -491,7 +495,7 @@ async def find_msgs(
     To refer to a found message from code, use its `id` field."""
     if context is None: context = 0 if headers_only else 1
     res = await call_endpa('find_msgs_', dname, json=False, re_pattern=re_pattern, msg_type=msg_type, limit=limit, ids=ids,
-                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg,
+                    use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp, only_chg=only_chg, only_pin=only_pin, only_bmk=only_bmk,
                     include_output=include_output, include_meta=include_meta, as_xml=as_xml, nums=nums,
                     trunc_out=trunc_out, trunc_in=trunc_in, before=before, after=after, context=context,
                     headers_only=headers_only, header_section=header_section, include_skipped=include_skipped)
@@ -550,7 +554,8 @@ async def _add_msg_unsafe(
     elif placement=='add_before': kw = dict(before=id)
     elif placement=='at_start':   kw = dict(before=d.messages[0].id) if d.messages else {}
     else:                         kw = dict(after=d.messages[-1].id) if d.messages else {}
-    m = d.mk_message(content, msg_type=msg_type, **{k:v for k,v in kwargs.items() if v}, **kw)
+    export = bool(kwargs.pop('exported', 0))  # aidialog spells the writable flag `export=`; `Message.exported` is read-only
+    m = d.mk_message(content, msg_type=msg_type, export=export, **{k:v for k,v in kwargs.items() if v}, **kw)
     d.save()
     if run: await run_msg(m.id, dname=dname)
     return m.id
@@ -836,12 +841,37 @@ async def stop_dialog(
 # %% ../nbs/00_core.ipynb #62101e04
 async def load_dialog(
     src_dname:str, # Dialog to load code from (path relative to solveit data dir, no .ipynb)
-    dname:str='', # Target dialog; defaults to current dialog
+    dname:str='', # Target dialog (path relative to solveit data dir, no .ipynb); defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
     unlock = getattr(get_ipython().kernel, 'unlock', None)
     if unlock: unlock()
     return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
+
+# %% ../nbs/00_core.ipynb #092d1b5a
+_meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
+
+@delegates(find_msgs, but=['context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta'])
+async def import_dlg(
+    src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
+    dname:str='',  # Target dialog (path relative to solveit data dir, no .ipynb); defaults to current dialog
+    id:str=None,   # id of message that placement is relative to (if None, uses current message)
+    placement:str='', # Location to place messages. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
+    **kwargs,
+):
+    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current. A leading frontmatter message in `src_dname` is instead placed first in `dname` (any existing frontmatter becomes the second message). Returns a view of the imported messages (`# msg <id>` headers), so the caller sees what arrived and the new ids."
+    msgs = await find_msgs(dname=src_dname, context=0, **kwargs)
+    def _is_fm(m): return m['msg_type'] in ('raw','note') and m['content'].startswith('---')
+    ids = []
+    for i, m in enumerate(msgs):
+        meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
+        if i == 0 and _is_fm(m):
+            ids.append(await add_msg(m['content'], msg_type=m['msg_type'], dname=dname, placement='at_start', **meta))
+            continue
+        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, placement=placement, **meta)
+        placement='add_after'
+        ids.append(id)
+    return aidialog.dlgskill.view_msgs(*ids, dlg=dlg_path(dname), nums=False)
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
