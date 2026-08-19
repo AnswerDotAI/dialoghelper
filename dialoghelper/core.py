@@ -5,11 +5,11 @@
 # %% auto #0
 __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace',
            'msg_replace_lines', 'msg_del_lines', 'names_containing', 'find_dname', 'xposta', 'xgeta', 'DialogAPIError',
-           'call_endp', 'call_endpa', 'curr_dialog', 'msg_idx', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr',
-           'iife_a', 'iife', 'add_mod', 'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event',
-           'event_get_a', 'event_get', 'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval',
-           'js_eval_a', 'Channel', 'display_response', 'realpath', 'list_dialogs', 'Message', 'Dialog', 'data_root',
-           'dlg_path', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
+           'call_endp', 'call_endpa', 'add_html_a', 'add_html', 'add_scr_a', 'add_scr', 'iife_a', 'iife', 'add_mod',
+           'add_mod_a', 'pop_data_a', 'pop_data', 'fire_event_a', 'fire_event', 'event_get_a', 'event_get',
+           'trigger_now', 'event_once', 'event_once_a', 'js_run', 'js_run_a', 'js_eval', 'js_eval_a', 'Channel',
+           'display_response', 'realpath', 'list_dialogs', 'Message', 'Dialog', 'data_root', 'dlg_path', 'curr_dialog',
+           'msg_idx', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'load_dialog', 'import_dlg', 'rm_dialog', 'run_code_interactive',
@@ -137,27 +137,6 @@ def _check_res(res, dname):
     "Raise if a route call came back empty; return a success dict"
     if not res: raise DialogAPIError(f'Dialog {dname} may not be running, or message not found')
     return {'success': 'complete'}
-
-# %% ../nbs/00_core.ipynb #a9cb5512
-async def curr_dialog(
-    with_messages:bool=False,  # Unused; kept for signature compatibility
-    dname:str='' # Dialog to get info for; defaults to current dialog
-) -> dict|str:
-    "Get the current dialog info."
-    d = _dlg(dname)
-    sv = d.meta.get('solveit', {})
-    return {'name': find_dname(dname).strip('/'), 'mode': sv.get('mode', 'learning')}
-
-# %% ../nbs/00_core.ipynb #8810450f
-async def msg_idx(
-    id:str=None,  # Message id to find (defaults to current message)
-    dname:str='' # Dialog to get message index from; defaults to current dialog
-) -> int:
-    "Get absolute index of message in dialog."
-    _diff_dialog(True, dname, id=id)
-    d = _dlg(dname)
-    if not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
-    return d.messages.index(id)
 
 # %% ../nbs/00_core.ipynb #c43c4361
 async def add_html_a(
@@ -378,6 +357,7 @@ class Message(adlg.Message):
     "aidialog `Message` with solveit's persisted fields declared"
     meta_attrs = dict(adlg.Message.meta_attrs, heading_collapsed='heading_collapsed',
         bookmark='bookmark', o_collapsed='collapsed', i_collapsed='hide_input')
+    heading_collapsed, o_collapsed, i_collapsed, bookmark = 0, 0, 0, None  # class-level defaults, as `adlg.Message.skipped`/`pinned`
 
     def cell_meta(self):
         "Solveit stores its flags as ints; the file convention (and the ipynb schema) is booleans"
@@ -404,6 +384,27 @@ def dlg_path(dname:str=''):
     return data_root()/f"{find_dname(dname).strip('/')}.ipynb"
 
 def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog)
+
+# %% ../nbs/00_core.ipynb #a9cb5512
+async def curr_dialog(
+    with_messages:bool=False,  # Unused; kept for signature compatibility
+    dname:str='' # Dialog to get info for; defaults to current dialog
+) -> dict|str:
+    "Get the current dialog info."
+    d = _dlg(dname)
+    sv = d.meta.get('solveit', {})
+    return {'name': find_dname(dname).strip('/'), 'mode': sv.get('mode', 'learning')}
+
+# %% ../nbs/00_core.ipynb #8810450f
+async def msg_idx(
+    id:str=None,  # Message id to find (defaults to current message)
+    dname:str='' # Dialog to get message index from; defaults to current dialog
+) -> int:
+    "Get absolute index of message in dialog."
+    _diff_dialog(True, dname, id=id)
+    d = _dlg(dname)
+    if not id: id = getattr(aidialog.dlgskill.cur_msg(), 'id', None)
+    return d.messages.index(id)
 
 # %% ../nbs/00_core.ipynb #f819e9bd
 def _maybe_xml(res, as_xml, key=None):
@@ -553,7 +554,8 @@ async def _add_msg_unsafe(
     elif placement=='add_before': kw = dict(before=id)
     elif placement=='at_start':   kw = dict(before=d.messages[0].id) if d.messages else {}
     else:                         kw = dict(after=d.messages[-1].id) if d.messages else {}
-    m = d.mk_message(content, msg_type=msg_type, **{k:v for k,v in kwargs.items() if v}, **kw)
+    export = bool(kwargs.pop('exported', 0))  # aidialog spells the writable flag `export=`; `Message.exported` is read-only
+    m = d.mk_message(content, msg_type=msg_type, export=export, **{k:v for k,v in kwargs.items() if v}, **kw)
     d.save()
     if run: await run_msg(m.id, dname=dname)
     return m.id
@@ -857,7 +859,7 @@ async def import_dlg(
     placement:str='', # Location to place messages. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
     **kwargs,
 ):
-    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current. A leading frontmatter message in `src_dname` is instead placed first in `dname` (any existing frontmatter becomes the second message)."
+    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current. A leading frontmatter message in `src_dname` is instead placed first in `dname` (any existing frontmatter becomes the second message). Returns a view of the imported messages (`# msg <id>` headers), so the caller sees what arrived and the new ids."
     msgs = await find_msgs(dname=src_dname, context=0, **kwargs)
     def _is_fm(m): return m['msg_type'] in ('raw','note') and m['content'].startswith('---')
     ids = []
@@ -869,7 +871,7 @@ async def import_dlg(
         id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, placement=placement, **meta)
         placement='add_after'
         ids.append(id)
-    return ids
+    return aidialog.dlgskill.view_msgs(*ids, dlg=dlg_path(dname), nums=False)
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
