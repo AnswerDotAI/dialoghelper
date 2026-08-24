@@ -937,7 +937,7 @@ async def import_dlg(
         id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, placement=placement, **meta)
         placement='add_after'
         ids.append(id)
-    return aidialog.dlgskill.view_msgs(*ids, dlg=dlg_path(dname), nums=False)
+    return '\n'.join(f"# msg {i}\n{m['content']}" for m,i in zip(msgs, ids))
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
