@@ -2,7 +2,7 @@
 
 Testing a notebook with `nbdev-test` runs its cells under execnb, outside solveit: no dialog context, no current-message tracking, no dialog kernel. For notebooks written as solveit dialogs (like dialoghelper's own), that tests a different thing than what runs in production. `solveit-test` instead asks a running solveit instance to execute a notebook exactly as the app does -- the production runloop, a fresh dialog kernel, real current-message state -- and reports the code messages whose outputs contain errors.
 
-The `solveit-test` entrypoint maps each notebook path to its dialog name through the server's own base path (so the notebooks must live under the tree the instance serves), runs each in turn, and reports `nbdev-test`-style. It respects nbdev's own skip machinery, computed with nbdev's API (a dev dependency, imported lazily so the rest of this module works without it): `skip_exec: true` frontmatter skips a whole notebook, `#|eval: false` (comment or meta form) skips a cell, and `nbdev_export` cells never run. A dialog that's open in solveit gets its kernel restarted by its test run, so state you had in that session is lost -- that's the price of every run starting clean. Runs execute the notebooks' code for real, mutating messages and outputs on disk, so run it on a clean checkout and review the diff: an example that doesn't clean up after itself shows up there, which is itself worth knowing.
+The `solveit-test` entrypoint maps each notebook path to its dialog name through the server's own base path (so the notebooks must live under the tree the instance serves), runs each in turn, and reports `nbdev-test`-style. Which messages run is aidialog's `Dialog.select_msgs`, the same selection `Dialog.execute` uses: code messages only (a prompt never runs), honoring the eval cascade — `skip_exec: true` frontmatter skips a whole notebook, `#|eval: false` (comment or meta form) skips a cell, and `nbdev_export` cells never run. A dialog that's open in solveit gets its kernel restarted by its test run, so state you had in that session is lost -- that's the price of every run starting clean. Runs execute the notebooks' code for real, mutating messages and outputs on disk, so run it on a clean checkout and review the diff: an example that doesn't clean up after itself shows up there, which is itself worth knowing. Since only messages that execute write outputs, a message skipped mid-run (a crashed kernel, a queue hiccup) keeps its stored output, and the error report can't tell it from a fresh failure. `--save` (like `nbdev-test`'s) empties the stored outputs of the messages about to run first, so outputs and report reflect this run alone.
 
 Docs: https://AnswerDotAI.github.io/dialoghelper/test.html.md"""
 
@@ -24,6 +24,7 @@ async def test_dlg(
     ids:list=None, # Message ids to run (default: all code messages, including those hidden from the AI)
     timeout:int=600, # Max seconds to wait for the run to finish
     poll:float=0.5, # Seconds between completion checks
+    save:bool=False, # Empty stored outputs of the messages to run first, so results reflect only this run?
 )->list[dict]: # Run messages left with error outputs (empty means the dialog passed)
     "Restart `dname`'s kernel, run its code messages through the solveit runloop, and return those that errored"
     await restart_dialog(dname)
@@ -31,6 +32,7 @@ async def test_dlg(
         msgs = await find_msgs(msg_type='code', context=0, include_output=False, include_meta=False, include_skipped=True, dname=dname)
         ids = [m.id for m in msgs]
     if not ids: return []
+    if save: await cells_client(dname).apply([dict(op='update', id=i, outputs=[]) for i in ids])
     await run_msg(','.join(ids), dname=dname)
     end = time.time()+timeout
     for i in ids:
@@ -42,15 +44,13 @@ async def test_dlg(
 
 # %% ../nbs/07_test.ipynb #24b935f6
 def _runnable_ids(path):
-    "Code cell ids that `nbdev-test` would run, or None when the whole notebook is skipped"
-    from nbdev.process import NBProcessor
+    "Message ids a non-interactive run executes, or None when the whole dialog is skipped"
     from nbdev.frontmatter import nb_frontmatter
-    from fastcore.nbio import fm_default_eval, does_cell_eval
-    nb = NBProcessor(path, rm_directives=False, process=True).nb
-    fm = nb_frontmatter(nb)
-    if str2bool(fm.get('skip_exec', False)): return None
-    dflt = fm_default_eval(fm)
-    return [c.id for c in nb.cells if c.cell_type=='code' and does_cell_eval(c, dflt)]
+    from aidialog.ipynb import read_ipynb
+    d = read_ipynb(path)
+    if d is None: return None
+    if str2bool(nb_frontmatter(d).get('skip_exec', False)): return None
+    return [m.id for m in d.select_msgs(all=True)]
 
 # %% ../nbs/07_test.ipynb #3d4119a0
 async def test_nbs(
@@ -58,6 +58,7 @@ async def test_nbs(
     timeout:int=600, # Max seconds to wait per dialog
     keep:bool=False, # Leave dialog kernels running after their test?
     n_workers:int=None, # Max dialogs tested concurrently (default: min(num_cpus(), 8))
+    save:bool=False, # Empty stored outputs of the messages to run first, so results reflect only this run?
 )->dict: # Failures per notebook name: erroring message ids, or a repr'd exception
     "Test each notebook under `path` as a dialog on the local solveit instance, printing progress `nbdev-test`-style"
     root = data_root()
@@ -70,7 +71,7 @@ async def test_nbs(
         if ids is None: return print(f'skip: {f.name}')
         dname = '/'+str(f.resolve().relative_to(root).with_suffix(''))
         try:
-            errs = await test_dlg(dname, ids=ids, timeout=timeout)
+            errs = await test_dlg(dname, ids=ids, timeout=timeout, save=save)
             if errs: failed[f.name] = [m.id for m in errs]
         except Exception as e: failed[f.name] = [repr(e)]
         finally:
@@ -79,7 +80,6 @@ async def test_nbs(
     await parallel_async(_one, files, n_workers=n_workers)
     return failed
 
-
 # %% ../nbs/07_test.ipynb #8814e977
 @call_parse(pos=['path'])
 async def solveit_test(
@@ -87,11 +87,11 @@ async def solveit_test(
     timeout:int=600, # Max seconds to wait per dialog
     keep:bool=False, # Leave dialog kernels running after their test?
     n_workers:int=None, # Max dialogs tested concurrently (default: min(num_cpus(), 8))
+    save:bool=False, # Empty stored outputs of the messages to run first, so results reflect only this run?
 ):
     "Run notebooks as dialogs on the local solveit instance, `nbdev-test`-style; they must live under its data path"
-    failed = await test_nbs(path, timeout=timeout, keep=keep, n_workers=n_workers)
+    failed = await test_nbs(path, timeout=timeout, keep=keep, n_workers=n_workers, save=save)
     if failed:
         sys.stderr.write('\nsolveit-test failed on:\n'+'\n'.join(f'\t{k}: {", ".join(v)}' for k,v in failed.items())+'\n')
         sys.exit(1)
     print('Success.')
-
