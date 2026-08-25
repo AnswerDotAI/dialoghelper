@@ -31,12 +31,9 @@ from fastcore.utils import *
 from fastcore.xtras import asdict, str_diff, obj2dict
 from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
-from ghapi.all import *
 from inspect import currentframe,Parameter,signature
 from httpx import AsyncClient, get as xget, post as xpost
 from IPython.display import display,Markdown,HTML
-from monsterui.all import franken_class_map,apply_classes
-from toolslm.xml import *
 from fasthtml.common import *
 from fasthtml.components import Solveit_input, Msgs
 from urllib.parse import urlencode
@@ -1017,6 +1014,7 @@ msg_del_lines =  _msg_edit (del_lines, 'msg_del_lines')
 async def solveit_docs():
     """Full reference documentation for Solveit - use this to answer questions about how to use Solveit.
     **NB**: The whole docs fit in LLM context, so read the whole thing, don't search/filter it. *Always* re-run rather than relying on truncated history or assumptions."""
+    from ghapi.core import GhApi
     _ref_gist_id = '9e7b444aba5ecf6d14295ba2cee890c3'
     pre = f"""⚠️ This content will be truncated in your next turn. Re-call this function if you need it again.
 If the user wants more info, give them a link to https://gist.github.com/jph00/{_ref_gist_id}."""
