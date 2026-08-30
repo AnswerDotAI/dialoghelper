@@ -907,9 +907,7 @@ async def load_dialog(
     dname:str='', # Target dialog; defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
-    unlock = getattr(get_ipython().kernel, 'unlock', None)
-    if unlock: unlock()
-    return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
+    with get_ipython().kernel.sidecar(): return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
@@ -932,10 +930,8 @@ async def run_code_interactive(
 
 # %% ../nbs/00_core.ipynb #80863b63
 async def _run_msgs_srv(ids):
-    "Ask the server to run `ids` in the current dialog now, awaiting completion; unlocks so the kernel is free meanwhile"
-    unlock = getattr(get_ipython().kernel, 'unlock', None)
-    if unlock: unlock()
-    res = await call_endpa('run_msgs_', '', ids=','.join(ids), json=True)
+    "Ask the server to run `ids` in the current dialog now, awaiting completion through the kernel sidecar"
+    with get_ipython().kernel.sidecar(): res = await call_endpa('run_msgs_', '', ids=','.join(ids), json=True)
     if err := res.get('error'): raise ValueError(err)
     return res['outputs']
 
