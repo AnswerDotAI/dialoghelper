@@ -12,8 +12,8 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
-           'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
-           'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
+           'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'rename_dialog', 'run_code_interactive',
+           'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -916,6 +916,17 @@ async def rm_dialog(
     "Delete a dialog (or folder) and associated records, stopping the kernel if running"
     name = find_dname(name).lstrip('/')
     return await call_endpa('rm_dialog_', name=name, sess='{}', json=True, audit=True, required=False)
+
+# %% ../nbs/00_core.ipynb #85b19a45
+async def rename_dialog(
+    name:str, # Name/path of the dialog to rename (relative to current dialog's folder, or absolute if starts with '/')
+    new_name:str, # New name/path (same addressing; parent folders are created as needed)
+    force:bool=False, # Overwrite `new_name` if it already exists?
+):
+    "Rename a dialog, open or closed"
+    name = find_dname(name).lstrip('/')
+    new_name = find_dname(new_name).lstrip('/')
+    return await call_endpa('rename_dialog_', name=name, new_name=new_name, force=force, json=True, audit=True, required=False)
 
 # %% ../nbs/00_core.ipynb #5617305b
 async def run_code_interactive(
