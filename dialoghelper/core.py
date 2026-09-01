@@ -13,7 +13,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
-           'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
+           'dialog_link', 'spawn_agent', 'web_answer']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -1038,16 +1038,6 @@ async def spawn_agent(prompt:str):
     The subagent's context and tools is defined by the parent prompt's history"""
     raise Exception("Do not run from python: this is a server-side only tool")
 
-# %% ../nbs/00_core.ipynb #d7027cfb
-async def search(q:str):
-    "Get search results for a query and return as text. Rarely used instead of `web_answer`."
-    return await call_endpa('search_', json=True, q=q, timeout=60)
-
-# %% ../nbs/00_core.ipynb #0f17ca2c
-async def searches(searches:list[str]):
-    "Get search results for multiple queries in parallel. Rarely used instead of `web_answer`."
-    return await call_endpa('searches_', json=True, searches=searches, timeout=60)
-
 # %% ../nbs/00_core.ipynb #84816ccc
 async def web_answer(
     pr:str, # The prompt - i.e the question to get answered
@@ -1055,4 +1045,10 @@ async def web_answer(
     page_chars:int=50000 # Truncate web pages beyond this size
 ): # Markdown text of the answer, with sources as appropriate
     "Use a search agent to search for all of `qs`, choose suitable pages to read, and answer `pr` based on the page contents."
-    return await call_endpa('web_answer_', json=True, pr=pr, qs=qs, page_chars=page_chars, timeout=60)
+    url = os.environ['SOLVELP_URL'].rstrip('/')
+    headers = {'Authorization': f"Bearer {os.environ.get('AAI_USER_KEY', 'local')}",
+               'X-SolveIt-Instance-Id': os.environ.get('INSTANCE_ID', '0')}
+    async with AsyncClient(timeout=120) as cli:
+        r = await cli.post(f'{url}/web_answer', headers=headers, json=dict(pr=pr, qs=qs, page_chars=page_chars))
+    r.raise_for_status()
+    return r.text
