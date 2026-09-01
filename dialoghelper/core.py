@@ -41,7 +41,7 @@ import aidialog.dialog as adlg
 import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `Message.cell_meta` below extends)
 import aidialog.dlgskill
 from jupyasyncclient import JupyAsyncCellsClient
-from fastspec.errors import APIError
+from fasttransport.errors import APIError
 from fastcore.nbio import select_cells, item2xml
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from functools import cache
