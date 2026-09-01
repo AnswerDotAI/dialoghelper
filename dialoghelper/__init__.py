@@ -6,5 +6,5 @@ Modules:
 - `dialoghelper.test`: Run dialogs' code messages through a live solveit, `nbdev-test`-style
 - `dialoghelper.tmux`: Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with LLMs, debugging across multiple terminals, or monitoring long-running processes."""
 
-__version__ = "0.2.42"
+__version__ = "0.2.43"
 from .core import *
