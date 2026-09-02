@@ -2,6 +2,21 @@
 
 <!-- do not remove -->
 
+## 0.2.42
+
+### New Features
+
+- Import APIError from fasttransport ([#246](https://github.com/AnswerDotAI/dialoghelper/pull/246)), thanks to [@jph00](https://github.com/jph00)
+- Use kernel sidecar context manager instead of manual unlock in load_dialog and _run_msgs_srv ([#244](https://github.com/AnswerDotAI/dialoghelper/issues/244))
+- Faster import ([#243](https://github.com/AnswerDotAI/dialoghelper/issues/243))
+- Move dialog message tools from direct file editing to the gateway cells API, adding server_info lookup for out-of-dialog use ([#241](https://github.com/AnswerDotAI/dialoghelper/issues/241))
+- Rewrite dialog tools to edit .ipynb files directly instead of via server endpoints; add data_root/dlg_path/repoint; drop connfiles ([#240](https://github.com/AnswerDotAI/dialoghelper/issues/240))
+- Remove dialoghelper.termskill pyskill and add dialoghelper.bootstrap IPython extension for solveit dialog kernel setup ([#239](https://github.com/AnswerDotAI/dialoghelper/issues/239))
+- Add aidialog-based Dialog/Message classes with server-side execute for running messages in the current kernel ([#238](https://github.com/AnswerDotAI/dialoghelper/issues/238))
+- Use fastcore.nbio fm_default_eval/does_cell_eval in _runnable_ids ([#237](https://github.com/AnswerDotAI/dialoghelper/issues/237))
+- Add solveit-test: run dialogs code messages on a live solveit instance, plus restart_dialog and update_msg meta support ([#236](https://github.com/AnswerDotAI/dialoghelper/issues/236))
+
+
 ## 0.2.41
 
 ### New Features

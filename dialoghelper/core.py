@@ -13,7 +13,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'load_dialog', 'import_dlg', 'rm_dialog', 'run_code_interactive',
-           'solveit_docs', 'dialog_link', 'spawn_agent', 'search', 'searches', 'web_answer']
+           'solveit_docs', 'dialog_link', 'spawn_agent']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -31,12 +31,9 @@ from fastcore.utils import *
 from fastcore.xtras import asdict, str_diff, obj2dict
 from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
-from ghapi.all import *
 from inspect import currentframe,Parameter,signature
 from httpx import AsyncClient, get as xget, post as xpost
 from IPython.display import display,Markdown,HTML
-from monsterui.all import franken_class_map,apply_classes
-from toolslm.xml import *
 from fasthtml.common import *
 from fasthtml.components import Solveit_input, Msgs
 from urllib.parse import urlencode
@@ -44,7 +41,7 @@ import aidialog.dialog as adlg
 import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `Message.cell_meta` below extends)
 import aidialog.dlgskill
 from jupyasyncclient import JupyAsyncCellsClient
-from fastspec.errors import APIError
+from fasttransport.errors import APIError
 from fastcore.nbio import select_cells, item2xml
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
 from functools import cache
@@ -910,9 +907,7 @@ async def load_dialog(
     dname:str='', # Target dialog; defaults to current dialog
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
-    unlock = getattr(get_ipython().kernel, 'unlock', None)
-    if unlock: unlock()
-    return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
+    with get_ipython().kernel.sidecar(): return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
 
 # %% ../nbs/00_core.ipynb #092d1b5a
 _meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
@@ -960,10 +955,8 @@ async def run_code_interactive(
 
 # %% ../nbs/00_core.ipynb #80863b63
 async def _run_msgs_srv(ids):
-    "Ask the server to run `ids` in the current dialog now, awaiting completion; unlocks so the kernel is free meanwhile"
-    unlock = getattr(get_ipython().kernel, 'unlock', None)
-    if unlock: unlock()
-    res = await call_endpa('run_msgs_', '', ids=','.join(ids), json=True)
+    "Ask the server to run `ids` in the current dialog now, awaiting completion through the kernel sidecar"
+    with get_ipython().kernel.sidecar(): res = await call_endpa('run_msgs_', '', ids=','.join(ids), json=True)
     if err := res.get('error'): raise ValueError(err)
     return res['outputs']
 
@@ -1042,6 +1035,7 @@ msg_del_lines =  _msg_edit (del_lines, 'msg_del_lines')
 async def solveit_docs():
     """Full reference documentation for Solveit - use this to answer questions about how to use Solveit.
     **NB**: The whole docs fit in LLM context, so read the whole thing, don't search/filter it. *Always* re-run rather than relying on truncated history or assumptions."""
+    from ghapi.core import GhApi
     _ref_gist_id = '9e7b444aba5ecf6d14295ba2cee890c3'
     pre = f"""⚠️ This content will be truncated in your next turn. Re-call this function if you need it again.
 If the user wants more info, give them a link to https://gist.github.com/jph00/{_ref_gist_id}."""
@@ -1068,22 +1062,3 @@ async def spawn_agent(prompt:str):
     """Spawn a subagent to complete a task defined by `prompt`. Must be run as a tool - not from Python.
     The subagent's context and tools is defined by the parent prompt's history"""
     raise Exception("Do not run from python: this is a server-side only tool")
-
-# %% ../nbs/00_core.ipynb #d7027cfb
-async def search(q:str):
-    "Get search results for a query and return as text. Rarely used instead of `web_answer`."
-    return await call_endpa('search_', json=True, q=q, timeout=60)
-
-# %% ../nbs/00_core.ipynb #0f17ca2c
-async def searches(searches:list[str]):
-    "Get search results for multiple queries in parallel. Rarely used instead of `web_answer`."
-    return await call_endpa('searches_', json=True, searches=searches, timeout=60)
-
-# %% ../nbs/00_core.ipynb #84816ccc
-async def web_answer(
-    pr:str, # The prompt - i.e the question to get answered
-    qs:list[str], # A list of 1 or more web search queries that might provide useful results. Do not constrain the queries too much - make sure the agent as a range of links to choose from
-    page_chars:int=50000 # Truncate web pages beyond this size
-): # Markdown text of the answer, with sources as appropriate
-    "Use a search agent to search for all of `qs`, choose suitable pages to read, and answer `pr` based on the page contents."
-    return await call_endpa('web_answer_', json=True, pr=pr, qs=qs, page_chars=page_chars, timeout=60)

@@ -72,3 +72,6 @@ allow(
     del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment,
     create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, msg_exhash
 )
+
+from dialoghelper.core import *
+from dialoghelper.exhash import *
