@@ -13,7 +13,7 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
-           'dialog_link', 'spawn_agent', 'web_answer']
+           'dialog_link', 'spawn_agent']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -1037,18 +1037,3 @@ async def spawn_agent(prompt:str):
     """Spawn a subagent to complete a task defined by `prompt`. Must be run as a tool - not from Python.
     The subagent's context and tools is defined by the parent prompt's history"""
     raise Exception("Do not run from python: this is a server-side only tool")
-
-# %% ../nbs/00_core.ipynb #84816ccc
-async def web_answer(
-    pr:str, # The prompt - i.e the question to get answered
-    qs:list[str], # A list of 1 or more web search queries that might provide useful results. Do not constrain the queries too much - make sure the agent as a range of links to choose from
-    page_chars:int=50000 # Truncate web pages beyond this size
-): # Markdown text of the answer, with sources as appropriate
-    "Use a search agent to search for all of `qs`, choose suitable pages to read, and answer `pr` based on the page contents."
-    url = os.environ['SOLVELP_URL'].rstrip('/')
-    headers = {'Authorization': f"Bearer {os.environ.get('AAI_USER_KEY', 'local')}",
-               'X-SolveIt-Instance-Id': os.environ.get('INSTANCE_ID', '0')}
-    async with AsyncClient(timeout=120) as cli:
-        r = await cli.post(f'{url}/web_answer', headers=headers, json=dict(pr=pr, qs=qs, page_chars=page_chars))
-    r.raise_for_status()
-    return r.text
