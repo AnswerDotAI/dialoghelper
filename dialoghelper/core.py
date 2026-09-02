@@ -12,8 +12,8 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
-           'restart_dialog', 'stop_dialog', 'load_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
-           'dialog_link', 'spawn_agent']
+           'restart_dialog', 'stop_dialog', 'load_dialog', 'import_dlg', 'rm_dialog', 'run_code_interactive',
+           'solveit_docs', 'dialog_link', 'spawn_agent']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -908,6 +908,31 @@ async def load_dialog(
 ):
     "Run all code messages from `src_dname` into the target dialog's kernel and return dialog contents. Do not call from python; use directly as an LLM tool."
     with get_ipython().kernel.sidecar(): return _lt.FullResponse(await call_endpa('load_dialog_', dname, src_dname=src_dname))
+
+# %% ../nbs/00_core.ipynb #092d1b5a
+_meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
+
+@delegates(find_msgs, but=['context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta'])
+async def import_dlg(
+    src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
+    dname:str='',  # Target dialog (path relative to solveit data dir, no .ipynb); defaults to current dialog
+    id:str=None,   # id of message that placement is relative to (if None, uses current message)
+    placement:str='', # Location to place messages. Can be 'at_start' or 'at_end', and if id provided or in curr dlg can also be 'add_after' or 'add_before'. Defaults to 'at_end' if no id and not targeting curr dlg
+    **kwargs,
+):
+    "Append messages from `src_dname` into `dname` starting at `id`, optionally filtered by `find_msgs` criteria (e.g. `only_exp` or `msg_type`). If `id` is None messages will append after current. A leading frontmatter message in `src_dname` is instead placed first in `dname` (any existing frontmatter becomes the second message). Returns a view of the imported messages (`# msg <id>` headers), so the caller sees what arrived and the new ids."
+    msgs = await find_msgs(dname=src_dname, context=0, **kwargs)
+    def _is_fm(m): return m['msg_type'] in ('raw','note') and m['content'].startswith('---')
+    ids = []
+    for i, m in enumerate(msgs):
+        meta = {k:m[k] for k in _meta_keys if k in m and m[k] is not None}
+        if i == 0 and _is_fm(m):
+            ids.append(await add_msg(m['content'], msg_type=m['msg_type'], dname=dname, placement='at_start', **meta))
+            continue
+        id = await add_msg(m['content'], msg_type=m['msg_type'], id=id, dname=dname, placement=placement, **meta)
+        placement='add_after'
+        ids.append(id)
+    return '\n'.join(f"# msg {i}\n{m['content']}" for m,i in zip(msgs, ids))
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
