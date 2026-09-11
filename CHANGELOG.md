@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.2.43
+
+### New Features
+
+- Include .ipynb extension in dialog names and resolve them against the gateway root ([#252](https://github.com/AnswerDotAI/dialoghelper/issues/252))
+- Remove `load_dialog` ([#251](https://github.com/AnswerDotAI/dialoghelper/issues/251))
+- Rewrite docstrings and prose docs for clarity ([#249](https://github.com/AnswerDotAI/dialoghelper/issues/249))
+- Enable folder-local pyskills discovery in dialog kernels, binding to the dialog opening folder before the tool layer loads ([#248](https://github.com/AnswerDotAI/dialoghelper/issues/248))
+- Remove the kernel-side `web_answer` helper ([#247](https://github.com/AnswerDotAI/dialoghelper/pull/247)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.2.42
 
 ### New Features
