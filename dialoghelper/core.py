@@ -14,8 +14,8 @@ __all__ = ['dh_settings', 'Placements', 'mermaid_url', 'msg_insert_line', 'msg_s
            'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
            'run_and_prompt', 'update_msg', 'run_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
            'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'url2note', 'create_or_run_dialog',
-           'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link',
-           'spawn_agent']
+           'restart_dialog', 'stop_dialog', 'rename_dialog', 'rm_dialog', 'run_code_interactive', 'solveit_docs',
+           'dialog_link', 'spawn_agent']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,re,inspect,ast,collections,time,asyncio,json,linecache,importlib,uuid,builtins,subprocess,sys
@@ -42,7 +42,7 @@ from urllib.parse import urlencode
 import aidialog.dialog as adlg
 import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `Message.cell_meta` below extends)
 import aidialog.dlgskill
-from jupyasyncclient import JupyAsyncCellsClient
+from jupyasyncclient import JupyAsyncCellsClient, JupyAsyncFilesClient
 from fasttransport.errors import APIError
 from fastcore.nbio import select_cells, item2xml
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
@@ -401,14 +401,16 @@ def dlg_path(dname:str=''):
 
 def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog)
 
+# %% ../nbs/00_core.ipynb #f7fe5db4
+def _rusty_url():
+    if url := (dh_settings.get('rusty') or os.environ.get('RUSTYGATE_URL')): return url
+    _server_info()
+    return dh_settings['rusty']
+
 # %% ../nbs/00_core.ipynb #c4582c78
 def cells_client(dname:str=''):
     "Create a cells client for the dialog's notebook under the gateway data root"
-    url = dh_settings.get('rusty') or os.environ.get('RUSTYGATE_URL')
-    if not url:
-        _server_info()
-        url = dh_settings['rusty']
-    return JupyAsyncCellsClient(url, find_dname(dname).strip('/')+'.ipynb')
+    return JupyAsyncCellsClient(_rusty_url(), find_dname(dname).strip('/')+'.ipynb')
 
 def _mk_cell(
     content:str='', # Message text, `%%prompt` marker excluded for prompts
@@ -902,6 +904,13 @@ async def stop_dialog(
     "Stop a running dialog kernel"
     name = find_dname(name).lstrip('/')
     return await call_endpa('stop_kernel_', name=name, json=True, required=False)
+
+# %% ../nbs/00_core.ipynb #bba9a394
+async def rename_dialog(name:str, new_name:str):
+    "Rename a dialog through the gateway; an existing destination raises HashMismatch"
+    name,new_name = find_dname(name).lstrip('/'), find_dname(new_name).lstrip('/')
+    cli = JupyAsyncFilesClient(_rusty_url())
+    return await cli.rename(f'{name}.ipynb', f'{new_name}.ipynb')
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
