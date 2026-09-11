@@ -918,7 +918,6 @@ async def rename_dialog(name:str, new_name:str):
     "Rename a dialog through the gateway; an existing destination raises HashMismatch"
     name,new_name = find_dname(name).lstrip('/'), find_dname(new_name).lstrip('/')
     cli = JupyAsyncFilesClient(_rusty_url())
-    if (rel:=str(Path(new_name).parent)) != '.': await cli.mkdir(rel, parents=True)
     return await cli.rename(f'{name}.ipynb', f'{new_name}.ipynb')
 
 # %% ../nbs/00_core.ipynb #e393f14b
