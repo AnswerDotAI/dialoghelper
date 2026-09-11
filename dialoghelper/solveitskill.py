@@ -64,13 +64,13 @@ __all__ = [
     'curr_dialog', 'realpath', 'list_dialogs', 'lnhashview_msg', 'msg_exhash',
     'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg',
     'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-    'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
+    'create_or_run_dialog', 'stop_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
 ]
 
 allow(
     curr_dialog, realpath, list_dialogs, read_msg, find_msgs, view_dlg, add_msg, read_msgid, view_msg,
     del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment,
-    create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, msg_exhash
+    create_or_run_dialog, stop_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, msg_exhash
 )
 
 from dialoghelper.core import *
