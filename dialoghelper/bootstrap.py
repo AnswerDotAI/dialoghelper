@@ -12,7 +12,7 @@ def repoint(nm, folder=None):
     for _ in Path(nm).parent.parts: root = root.parent
     from dialoghelper.core import dh_settings
     dh_settings['root'] = str(root)
-    fname = folder/f'{Path(nm).name}.ipynb'
+    fname = folder/Path(nm).name
     get_ipython().ex(f'''import aidialog.dlgskill as dsk, dialoghelper.core as dh
 dsk.set_dlg({str(fname)!r}, cls=dh.Dialog)
 __dialog_name = {nm!r}''')

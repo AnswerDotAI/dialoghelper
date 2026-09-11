@@ -71,21 +71,19 @@ def names_containing(s:str):
 
 # %% ../nbs/00_core.ipynb #65a8b58b
 def find_dname(dname=None, required=True):
-    "Get the dialog name by searching the call stack for __dialog_name, and resolving `dname` if supplied."
-    if dname:
-        dname = dname.removesuffix('.ipynb')
-        if dname.startswith('/'): return dname
+    "Resolve `dname` relative to the current dialog's folder, or from the gateway root with a leading slash."
+    if dname and dname.startswith('/'): return dname.lstrip('/')
     curr = dh_settings.get('dname', None)
     if not curr: curr = os.getenv('__DIALOG_NAME')
     if not curr:
         if required: curr = find_var('__dialog_name')
         else: return None
     if not curr: raise ValueError("No dialog context: Please pass absolute `dname` starting with '/'")
-    if not dname: return '/'+curr
-    p = Path(curr).parent
-    res = normpath((p/dname))
+    curr = curr.lstrip('/')
+    if not dname: return curr
+    res = normpath(Path(curr).parent/dname)
     assert '../' not in res, "Path traversal not permitted"
-    return '/'+res
+    return res
 
 # %% ../nbs/00_core.ipynb #a01ad161
 def _diff_dialog(pred, dname, err="`id` parameter must be provided when target dialog is different", id=None):
@@ -357,7 +355,7 @@ async def list_dialogs(
     def fmt(a,b):
         j = os.path.join(a,b)
         res = os.path.relpath(j, base)
-        return (res + ('/' if os.path.isdir(j) else '')).removesuffix('.ipynb')
+        return res + ('/' if os.path.isdir(j) else '')
     items = globtastic(base, maxdepth=depth, exts=('ipynb',''), ret_folders=True,
         skip_folder_re=r'^\.', sort=True, func=fmt)
     return {'items': items}
@@ -397,9 +395,9 @@ def data_root():
 
 def dlg_path(dname:str=''):
     "The `.ipynb` file for `dname` (default: the current dialog)"
-    return data_root()/f"{find_dname(dname).strip('/')}.ipynb"
+    return data_root()/find_dname(dname)
 
-def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog)
+def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog, name=find_dname(dname))
 
 # %% ../nbs/00_core.ipynb #c4582c78
 def cells_client(dname:str=''):
@@ -408,7 +406,7 @@ def cells_client(dname:str=''):
     if not url:
         _server_info()
         url = dh_settings['rusty']
-    return JupyAsyncCellsClient(url, find_dname(dname).strip('/')+'.ipynb')
+    return JupyAsyncCellsClient(url, find_dname(dname))
 
 def _mk_cell(
     content:str='', # Message text, `%%prompt` marker excluded for prompts
