@@ -3,16 +3,12 @@
 import os
 from pathlib import Path
 
-def repoint(nm, folder=None):
-    "Point this kernel at dialog `nm` in `folder` (default cwd): working directory, kernel-side names, and dsk's current dialog"
+def repoint(nm):
+    "Point this kernel at a gateway-relative dialog filename under its established root"
     from IPython import get_ipython
-    folder = Path(folder) if folder else Path.cwd()
-    os.chdir(folder)
-    root = folder
-    for _ in Path(nm).parent.parts: root = root.parent
     from dialoghelper.core import dh_settings
-    dh_settings['root'] = str(root)
-    fname = folder/Path(nm).name
+    fname = Path(dh_settings['root'])/nm
+    os.chdir(fname.parent)
     get_ipython().ex(f'''import aidialog.dlgskill as dsk, dialoghelper.core as dh
 dsk.set_dlg({str(fname)!r}, cls=dh.Dialog)
 __dialog_name = {nm!r}''')
@@ -23,6 +19,10 @@ def load_ipython_extension(ip):
     if not nm: return
     from pyskills import enable_local_skills
     enable_local_skills(Path.cwd())
+    from dialoghelper.core import dh_settings
+    root = Path.cwd()
+    for _ in Path(nm).parent.parts: root = root.parent
+    dh_settings['root'] = str(root)
     ip.ex('''from dialoghelper.stdtools import *
 py = RunPython()''')
     repoint(nm)

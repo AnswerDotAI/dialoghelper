@@ -2,8 +2,7 @@
 
 ## Core Concepts
 
-- **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's
-  runtime data path (with leading `/`; but NOT from the disk root path). The `.ipynb` extension is never included.
+- **Dialog addressing**: Functions accepting `dname` use notebook filenames including `.ipynb`. Input without a leading `/` is relative to the current dialog's folder. A leading `/` addresses the gateway root, not the disk root.
 - **Message addressing**: Messages have stable `id` strings (e.g., `a9cb5512`). Solveit sets the "current message" to the most recently run message. Markdown refs to a message are anchors to its DOM id, so they carry a `_` prefix (`#_a9cb5512`); `msg_ref` builds them.
 - **Implicit state**: After `add_msg`/`update_msg`, the "current message" is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
 
@@ -17,7 +16,7 @@
 
 **Key insight**: Messages above the current prompt are already in LLM context—their content and outputs are always up-to-date. Do NOT use read functions just to review content you can already see. Use read functions only for: (1) getting line numbers immediately before editing, (2) accessing messages below current prompt (if you're sure the user wants you to "look ahead"), (3) accessing other dialogs.
 
-**dname**: Many functions take an optional `dname` parameter, to choose which dialog to view/edit. If `dname` is None, the current dialog is used (if any). If `dname` is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**
+**dname**: Many functions take an optional `dname` parameter to choose which dialog to view/edit. If `dname` is None, the current dialog is used (if any). Open dialogs update interactively in the browser. Closed dialogs update on disk. Use `/myproject/dlg.ipynb` to address a dialog from the gateway root, or `dlg.ipynb` to address one in the current dialog's folder. `find_dname` returns a gateway-root-relative filename without a leading slash.
 
 ### Modifying dialogs
 - `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)

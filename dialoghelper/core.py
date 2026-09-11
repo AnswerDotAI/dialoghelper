@@ -31,7 +31,6 @@ from fastcore.meta import splice_sig, delegates, delegated
 
 from fastcore.utils import *
 from fastcore.xtras import asdict, str_diff, obj2dict
-from fastcore.aio import acache
 from fastcore.docments import MarkdownRenderer
 from inspect import currentframe,Parameter,signature
 from httpx import AsyncClient, get as xget, post as xpost
@@ -102,7 +101,7 @@ async def xgeta(url, **kwargs):
 # %% ../nbs/00_core.ipynb #bdac4ecb
 def _prep_endp(path, dname, json, id, data, required=True):
     dname = find_dname(dname, required=required)
-    if dname: data['dlg_name'] = dname.strip('/')
+    if dname: data['dlg_name'] = dname
     if id: data['id_'] = id
     data = {k:v for k,v in data.items() if v is not None}
     url = f'http://localhost:{dh_settings["port"]}/{path}'
@@ -144,7 +143,7 @@ async def curr_dialog(
     "Get the current dialog info."
     d = _dlg(dname)
     sv = d.meta.get('solveit', {})
-    return {'name': find_dname(dname).strip('/'), 'mode': sv.get('mode', 'learning')}
+    return {'name': find_dname(dname), 'mode': sv.get('mode', 'learning')}
 
 # %% ../nbs/00_core.ipynb #c43c4361
 async def add_html_a(
@@ -334,13 +333,12 @@ def display_response(display:str, result:str=None):
     return _lt.ToolResponse({'_display': display, 'result': result})
 
 # %% ../nbs/00_core.ipynb #e2138315
-@acache
 async def realpath(
     subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
 ) -> str:
     "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
     sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
-    return str((data_root()/sub.lstrip('/')).resolve())
+    return str((data_root()/sub).resolve())
 
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(
@@ -350,7 +348,7 @@ async def list_dialogs(
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
     d = find_dname(subpath, required=False)
     sub = (d or '') if subpath else (str(Path(d).parent) if d else '')
-    base = data_root()/sub.lstrip('/')
+    base = data_root()/sub
     if not base.is_dir(): return {'error': f'{subpath} not a directory'}
     def fmt(a,b):
         j = os.path.join(a,b)
@@ -390,7 +388,7 @@ def data_root():
         _server_info()
         return Path(dh_settings['root'])
     root = Path.cwd()
-    for _ in Path(nm.strip('/')).parent.parts: root = root.parent
+    for _ in Path(nm).parent.parts: root = root.parent
     return root
 
 def dlg_path(dname:str=''):
@@ -671,7 +669,7 @@ def msg_ref(id, dname=None):
     "Markdown ref to a message — same-dialog `#_id` or cross-dialog `#dname/_id` (anchors target DOM ids, which carry a `_` prefix)"
     id = '_'+str(id).removeprefix('_')
     if not dname: return f'#{id}'
-    return f'#{find_dname(dname).strip("/")}/{id}'
+    return f'#{find_dname(dname)}/{id}'
 
 # %% ../nbs/00_core.ipynb #f1ee1903
 async def del_msgs(
@@ -882,7 +880,7 @@ async def create_or_run_dialog(
     template:bool=True, # Include TEMPLATE.ipynb files when creating a new dialog
 ):
     "Create a new dialog, or set an existing one running"
-    name = find_dname(name).lstrip('/')
+    name = find_dname(name)
     return await call_endpa('create_dialog_', name=name, template=template, json=True, required=False)
 
 # %% ../nbs/00_core.ipynb #a9c83c4b
@@ -890,7 +888,7 @@ async def restart_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Restart a dialog's kernel, starting the dialog first if needed"
-    name = find_dname(name).lstrip('/')
+    name = find_dname(name)
     return await call_endpa('restart_kernel_', name=name, json=True, timeout=60, required=False)
 
 # %% ../nbs/00_core.ipynb #80433dd1
@@ -898,7 +896,7 @@ async def stop_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Stop a running dialog kernel"
-    name = find_dname(name).lstrip('/')
+    name = find_dname(name)
     return await call_endpa('stop_kernel_', name=name, json=True, required=False)
 
 # %% ../nbs/00_core.ipynb #e393f14b
@@ -906,7 +904,7 @@ async def rm_dialog(
     name:str, # Name/path of the dialog to delete (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Delete a dialog (or folder) and associated records, stopping the kernel if running"
-    name = find_dname(name).lstrip('/')
+    name = find_dname(name)
     return await call_endpa('rm_dialog_', name=name, sess='{}', json=True, audit=True, required=False)
 
 # %% ../nbs/00_core.ipynb #5617305b
@@ -1018,7 +1016,7 @@ def dialog_link(
     if not (dname or msg_id): return 'err: no dname or msg_id'
     url = ''
     if dname:
-        dname = find_dname(dname).removeprefix('/')
+        dname = find_dname(dname)
         url += f"/dialog_?{urlencode({'name': dname})}"
     if msg_id: url += '#_'+str(msg_id).removeprefix('_')  # the fragment targets the DOM id, which carries a `_` prefix
     return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')

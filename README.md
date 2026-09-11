@@ -17,6 +17,10 @@ $ pip install dialoghelper
 
 Documentation can be found hosted on this GitHub [repository](https://github.com/AnswerDotAI/dialoghelper)’s [pages](https://AnswerDotAI.github.io/dialoghelper/).
 
+### Dialog filenames
+
+Dialog names include `.ipynb`. Inputs such as `lesson.ipynb` resolve relative to the current dialog’s folder. A leading slash, as in `/project/lesson.ipynb`, addresses the gateway root rather than the disk root. [`find_dname`](https://AnswerDotAI.github.io/dialoghelper/core.html#find_dname) and [`curr_dialog`](https://AnswerDotAI.github.io/dialoghelper/core.html#curr_dialog) return gateway-root-relative filenames without a leading slash. [`list_dialogs`](https://AnswerDotAI.github.io/dialoghelper/core.html#list_dialogs) retains notebook extensions and marks folders with a trailing slash.
+
 ### Folder-local skills
 
 Solveit activates pyskills from the dialog’s opening folder before loading its tool layer. Put a public `.py` module or package in a `PYSKILLs/` directory there or in an ancestor. Give it a module docstring. `list_pyskills()` discovers it and ordinary imports load it without an install or entry-point declaration. The nearest local folder wins. Changing cwd or moving a live dialog does not change the selected scope; restart its kernel to use the new location. Function permissions remain separate from discovery.

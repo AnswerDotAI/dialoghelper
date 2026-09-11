@@ -69,7 +69,7 @@ async def test_nbs(
     async def _one(f):
         ids = _runnable_ids(f)
         if ids is None: return print(f'skip: {f.name}')
-        dname = '/'+str(f.resolve().relative_to(root).with_suffix(''))
+        dname = '/'+str(f.resolve().relative_to(root))
         try:
             errs = await test_dlg(dname, ids=ids, timeout=timeout, save=save)
             if errs: failed[f.name] = [m.id for m in errs]
