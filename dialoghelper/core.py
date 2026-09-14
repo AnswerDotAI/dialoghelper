@@ -42,6 +42,7 @@ import aidialog.dialog as adlg
 import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `Message.cell_meta` below extends)
 import aidialog.dlgskill
 from jupyasyncclient import JupyAsyncCellsClient
+from jupyasyncclient.core import KernelApi
 from fasttransport.errors import APIError
 from fastcore.nbio import select_cells, item2xml
 from safepyrun import RunPython,find_var,create_python_magic,load_ipython_extension
@@ -53,7 +54,7 @@ from fastcore.tools import *
 _lt = import_no_init('aidialog.msg_parts')
 
 # %% ../nbs/00_core.ipynb #eb1636a6
-dh_settings = {'port':5001}
+dh_settings = {'port':5001, 'kid':os.environ.get('RUSTYGATE_KERNEL_ID')}
 # dh_settings = {'port':6001}
 
 # %% ../nbs/00_core.ipynb #f5cd76ed
@@ -69,15 +70,24 @@ def names_containing(s:str):
     return [o for o in ns if s in o]
 
 # %% ../nbs/00_core.ipynb #65a8b58b
+def _gateway_url():
+    url = dh_settings.get('rusty') or os.environ.get('RUSTYGATE_URL')
+    if not url:
+        _server_info()
+        url = dh_settings['rusty']
+    return url
+
 def find_dname(dname=None, required=True):
     "Resolve `dname` relative to the current dialog's folder, or from the gateway root with a leading slash."
     if dname and dname.startswith('/'): return dname.lstrip('/')
     curr = dh_settings.get('dname', None)
-    if not curr: curr = os.getenv('__DIALOG_NAME')
+    if not curr and (kid := dh_settings.get('kid')):
+        res = xget(f'{_gateway_url()}/api/kernels/{kid}')
+        res.raise_for_status()
+        curr = res.json()['path']
     if not curr:
-        if required: curr = find_var('__dialog_name')
-        else: return None
-    if not curr: raise ValueError("No dialog context: Please pass absolute `dname` starting with '/'")
+        if not required: return None
+        raise ValueError("No dialog context: Please pass absolute `dname` starting with '/'")
     curr = curr.lstrip('/')
     if not dname: return curr
     res = normpath(Path(curr).parent/dname)
@@ -100,8 +110,10 @@ async def xgeta(url, **kwargs):
 
 # %% ../nbs/00_core.ipynb #bdac4ecb
 def _prep_endp(path, dname, json, id, data, required=True):
-    dname = find_dname(dname, required=required)
-    if dname: data['dlg_name'] = dname
+    if not dname and not dh_settings.get('dname') and (kid := dh_settings.get('kid')): data['kid'] = kid
+    else:
+        dname = find_dname(dname, required=required)
+        if dname: data['dlg_name'] = dname
     if id: data['id_'] = id
     data = {k:v for k,v in data.items() if v is not None}
     url = f'http://localhost:{dh_settings["port"]}/{path}'
@@ -137,13 +149,11 @@ def _check_res(res, dname):
 
 # %% ../nbs/00_core.ipynb #a9cb5512
 async def curr_dialog(
-    with_messages:bool=False,  # Unused; kept for signature compatibility
     dname:str='' # Dialog to get info for; defaults to current dialog
-) -> dict|str:
+) -> dict:
     "Get the current dialog info."
-    d = _dlg(dname)
-    sv = d.meta.get('solveit', {})
-    return {'name': find_dname(dname), 'mode': sv.get('mode', 'learning')}
+    data = await cells_client(dname).view(fields='meta', limit=0)
+    return {'name': data['path'], 'mode': data['metadata'].get('solveit', {}).get('mode', 'learning')}
 
 # %% ../nbs/00_core.ipynb #c43c4361
 async def add_html_a(
@@ -334,11 +344,10 @@ def display_response(display:str, result:str=None):
 
 # %% ../nbs/00_core.ipynb #e2138315
 async def realpath(
-    subpath:str='/' # Path under data root (absolute with `/`, else relative to current dialog's folder)
+    subpath:str='/' # Gateway-root-relative with a leading slash, otherwise relative to the current notebook's folder
 ) -> str:
-    "Get the real on-disk path to solveit `subpath`. '/' gets on-disk base path."
-    sub = find_dname(subpath) if subpath else str(Path(find_dname()).parent)
-    return str((data_root()/sub).resolve())
+    "Get the on-disk path from the kernel's current notebook binding."
+    return await KernelApi(_gateway_url()).api.kernels.kernel_realpath(kid=dh_settings['kid'], path=subpath)
 
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(
@@ -346,9 +355,7 @@ async def list_dialogs(
     depth:int=1 # Directory depth
 ) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
-    d = find_dname(subpath, required=False)
-    sub = (d or '') if subpath else (str(Path(d).parent) if d else '')
-    base = data_root()/sub
+    base = Path(await realpath(subpath))
     if not base.is_dir(): return {'error': f'{subpath} not a directory'}
     def fmt(a,b):
         j = os.path.join(a,b)
@@ -395,16 +402,12 @@ def dlg_path(dname:str=''):
     "The `.ipynb` file for `dname` (default: the current dialog)"
     return data_root()/find_dname(dname)
 
-def _dlg(dname:str=''): return aidialog.ipynb.read_ipynb(dlg_path(dname), cls=Dialog, name=find_dname(dname))
-
 # %% ../nbs/00_core.ipynb #c4582c78
 def cells_client(dname:str=''):
-    "Create a cells client for the dialog's notebook under the gateway data root"
-    url = dh_settings.get('rusty') or os.environ.get('RUSTYGATE_URL')
-    if not url:
-        _server_info()
-        url = dh_settings['rusty']
-    return JupyAsyncCellsClient(url, find_dname(dname))
+    "Create a cells client for the current kernel or a separately addressed notebook"
+    if not dname and not dh_settings.get('dname') and (kid := dh_settings.get('kid')):
+        return JupyAsyncCellsClient(_gateway_url(), kernel_id=kid)
+    return JupyAsyncCellsClient(_gateway_url(), find_dname(dname))
 
 def _mk_cell(
     content:str='', # Message text, `%%prompt` marker excluded for prompts
@@ -536,7 +539,7 @@ async def find_msgs(
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code, use its `id` field."""
     if context is None: context = 0 if headers_only else 1
-    d = _cells2dlg(await cells_client(dname).cells(), name=find_dname(dname, required=False) or '-')
+    d = _cells2dlg(await cells_client(dname).cells())
     ms = [m for m in d.messages if include_skipped or not m.skipped]
     found = Dialog(ms).find_msgs(re_pattern, msg_type=msg_type, only_err=only_err, only_exp=only_exp, ids=ids, limit=limit,
         use_case=use_case, use_regex=use_regex, headers_only=headers_only, header_section=header_section,

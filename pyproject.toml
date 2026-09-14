@@ -20,7 +20,7 @@ dependencies = [
   'ghapi>=2.0.0',
   'ipykernel-helper>=0.0.28',
   'ipymini>=0.1.21',
-  'jupyasyncclient>=0.2.8',
+  'jupyasyncclient>=0.2.16',
   'python-fastllm',
   'pyskills>=0.0.30',
   'rgapi>=0.1.8',

@@ -17,9 +17,13 @@ $ pip install dialoghelper
 
 Documentation can be found hosted on this GitHub [repository](https://github.com/AnswerDotAI/dialoghelper)’s [pages](https://AnswerDotAI.github.io/dialoghelper/).
 
-### Dialog filenames
+### Dialog identity and filenames
+
+Current-session reads, edits, execution and browser callbacks use `dh_settings['kid']`, initialized from `RUSTYGATE_KERNEL_ID`. The gateway owns the notebook binding. Renames and restarts retain the kernel id. `curr_dialog(dname='')` returns the notebook’s current `name` and `mode` from the gateway. Explicit `dname` arguments remain file-based.
 
 Dialog names include `.ipynb`. Inputs such as `lesson.ipynb` resolve relative to the current dialog’s folder. A leading slash, as in `/project/lesson.ipynb`, addresses the gateway root rather than the disk root. [`find_dname`](https://AnswerDotAI.github.io/dialoghelper/core.html#find_dname) and [`curr_dialog`](https://AnswerDotAI.github.io/dialoghelper/core.html#curr_dialog) return gateway-root-relative filenames without a leading slash. [`list_dialogs`](https://AnswerDotAI.github.io/dialoghelper/core.html#list_dialogs) retains notebook extensions and marks folders with a trailing slash.
+
+[`realpath()`](https://AnswerDotAI.github.io/dialoghelper/core.html#realpath) returns the gateway’s on-disk root. `realpath('')` and [`list_dialogs()`](https://AnswerDotAI.github.io/dialoghelper/core.html#list_dialogs) default to the current notebook’s folder. Relative subpaths use that folder even after a notebook rename, not the kernel’s mutable cwd. A leading slash uses the gateway root. [`realpath`](https://AnswerDotAI.github.io/dialoghelper/core.html#realpath) accepts prospective paths without creating them. `..` can move up within the root. The gateway resolves symlinks within its root and rejects dangling symlinks and paths escaping the root. Notebook-relative paths require a bound kernel.
 
 ### Folder-local skills
 
