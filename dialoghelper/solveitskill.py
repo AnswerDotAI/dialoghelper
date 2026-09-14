@@ -14,7 +14,11 @@
 - `read_msg` — navigate relative to current message
 - `view_msg` (content+line numbers only) or `read_msgid` (including metadata and output)  — direct access when you have the id
 
-**Key insight**: Messages above the current prompt are already in LLM context—their content and outputs are always up-to-date. Do NOT use read functions just to review content you can already see. Use read functions only for: (1) getting line numbers immediately before editing, (2) accessing messages below current prompt (if you're sure the user wants you to "look ahead"), (3) accessing other dialogs.
+Messages above the current prompt are already in LLM context. Their content and outputs are always up to date. Do not reread content you can already see. Use read functions only to:
+
+- Get line numbers immediately before editing.
+- Access messages below the current prompt, when you are sure the user wants you to look ahead.
+- Access other dialogs.
 
 **dname**: Many functions take an optional `dname` parameter to choose which dialog to view/edit. If `dname` is None, the current dialog is used (if any). Open dialogs update interactively in the browser. Closed dialogs update on disk. Use `/myproject/dlg.ipynb` to address a dialog from the gateway root, or `dlg.ipynb` to address one in the current dialog's folder. `find_dname` returns a gateway-root-relative filename without a leading slash.
 
@@ -52,7 +56,7 @@ Message editing uses exhash. View `doc(exhash.skill)` first. Then follow these s
 4. If more edits needed: re-read, then repeat from step 2
 ```
 
-Note that all dialoghelper functions are async (so await them), and also using `print()` in `python` will return stdout, so you can use that to read multiple messages (for instance) by using multiple prints, instead of just having a single return value.
+All dialoghelper functions are async. Use `await` to call them. A `python` call returns stdout. To display several messages in one call, print each message.
 """
 
 from dialoghelper.core import *

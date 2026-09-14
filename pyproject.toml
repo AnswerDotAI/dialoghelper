@@ -22,7 +22,7 @@ dependencies = [
   'ipymini>=0.1.21',
   'jupyasyncclient>=0.2.16',
   'python-fastllm',
-  'pyskills>=0.0.30',
+  'pyskills>=0.0.33',
   'rgapi>=0.1.8',
   'toolslm>=0.3.30',
   "exhash>=0.3.14",

@@ -1,8 +1,18 @@
 """Run dialogs' code messages through a live solveit, `nbdev-test`-style
 
-Testing a notebook with `nbdev-test` runs its cells under execnb, outside solveit: no dialog context, no current-message tracking, no dialog kernel. For notebooks written as solveit dialogs (like dialoghelper's own), that tests a different thing than what runs in production. `solveit-test` instead asks a running solveit instance to execute a notebook exactly as the app does -- the production runloop, a fresh dialog kernel, real current-message state -- and reports the code messages whose outputs contain errors.
+`solveit-test` tests notebooks through a running solveit instance. It uses solveit's runloop and dialog kernels, with current-message tracking and dialog context. `nbdev-test` uses execnb outside solveit, where these features aren't available. Use `solveit-test` for notebooks that depend on them, such as dialoghelper's own.
 
-The `solveit-test` entrypoint maps each notebook path to its dialog name through the server's own base path (so the notebooks must live under the tree the instance serves), runs each in turn, and reports `nbdev-test`-style. Which messages run is aidialog's `Dialog.select_msgs`, the same selection `Dialog.execute` uses: code messages only (a prompt never runs), honoring the eval cascade — `skip_exec: true` frontmatter skips a whole notebook, `#|eval: false` (comment or meta form) skips a cell, and `nbdev_export` cells never run. A dialog that's open in solveit gets its kernel restarted by its test run, so state you had in that session is lost -- that's the price of every run starting clean. Runs execute the notebooks' code for real, mutating messages and outputs on disk, so run it on a clean checkout and review the diff: an example that doesn't clean up after itself shows up there, which is itself worth knowing. Since only messages that execute write outputs, a message skipped mid-run (a crashed kernel, a queue hiccup) keeps its stored output, and the error report can't tell it from a fresh failure. `--save` (like `nbdev-test`'s) empties the stored outputs of the messages about to run first, so outputs and report reflect this run alone.
+`solveit-test` requires a running solveit instance. The notebooks must be under the directory that instance serves. The command maps file paths to dialog names and tests notebooks concurrently.
+
+The command uses aidialog's `Dialog.select_msgs`, matching `Dialog.execute`. It selects code messages, never prompts, with these exclusions:
+
+- `skip_exec: true` in frontmatter skips the notebook.
+- `eval: false` in a cell directive or metadata skips the cell.
+- `nbdev_export` cells never run.
+
+Testing restarts each dialog's kernel, including dialogs you have open in solveit. You lose their existing kernel state. Runs change messages and outputs on disk. Use a clean checkout and review the diff afterward.
+
+A kernel crash or queue problem can prevent a selected message from executing. Its stored output can still contain an error from an earlier run. The report cannot distinguish that error from a new one. Use `--save` to clear the selected messages' outputs before running them.
 
 Docs: https://AnswerDotAI.github.io/dialoghelper/test.html.md"""
 

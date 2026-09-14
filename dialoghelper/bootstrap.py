@@ -14,7 +14,7 @@ dsk.set_dlg({str(fname)!r}, cls=dh.Dialog)''')
 
 def load_ipython_extension(ip):
     "Load Solveit's tools and point aidialog at the current notebook binding"
-    if not os.environ.get('SOLVEIT_KERNEL'): return
+    if not os.environ.get('RUSTYGATE_KERNEL_PATH'): return
     nm = os.environ['RUSTYGATE_KERNEL_PATH']
     from pyskills import enable_local_skills
     enable_local_skills(Path.cwd())
@@ -22,6 +22,5 @@ def load_ipython_extension(ip):
     root = Path.cwd()
     for _ in Path(nm).parent.parts: root = root.parent
     dh_settings['root'] = str(root)
-    ip.ex('''from dialoghelper.stdtools import *
-py = RunPython()''')
+    ip.ex('from dialoghelper.stdtools import *')
     repoint(nm)

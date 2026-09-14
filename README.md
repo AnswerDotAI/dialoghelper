@@ -27,4 +27,4 @@ Dialog names include `.ipynb`. Inputs such as `lesson.ipynb` resolve relative to
 
 ### Folder-local skills
 
-Solveit activates pyskills from the dialog’s opening folder before loading its tool layer. Put a public `.py` module or package in a `PYSKILLs/` directory there or in an ancestor. Give it a module docstring. `list_pyskills()` discovers it and ordinary imports load it without an install or entry-point declaration. The nearest local folder wins. Changing cwd or moving a live dialog does not change the selected scope; restart its kernel to use the new location. Function permissions remain separate from discovery.
+Solveit activates pyskills from the dialog’s opening folder before loading its tool layer. Put a public `.py` module or package in a `_pyskills/` directory there or in an ancestor. Give it a module docstring. `list_pyskills()` discovers it and ordinary imports load it without an install or entry-point declaration. The nearest local folder wins. Changing cwd or moving a live dialog does not change the selected scope; restart its kernel to use the new location. Function permissions remain separate from discovery.
