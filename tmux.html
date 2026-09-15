@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with LLMs, debugging across multiple terminals, or monitoring long-running processes.">
+
+<title>tmux – dialoghelper</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-5ff355f32169432f12e3b54c979a24ba.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="tmux – dialoghelper">
+<meta property="og:description" content="Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with LLMs, debugging across multiple terminals, or monitoring long-running processes.">
+<meta property="og:site_name" content="dialoghelper">
+<meta name="twitter:title" content="tmux – dialoghelper">
+<meta name="twitter:description" content="Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with LLMs, debugging across multiple terminals, or monitoring long-running processes.">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">dialoghelper</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./tmux.html">tmux</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">dialoghelper</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">dialoghelper</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./capture.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">capture</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tracetools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">tracetools</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tmux.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">tmux</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./04_exhash.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">04_exhash.html</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./solve_auth.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">SolveIt Auth</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./utils.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">dialoghelper.utils</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./test.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">test</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#ssh" id="toc-ssh" class="nav-link active" data-scroll-target="#ssh">SSH</a>
+  <ul class="collapse">
+  <li><a href="#pane" id="toc-pane" class="nav-link" data-scroll-target="#pane">pane</a></li>
+  <li><a href="#list_panes" id="toc-list_panes" class="nav-link" data-scroll-target="#list_panes">list_panes</a></li>
+  <li><a href="#panes" id="toc-panes" class="nav-link" data-scroll-target="#panes">panes</a></li>
+  <li><a href="#list_windows" id="toc-list_windows" class="nav-link" data-scroll-target="#list_windows">list_windows</a></li>
+  <li><a href="#windows" id="toc-windows" class="nav-link" data-scroll-target="#windows">windows</a></li>
+  <li><a href="#list_sessions" id="toc-list_sessions" class="nav-link" data-scroll-target="#list_sessions">list_sessions</a></li>
+  <li><a href="#sessions" id="toc-sessions" class="nav-link" data-scroll-target="#sessions">sessions</a></li>
+  <li><a href="#searching-nested-results" id="toc-searching-nested-results" class="nav-link" data-scroll-target="#searching-nested-results">Searching nested results</a></li>
+  </ul></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/dialoghelper/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="tmux.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">tmux</h1>
+</div>
+
+<div>
+  <div class="description">
+    Capture and inspect content from tmux sessions, windows, and panes — locally or over SSH. Useful for sharing terminal output with LLMs, debugging across multiple terminals, or monitoring long-running processes.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<section id="ssh" class="level2">
+<h2 class="anchored" data-anchor-id="ssh">SSH</h2>
+<p>All capture and list functions accept SSH kwargs to target a remote machine: use <code>host</code> for an SSH alias, or <code>ip</code> + <code>user</code> + optional <code>keyfile</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pane(host<span class="op">=</span><span class="st">'hack'</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>windows(ip<span class="op">=</span><span class="st">'1.2.3.4'</span>, user<span class="op">=</span><span class="st">'ubuntu'</span>, keyfile<span class="op">=</span><span class="st">'~/.ssh/id_rsa'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="00574661" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.183016+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.520132+00:00&quot;,&quot;total&quot;:0.33712522399997624}}" data-execution_count="4">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L52" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="shell_ret" class="level3">
+<h3 class="anchored" data-anchor-id="shell_ret">shell_ret</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> shell_ret(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    cmd:<span class="bu">str</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, <span class="op">*</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Run shell command locally or over ssh (use host for alias, or ip/user/keyfile)</em></p>
+</section>
+</div>
+<div id="931ef9d2" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(shell_ret(<span class="st">'du -sh'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>416K    .
+</code></pre>
+</div>
+</div>
+<div id="c5a540f2" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(shell_ret(<span class="st">'du -sh'</span>, host<span class="op">=</span><span class="st">'hack'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<div class="ansi-escaped-output">
+<pre><span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-cyan-fg">Cell</span><span class="ansi-cyan-fg"> </span><span class="ansi-green-fg">In[17]</span><span class="ansi-green-fg">, line 1</span>
+<span class="ansi-green-fg">----&gt; </span><span class="ansi-green-fg">1</span> print(shell_ret(<span class="ansi-yellow-fg">'du -sh'</span>, host=<span class="ansi-yellow-fg">'hack'</span>))
+
+<span class="ansi-cyan-fg">Cell</span><span class="ansi-cyan-fg"> </span><span class="ansi-green-fg">In[13]</span><span class="ansi-green-fg">, line 8</span>, in <span class="ansi-cyan-fg">shell_ret</span><span class="ansi-blue-fg">(cmd, capture_output, text, ret, **kwargs)</span>
+<span class="ansi-green-fg">      4</span>     <span class="ansi-yellow-fg">"Run shell command locally or over ssh (use host for alias, or ip/user/keyfile)"</span>
+<span class="ansi-green-fg">      5</span>     host, ip, user, keyfile = kwargs.pop(<span class="ansi-yellow-fg">'host'</span>, <span style="font-weight:bold;color:rgb(0,135,0)">None</span>), kwargs.pop(<span class="ansi-yellow-fg">'ip'</span>, <span style="font-weight:bold;color:rgb(0,135,0)">None</span>), kwargs.pop(<span class="ansi-yellow-fg">'user'</span>, <span style="font-weight:bold;color:rgb(0,135,0)">None</span>), kwargs.pop(<span class="ansi-yellow-fg">'keyfile'</span>, <span style="font-weight:bold;color:rgb(0,135,0)">None</span>)
+<span class="ansi-green-fg">      6</span>     <span style="font-weight:bold;color:rgb(0,135,0)">if</span> host: cmd = f"echo '{cmd}' | ssh -A {host} 'bash -ls'"
+<span class="ansi-green-fg">      7</span>     <span style="font-weight:bold;color:rgb(0,135,0)">elif</span> ip: cmd = f"echo '{cmd}' | ssh {f'-i {keyfile} ' <span style="font-weight:bold;color:rgb(0,135,0)">if</span> keyfile <span style="font-weight:bold;color:rgb(0,135,0)">else</span> <span class="ansi-yellow-fg">''</span>}-A {user}@{ip} 'bash -ls'"
+<span class="ansi-green-fg">----&gt; </span><span class="ansi-green-fg">8</span>     o = subprocess.run(cmd, shell=<span style="font-weight:bold;color:rgb(0,135,0)">True</span>, text=text, capture_output=capture_output, **kwargs)
+<span class="ansi-green-fg">      9</span>     <span style="font-weight:bold;color:rgb(0,135,0)">return</span> (o.stdout <span style="font-weight:bold;color:rgb(0,135,0)">or</span> o.stderr) <span style="font-weight:bold;color:rgb(0,135,0)">if</span> ret <span style="font-weight:bold;color:rgb(0,135,0)">else</span> o
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/subprocess.py:556</span>, in <span class="ansi-cyan-fg">run</span><span class="ansi-blue-fg">(input, capture_output, timeout, check, *popenargs, **kwargs)</span>
+<span class="ansi-green-fg">    554</span> <span style="font-weight:bold;color:rgb(0,135,0)">with</span> Popen(*popenargs, **kwargs) <span style="font-weight:bold;color:rgb(0,135,0)">as</span> process:
+<span class="ansi-green-fg">    555</span>     <span style="font-weight:bold;color:rgb(0,135,0)">try</span>:
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">556</span>         stdout, stderr = <span class="ansi-black-fg ansi-yellow-bg">process</span><span class="ansi-black-fg ansi-yellow-bg">.</span><span class="ansi-black-fg ansi-yellow-bg">communicate</span><span class="ansi-black-fg ansi-yellow-bg">(</span><span class="ansi-black-fg ansi-yellow-bg">input</span><span class="ansi-black-fg ansi-yellow-bg">,</span><span class="ansi-black-fg ansi-yellow-bg"> </span><span class="ansi-black-fg ansi-yellow-bg">timeout</span><span class="ansi-black-fg ansi-yellow-bg">=</span><span class="ansi-black-fg ansi-yellow-bg">timeout</span><span class="ansi-black-fg ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    557</span>     <span style="font-weight:bold;color:rgb(0,135,0)">except</span> TimeoutExpired <span style="font-weight:bold;color:rgb(0,135,0)">as</span> exc:
+<span class="ansi-green-fg">    558</span>         process.kill()
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/subprocess.py:1222</span>, in <span class="ansi-cyan-fg">Popen.communicate</span><span class="ansi-blue-fg">(self, input, timeout)</span>
+<span class="ansi-green-fg">   1219</span>     endtime = <span style="font-weight:bold;color:rgb(0,135,0)">None</span>
+<span class="ansi-green-fg">   1221</span> <span style="font-weight:bold;color:rgb(0,135,0)">try</span>:
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1222</span>     stdout, stderr = <span class="ansi-black-fg ansi-yellow-bg">self</span><span class="ansi-black-fg ansi-yellow-bg">.</span><span class="ansi-black-fg ansi-yellow-bg">_communicate</span><span class="ansi-black-fg ansi-yellow-bg">(</span><span class="ansi-black-fg ansi-yellow-bg">input</span><span class="ansi-black-fg ansi-yellow-bg">,</span><span class="ansi-black-fg ansi-yellow-bg"> </span><span class="ansi-black-fg ansi-yellow-bg">endtime</span><span class="ansi-black-fg ansi-yellow-bg">,</span><span class="ansi-black-fg ansi-yellow-bg"> </span><span class="ansi-black-fg ansi-yellow-bg">timeout</span><span class="ansi-black-fg ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1223</span> <span style="font-weight:bold;color:rgb(0,135,0)">except</span> <span style="font-weight:bold;color:rgb(215,95,95)">KeyboardInterrupt</span>:
+<span class="ansi-green-fg">   1224</span>     <span style="font-style:italic;color:rgb(95,135,135)"># https://bugs.python.org/issue25942</span>
+<span class="ansi-green-fg">   1225</span>     <span style="font-style:italic;color:rgb(95,135,135)"># See the detailed comment in .wait().</span>
+<span class="ansi-green-fg">   1226</span>     <span style="font-weight:bold;color:rgb(0,135,0)">if</span> timeout <span style="font-weight:bold;color:rgb(175,0,255)">is</span> <span style="font-weight:bold;color:rgb(175,0,255)">not</span> <span style="font-weight:bold;color:rgb(0,135,0)">None</span>:
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/subprocess.py:2154</span>, in <span class="ansi-cyan-fg">Popen._communicate</span><span class="ansi-blue-fg">(self, input, endtime, orig_timeout)</span>
+<span class="ansi-green-fg">   2147</span>     <span style="color:rgb(0,135,0)">self</span>._check_timeout(endtime, orig_timeout,
+<span class="ansi-green-fg">   2148</span>                         stdout, stderr,
+<span class="ansi-green-fg">   2149</span>                         skip_check_and_raise=<span style="font-weight:bold;color:rgb(0,135,0)">True</span>)
+<span class="ansi-green-fg">   2150</span>     <span style="font-weight:bold;color:rgb(0,135,0)">raise</span> <span style="font-weight:bold;color:rgb(215,95,95)">RuntimeError</span>(  <span style="font-style:italic;color:rgb(95,135,135)"># Impossible :)</span>
+<span class="ansi-green-fg">   2151</span>         <span class="ansi-yellow-fg">'</span><span class="ansi-yellow-fg">_check_timeout(..., skip_check_and_raise=True) </span><span class="ansi-yellow-fg">'</span>
+<span class="ansi-green-fg">   2152</span>         <span class="ansi-yellow-fg">'</span><span class="ansi-yellow-fg">failed to raise TimeoutExpired.</span><span class="ansi-yellow-fg">'</span>)
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">2154</span> ready = <span class="ansi-black-fg ansi-yellow-bg">selector</span><span class="ansi-black-fg ansi-yellow-bg">.</span><span class="ansi-black-fg ansi-yellow-bg">select</span><span class="ansi-black-fg ansi-yellow-bg">(</span><span class="ansi-black-fg ansi-yellow-bg">timeout</span><span class="ansi-black-fg ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2155</span> <span style="color:rgb(0,135,0)">self</span>._check_timeout(endtime, orig_timeout, stdout, stderr)
+<span class="ansi-green-fg">   2157</span> <span style="font-style:italic;color:rgb(95,135,135)"># XXX Rewrite these to use non-blocking I/O on the file</span>
+<span class="ansi-green-fg">   2158</span> <span style="font-style:italic;color:rgb(95,135,135)"># objects; they are no longer using C stdio!</span>
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/.local/share/uv/python/cpython-3.13.15-macos-aarch64-none/lib/python3.13/selectors.py:398</span>, in <span class="ansi-cyan-fg">_PollLikeSelector.select</span><span class="ansi-blue-fg">(self, timeout)</span>
+<span class="ansi-green-fg">    396</span> ready = []
+<span class="ansi-green-fg">    397</span> <span style="font-weight:bold;color:rgb(0,135,0)">try</span>:
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">398</span>     fd_event_list = <span class="ansi-black-fg ansi-yellow-bg">self</span><span class="ansi-black-fg ansi-yellow-bg">.</span><span class="ansi-black-fg ansi-yellow-bg">_selector</span><span class="ansi-black-fg ansi-yellow-bg">.</span><span class="ansi-black-fg ansi-yellow-bg">poll</span><span class="ansi-black-fg ansi-yellow-bg">(</span><span class="ansi-black-fg ansi-yellow-bg">timeout</span><span class="ansi-black-fg ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    399</span> <span style="font-weight:bold;color:rgb(0,135,0)">except</span> <span style="font-weight:bold;color:rgb(215,95,95)">InterruptedError</span>:
+<span class="ansi-green-fg">    400</span>     <span style="font-weight:bold;color:rgb(0,135,0)">return</span> ready
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/aai-ws/kernmini/kernmini/kernel.py:821</span>, in <span class="ansi-cyan-fg">MiniKernel.handle_sigint</span><span class="ansi-blue-fg">(self, signum, frame)</span>
+<span class="ansi-green-fg">    819</span> <span style="font-weight:bold;color:rgb(0,135,0)">if</span> parent.cancel_async_execution(wake=<span style="font-weight:bold;color:rgb(0,135,0)">True</span>): <span style="font-weight:bold;color:rgb(0,135,0)">return</span>
+<span class="ansi-green-fg">    820</span> <span style="font-weight:bold;color:rgb(0,135,0)">if</span> <span style="font-weight:bold;color:rgb(175,0,255)">not</span> parent.sync_executing.is_set(): <span style="font-weight:bold;color:rgb(0,135,0)">return</span>
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">821</span> <span style="font-weight:bold;color:rgb(0,135,0)">raise</span> <span style="font-weight:bold;color:rgb(215,95,95)">KeyboardInterrupt</span>
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>: </pre>
+</div>
+</div>
+</div>
+<div id="d4f3258b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.521413+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.524044+00:00&quot;,&quot;total&quot;:0.0026337040000044}}" data-execution_count="6">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L63" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="set_default_history" class="level3">
+<h3 class="anchored" data-anchor-id="set_default_history">set_default_history</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> set_default_history(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    n:<span class="bu">int</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Set the default number of lines to capture from tmux history</em></p>
+</section>
+</div>
+<section id="pane" class="level3">
+<h3 class="anchored" data-anchor-id="pane">pane</h3>
+<div id="a49fdb05" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.525617+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.529776+00:00&quot;,&quot;total&quot;:0.0041620089999696575}}" data-execution_count="8">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L70" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="pane-1" class="level3">
+<h3 class="anchored" data-anchor-id="pane-1">pane</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> pane(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    n:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Number of scrollback lines to capture, in addition to visible area (None uses default_tmux_lines, which is 500 if not otherwise set)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    pane:<span class="bu">int</span> <span class="op">|</span> <span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Pane number to capture from (accepts both integers for window IDs and "%{int}" for global pane IDs)</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    session:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Session name to target</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    window:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Window number to target</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Grab the tmux history in plain text</em></p>
+</section>
+</div>
+<div id="c53edcad" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># print(pane(1))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="3ddb1780" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># print(pane(1, host='hack'))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="list_panes" class="level3">
+<h3 class="anchored" data-anchor-id="list_panes">list_panes</h3>
+<div id="544c9d75" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.530990+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.534602+00:00&quot;,&quot;total&quot;:0.003614935999962654}}" data-execution_count="10">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L88" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="list_panes-1" class="level3">
+<h3 class="anchored" data-anchor-id="list_panes-1">list_panes</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> list_panes(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    session:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Session name to list panes from</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    window:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Window number to list panes from</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>List panes for a session/window (or current if none specified)</em></p>
+</section>
+</div>
+<div id="48cdf31d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list_panes(window<span class="op">=</span><span class="dv">0</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="74edce2f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list_panes(window<span class="op">=</span><span class="dv">0</span>, host<span class="op">=</span><span class="st">'hack'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="panes" class="level3">
+<h3 class="anchored" data-anchor-id="panes">panes</h3>
+<div id="8d8293d1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.535969+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.538550+00:00&quot;,&quot;total&quot;:0.0025830330000076174}}" data-execution_count="12">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L106" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="panes-1" class="level3">
+<h3 class="anchored" data-anchor-id="panes-1">panes</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> panes(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    session:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Session name to target</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    window:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Window number to target</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    n:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Number of scrollback lines to capture</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Grab history from all panes in a session/window</em></p>
+</section>
+</div>
+<div id="cf59c650" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.538616+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.539013+00:00&quot;,&quot;total&quot;:0.00039846999999326727}}" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pprint <span class="im">import</span> pprint</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="40544a39" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pprint(panes(window=0, n=10))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="c8557045" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pprint(panes(n=10, host='hack'))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="list_windows" class="level3">
+<h3 class="anchored" data-anchor-id="list_windows">list_windows</h3>
+<div id="67dbe1a6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.539728+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.543002+00:00&quot;,&quot;total&quot;:0.0032764420000148675}}" data-execution_count="15">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L119" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="list_windows-1" class="level3">
+<h3 class="anchored" data-anchor-id="list_windows-1">list_windows</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> list_windows(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    session:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Session name to list windows from</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>List all windows in a session</em></p>
+</section>
+</div>
+<div id="35825569" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list_windows())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="ee1c4f0a" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list_windows(host<span class="op">=</span><span class="st">'hack'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="windows" class="level3">
+<h3 class="anchored" data-anchor-id="windows">windows</h3>
+<div id="759d4c78" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.544719+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.548425+00:00&quot;,&quot;total&quot;:0.003708967000022767}}" data-execution_count="17">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L136" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="windows-1" class="level3">
+<h3 class="anchored" data-anchor-id="windows-1">windows</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> windows(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    session:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Session name to target</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    n:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Number of scrollback lines to capture</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Grab history from all panes in all windows of a session as <code>{'win_num:name': {pane_num: content}}</code></em></p>
+</section>
+</div>
+<div id="d06b5163" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pprint(windows())</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="707c381b" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pprint(windows(host='hack'))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="list_sessions" class="level3">
+<h3 class="anchored" data-anchor-id="list_sessions">list_sessions</h3>
+<div id="f0acde39" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.549398+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.552800+00:00&quot;,&quot;total&quot;:0.003405026999985239}}" data-execution_count="19">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L147" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="list_sessions-1" class="level3">
+<h3 class="anchored" data-anchor-id="list_sessions-1">list_sessions</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> list_sessions(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>List all tmux sessions</em></p>
+</section>
+</div>
+<div id="bd54cd63" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list_sessions())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="df827837" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(list_sessions(host<span class="op">=</span><span class="st">'hack'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="sessions" class="level3">
+<h3 class="anchored" data-anchor-id="sessions">sessions</h3>
+<div id="7e2101a5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.554302+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.557866+00:00&quot;,&quot;total&quot;:0.003567182999972829}}" data-execution_count="21">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L158" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="sessions-1" class="level3">
+<h3 class="anchored" data-anchor-id="sessions-1">sessions</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sessions(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    n:<span class="bu">int</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Number of scrollback lines to capture</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>, capture_output:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, text:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, ret:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>, host:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH Host</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    ip:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH IP</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    user:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH user</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    keyfile:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional SSH keyfile</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Grab history from all panes in all windows of all sessions as <code>{session: {'win_num:name': {pane_num: content}}}</code></em></p>
+</section>
+</div>
+<div id="9d8e9b7e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pprint(sessions())</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="5be4b070" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># pprint(sessions(host='hack'))</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="searching-nested-results" class="level3">
+<h3 class="anchored" data-anchor-id="searching-nested-results">Searching nested results</h3>
+<p><a href="https://AnswerDotAI.github.io/dialoghelper/tmux.html#windows"><code>windows()</code></a> and <a href="https://AnswerDotAI.github.io/dialoghelper/tmux.html#sessions"><code>sessions()</code></a> return nested dicts. Use <a href="https://AnswerDotAI.github.io/dialoghelper/tmux.html#flatten_dict"><code>flatten_dict</code></a> to search them as <code>(path, content)</code> tuples, where <code>path</code> identifies the session/window/pane source. The <code>path</code> string uses <code>//</code> separators showing the hierarchy, e.g.&nbsp;<code>"mysession//0:bash//1"</code> means session <code>"mysession"</code>, window <code>0</code> named <code>"bash"</code>, pane <code>1</code>.</p>
+<p>For example, find error lines across all tmux history:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>errors <span class="op">=</span> [(path, line)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> path, content <span class="kw">in</span> flatten_dict(sessions(n<span class="op">=</span><span class="dv">2000</span>))</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> line <span class="kw">in</span> content.splitlines()</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> <span class="st">'error'</span> <span class="kw">in</span> line.lower()]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Or find panes containing a command you remember:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>found <span class="op">=</span> {path: content <span class="cf">for</span> path, content <span class="kw">in</span> flatten_dict(windows(n<span class="op">=</span><span class="dv">2000</span>)) <span class="cf">if</span> <span class="st">'curl'</span> <span class="kw">in</span> content}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="f7aa1c2d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-15T21:38:26.559014+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-15T21:38:26.561732+00:00&quot;,&quot;total&quot;:0.002720803999977761}}" data-execution_count="23">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/dialoghelper/blob/main/dialoghelper/tmux.py#L167" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="flatten_dict" class="level3">
+<h3 class="anchored" data-anchor-id="flatten_dict">flatten_dict</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> flatten_dict(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    d, parent_key:<span class="bu">str</span><span class="op">=</span><span class="st">''</span>, sep:<span class="bu">str</span><span class="op">=</span><span class="st">'//'</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Flatten nested dict into list of (key_path, value) tuples</em></p>
+</section>
+</div>
+<div id="f2636774" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>nested <span class="op">=</span> {</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">'session1'</span>: {</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">'0:bash'</span>: {<span class="dv">0</span>: <span class="st">'some content'</span>, <span class="dv">1</span>: <span class="st">'more content'</span>},</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">'1:vim'</span>: {<span class="dv">0</span>: <span class="st">'editing file'</span>}</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> path, content <span class="kw">in</span> flatten_dict(nested): <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>path<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>content<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/dialoghelper");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/dialoghelper/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
