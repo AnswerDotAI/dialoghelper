@@ -518,8 +518,8 @@ async def find_msgs(
     context:int=None, # Include additional n msgs around matches (default 1, or 0 when `headers_only`)
     use_case:bool=False, # Use case-sensitive matching?
     use_regex:bool=True, # Use regex matching?
-    only_err:bool=False, # Only return messages that have errors?
-    only_exp:bool=False, # Only return messages that are exported?
+    only_err:bool=None, # Only messages with errors if True, only those without if False, all if None
+    only_exp:bool=None, # Only exported messages if True, only unexported if False, all if None
     ids:str='', # Optionally filter by comma-separated list of message ids
     limit:int=None, # Optionally limit number of returned items
     include_output:bool=True, # Include output in returned dict?
