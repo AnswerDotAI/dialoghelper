@@ -1,5 +1,6 @@
 from dialoghelper import *
 from dialoghelper.solveitskill import *
+from dialoghelper.prompt import run_prompt
 from ipykernel_helper import *
 from fastcore.tools import *
 from toolslm.inspecttools import *
