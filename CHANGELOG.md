@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.44
+
+### New Features
+
+- Use kid instead of dname where possible ([#253](https://github.com/AnswerDotAI/dialoghelper/issues/253))
+
+
 ## 0.2.43
 
 ### New Features
