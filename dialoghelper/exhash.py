@@ -34,11 +34,11 @@ async def msg_exhash(
     Use `lnhashview_msg(id)` to get hash-verified addresses before first use.
 
     Address strings:
-        Single:   ``12|a3f2|``
-        Range:    ``12|a3f2|,15|b1c3|``
+        Single:   ``12|Py|``
+        Range:    ``12|Py|,15|HD|``
         Last:     ``$`` (last line)
         Whole:    ``%`` (whole file, same as ``1,$``)
-        Special:  ``0|0000|`` targets before line 1 (only with a or i)
+        Special:  ``0|AA|`` targets before line 1 (only with a or i)
 
     Command tuples:
         (addr, "s", pattern, replacement[, flags])
