@@ -78,7 +78,7 @@ def _gateway_url():
     return url
 
 def find_dname(dname=None, required=True):
-    "Resolve `dname` relative to the current dialog's folder, or from the gateway root with a leading slash."
+    "Return `dname` as a gateway-root-relative name without a leading slash. A leading `/` starts from the gateway root, and other names are relative to the current dialog's folder."
     if dname and dname.startswith('/'): return dname.lstrip('/')
     curr = dh_settings.get('dname', None)
     if not curr and (kid := dh_settings.get('kid')):
@@ -462,8 +462,7 @@ async def read_msg(
     NB: Messages in the current dialog above the current message are *already* visible; use this only when you need line numbers for editing operations, or for messages not in the current dialog or below the current message.
     - To get the exact message use `n=0` and `relative=True` together with `id`.
     - To get a relative message use `n` (relative position index).
-    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message.
-    {dname}"""
+    - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
     if id and not relative: raise ValueError('`id` provided while `relative=False`')
     _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
     fc = cells_client(dname)
@@ -534,7 +533,6 @@ async def find_msgs(
     dname:str='' # Dialog to get info for; defaults to current dialog
 )->list[dict]: # Messages in requested dialog that contain the given information
     """Often it is more efficient to call `view_dlg` (not `find_msgs`) to see the whole dialog, so you can use it all from then on.
-    {dname}
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code, use its `id` field."""
@@ -626,8 +624,7 @@ async def add_msg(
     """Add/update a message to the queue to show after code execution completes, and optionally run it.
     Code messages are run using python's restricted sandbox.
     **NB**: when creating multiple messages in a row, after the 1st message set `id` to the result of the last `add_msg` call,
-    otherwise messages will appear in the dialog in REVERSE order.
-    {dname}"""
+    otherwise messages will appear in the dialog in REVERSE order."""
     if msg_type=='code' and run: content = "%%py\n"+content
     return await _add_msg_unsafe(content=content, msg_type=msg_type, run=run, **kwargs)
 
@@ -726,11 +723,10 @@ async def update_msg(
     **kwargs) -> str:
     """Update an existing message. Provide either `msg` OR field key/values to update.
     - Use `content` param to update contents.
-    - Only include parameters to update--missing ones will be left unchanged.
-    {dname}"""
+    - Only include parameters to update--missing ones will be left unchanged."""
     if msg: kwargs |= msg.get('msg', msg)
-    if not id: id = kwargs.pop('id', None)
-    if not id: raise TypeError("update_msg needs either a dict message with and id, or `id=`")
+    if not id: id = kwargs.pop('id', None) or aidialog.dlgskill.cur_msgid
+    if not id: raise TypeError("update_msg needs `id=`, a message dict with an id, or a current message")
     kwargs = {k:v for k,v in kwargs.items() if v is not None}
     fc = cells_client(dname)
     if {'content','msg_type','output','meta','exported'} & set(kwargs) or log_changed:

@@ -1,62 +1,34 @@
 """Read, search, edit, and manage Solveit dialogs using dialoghelper.core, including dialog/message addressing, line-numbered inspection, targeted message edits, add/update/delete/copy/paste workflows, and safe editing patterns.
 
-## Core Concepts
+A dialog is a notebook of messages: notes, code, prompts, and raw text. These functions read and change dialogs. Call them with `await`, except `dialog_link`, `msg_ref`, and `find_dname`, which are ordinary functions. The `python` tool returns only stdout, so print each result you want to see when one call produces several. Read a function's `doc()` before first using it. When a call fails, stop and ask the user rather than retrying with guessed arguments.
 
-- **Dialog addressing**: Functions accepting `dname` use notebook filenames including `.ipynb`. Input without a leading `/` is relative to the current dialog's folder. A leading `/` addresses the gateway root, not the disk root.
-- **Message addressing**: Messages have stable `id` strings (e.g., `a9cb5512`). Solveit sets the "current message" to the most recently run message. Markdown refs to a message are anchors to its DOM id, so they carry a `_` prefix (`#_a9cb5512`); `msg_ref` builds them.
-- **Implicit state**: After `add_msg`/`update_msg`, the "current message" is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
+## Addressing
 
-## Workflow Patterns
+Each message has a stable `id`, such as `a9cb5512`. The current message is the one most recently run, and Solveit sets it. `read_msg`, `add_msg`, and `update_msg` use the current message when you omit `id`. Markdown links to a message use its DOM anchor, which has a `_` prefix (`#_a9cb5512`). `msg_ref` builds these links.
 
-### Reading dialog state
-- `view_dlg` — fastest way to see entire dialog structure with line numbers for editing
-- `find_msgs` — search with regex, filter by type/errors/changes
-- `read_msg` — navigate relative to current message
-- `view_msg` (content+line numbers only) or `read_msgid` (including metadata and output)  — direct access when you have the id
+Pass `dname` to act on another dialog, named by its `.ipynb` filename. A name without a leading `/` is relative to the current dialog's folder. A leading `/` starts from the gateway root, not the disk root. With no `dname`, functions act on the current dialog. Changes to an open dialog appear live in the browser, and changes to a closed dialog are written to disk. `find_dname` returns the gateway-root-relative form of a name, without the leading slash.
 
-Messages above the current prompt are already in LLM context. Their content and outputs are always up to date. Do not reread content you can already see. Use read functions only to:
+## Reading
 
-- Get line numbers immediately before editing.
-- Access messages below the current prompt, when you are sure the user wants you to look ahead.
-- Access other dialogs.
+Messages above the current prompt are already in your context, with up-to-date content and outputs. Don't read them again. Read only to:
 
-**dname**: Many functions take an optional `dname` parameter to choose which dialog to view/edit. If `dname` is None, the current dialog is used (if any). Open dialogs update interactively in the browser. Closed dialogs update on disk. Use `/myproject/dlg.ipynb` to address a dialog from the gateway root, or `dlg.ipynb` to address one in the current dialog's folder. `find_dname` returns a gateway-root-relative filename without a leading slash.
+- get fresh addresses just before editing, because earlier tool results in your context may be truncated
+- see messages below the current prompt, when you are sure the user wants you to look ahead
+- see another dialog
 
-### Modifying dialogs
-- `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
-  - **NB** When not passing a message id, it defaults to the *current* message. So if you call it multiple times with no message id, the messages will be added in REVERSE! Instead, get the return value of `add_msg` after each call, and use that for the next call
-- `update_msg` — partial updates; only pass fields to change
-- `del_msgs` — use sparingly, only when explicitly requested
-`copy_msgs` → `paste_msgs` — for moving/duplicating messages within running dialogs.
+`view_dlg` shows the whole dialog at once, and is usually the quickest start. `find_msgs` searches by regex and filters by message type, errors, or changes. `read_msg` moves relative to the current message. `view_msg` returns a message's content, and `read_msgid` adds its metadata and output.
 
-## Non-decorated Functions Worth Knowing
+## Changing messages
 
-**Dangerous (not allowed by default):**
-- `_add_msg_unsafe(content, run_mode='run', ...)` — add AND execute message (code or prompt)
-- `run_msg(ids)` — queue messages for execution
-- `rm_dialog(name)` — delete entire dialog
+`add_msg` adds a message after the current one. The current message does not move, so repeated calls without `id` come out in reverse order. Pass each call's returned id as the next call's `id`. `update_msg` changes only the fields you pass. `del_msgs` deletes messages: use it only when the user asks for a deletion. `copy_msgs` and `paste_msgs` move or duplicate messages within running dialogs. `toggle_header`, `toggle_bookmark`, and `toggle_comment` switch a message's collapsed heading, numbered bookmark, or line comments.
 
-## Important Patterns
+To edit a message's text, read `doc(exhash.skill)` first. Take the id from your context, or from `view_dlg` or `find_msgs`. View the message with `lnhashview_msg(id)`, apply commands with `msg_exhash(id, *cmds)`, and view it again before any further edit.
 
-### Key Principles
+## Dialogs and other tools
 
-1. **Always re-read before editing.** Past call results in chat history may be TRUNCATED.
-2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
-3. **Don't guess when functions fail.** If a function returns an error, STOP and ask for clarification. Do not retry with guessed parameters. Better still, call doc() first!
+`curr_dialog` describes the current dialog, `list_dialogs` lists the dialogs and folders under a path, and `realpath` gives the dialog's on-disk path. `create_or_run_dialog` creates a dialog or starts its kernel, and `stop_dialog` stops it. `dialog_link` returns a link that opens a dialog in Solveit. `run_code_interactive` puts code in the user's dialog for them to run: use it only when no other function does the job. `solveit_docs` returns Solveit's reference documentation. `spawn_agent` starts a subagent, and must be called as a tool, not from Python.
 
-### Typical Editing Workflow
-
-Message editing uses exhash. View `doc(exhash.skill)` first. Then follow these steps:
-
-```
-0. Find message id in dynamic contenxt, or using `view_dlg` or  `find_msgs`
-1. lnhashview_msg(id)
-2. Identify lines to change
-3. msg_exhash(...)
-4. If more edits needed: re-read, then repeat from step 2
-```
-
-All dialoghelper functions are async. Use `await` to call them. A `python` call returns stdout. To display several messages in one call, print each message.
+Three functions run code or delete data, so they are not allowed by default. `_add_msg_unsafe` adds a message and runs it, `run_msg` queues messages to run, and `rm_dialog` deletes a dialog.
 """
 
 from dialoghelper.core import *
