@@ -1,59 +1,26 @@
 """Read, search, edit, and manage Solveit dialogs using dialoghelper.core, including dialog/message addressing, line-numbered inspection, targeted message edits, add/update/delete/copy/paste workflows, and safe editing patterns.
 
-## Core Concepts
+A dialog is a notebook of messages (note, code, prompt, raw). Call functions with `await`, except the ordinary functions `dialog_link`, `msg_ref`, `find_dname`. The `python` tool returns only stdout: print each result when one call produces several. Read a function's `doc()` before first use; if a call fails, stop and ask the user rather than retrying with guessed arguments.
 
-- **Dialog addressing**: All functions accepting `dname` resolve paths relative to current dialog (no leading `/`) or absolute from Solveit's
-  runtime data path (with leading `/`; but NOT from the disk root path). The `.ipynb` extension is never included.
-- **Message addressing**: Messages have stable `id` strings (e.g., `a9cb5512`). Solveit sets the "current message" to the most recently run message. Markdown refs to a message are anchors to its DOM id, so they carry a `_` prefix (`#_a9cb5512`); `msg_ref` builds them.
-- **Implicit state**: After `add_msg`/`update_msg`, the "current message" is updated to the new/modified message. This enables chaining: successive `add_msg` calls create messages in sequence.
+## Addressing
 
-## Workflow Patterns
+Messages have stable ids (`a9cb5512`). The current message is the most recently run one (Solveit sets it); `read_msg`, `add_msg`, and `update_msg` use it when `id` is omitted. Markdown refs to a message use its DOM anchor, with a `_` prefix (`#_a9cb5512`); `msg_ref` builds them. `dname` names another dialog by its `.ipynb` filename: relative to the current dialog's folder, or from the gateway root (not the disk root) with a leading `/`; default the current dialog. Open dialogs update live in the browser; closed ones update on disk.
 
-### Reading dialog state
-- `view_dlg` — fastest way to see entire dialog structure with line numbers for editing
-- `find_msgs` — search with regex, filter by type/errors/changes
-- `read_msg` — navigate relative to current message
-- `view_msg` (content+line numbers only) or `read_msgid` (including metadata and output)  — direct access when you have the id
+## Reading
 
-**Key insight**: Messages above the current prompt are already in LLM context—their content and outputs are always up-to-date. Do NOT use read functions just to review content you can already see. Use read functions only for: (1) getting line numbers immediately before editing, (2) accessing messages below current prompt (if you're sure the user wants you to "look ahead"), (3) accessing other dialogs.
+Messages above the current prompt are already in your context, with up-to-date content and outputs: don't reread them. Read only to get fresh addresses just before editing (earlier tool results may be truncated), to see messages below the prompt when you're sure the user wants that, or to see another dialog. `view_dlg`: whole dialog, usually the quickest start. `find_msgs`: regex search, filters by type, errors, or changes. `read_msg`: relative to the current message. `view_msg`: content; `read_msgid`: content plus metadata and output.
 
-**dname**: Many functions take an optional `dname` parameter, to choose which dialog to view/edit. If `dname` is None, the current dialog is used (if any). If `dname` is an open dialog, it will be updated interactively with real-time updates to the browser. If it is a closed dialog, it will be updated on disk. Dialog names must be paths relative to solveit root (if starting with `/`, e.g. `/myproject/dlg`) or relative to the current dialog's folder (if not starting with `/`), and should *not* include the .ipynb extension. **Use absolute paths when targeting dialogs outside the current dialog's folder tree.**
+## Changing messages
 
-### Modifying dialogs
-- `add_msg` — placement can be `add_after`/`add_before` (relative to current) or `at_start`/`at_end` (absolute)
-  - **NB** When not passing a message id, it defaults to the *current* message. So if you call it multiple times with no message id, the messages will be added in REVERSE! Instead, get the return value of `add_msg` after each call, and use that for the next call
-- `update_msg` — partial updates; only pass fields to change
-- `del_msgs` — use sparingly, only when explicitly requested
-`copy_msgs` → `paste_msgs` — for moving/duplicating messages within running dialogs.
+`add_msg` inserts after the current message, which doesn't move: repeated calls without `id` come out reversed, so pass each returned id as the next call's `id`. `update_msg` changes only the fields passed. `del_msgs` only when the user asks for a deletion. `copy_msgs`/`paste_msgs` move or duplicate messages within running dialogs. `toggle_header`/`toggle_bookmark`/`toggle_comment` switch a message's collapsed heading, numbered bookmark, or line comments.
 
-## Non-decorated Functions Worth Knowing
+Text edits use exhash (read `doc(exhash.skill)` first): take the id from context, `view_dlg`, or `find_msgs`; view with `lnhashview_msg(id)`; apply `msg_exhash(id, *cmds)`; view again before further edits.
 
-**Dangerous (not allowed by default):**
-- `_add_msg_unsafe(content, run_mode='run', ...)` — add AND execute message (code or prompt)
-- `run_msg(ids)` — queue messages for execution
-- `rm_dialog(name)` — delete entire dialog
+## Dialogs and other tools
 
-## Important Patterns
+`curr_dialog`: current dialog info. `list_dialogs`: dialogs and folders under a path. `realpath`: on-disk path. `create_or_run_dialog`/`stop_dialog`: create a dialog or start its kernel / stop it. `dialog_link`: link that opens a dialog in Solveit. `run_code_interactive`: puts code in the user's dialog for them to run; only when no other function does the job. `solveit_docs`: Solveit reference docs. `spawn_agent`: starts a subagent; call it as a tool, not from Python.
 
-### Key Principles
-
-1. **Always re-read before editing.** Past call results in chat history may be TRUNCATED.
-2. **Work backwards.** When making multiple edits to a message, start from the end and work towards the beginning. This prevents line number shifts from invalidating your planned edits.
-3. **Don't guess when functions fail.** If a function returns an error, STOP and ask for clarification. Do not retry with guessed parameters. Better still, call doc() first!
-
-### Typical Editing Workflow
-
-Message editing uses exhash. View `doc(exhash.skill)` first. Then follow these steps:
-
-```
-0. Find message id in dynamic contenxt, or using `view_dlg` or  `find_msgs`
-1. lnhashview_msg(id)
-2. Identify lines to change
-3. msg_exhash(...)
-4. If more edits needed: re-read, then repeat from step 2
-```
-
-Note that all dialoghelper functions are async (so await them), and also using `print()` in `python` will return stdout, so you can use that to read multiple messages (for instance) by using multiple prints, instead of just having a single return value.
+Not allowed by default, because they run code or delete data: `_add_msg_unsafe` (adds and runs a message), `run_msg` (queues messages to run), `rm_dialog` (deletes a dialog).
 """
 
 from dialoghelper.core import *
@@ -64,13 +31,13 @@ __all__ = [
     'curr_dialog', 'realpath', 'list_dialogs', 'lnhashview_msg', 'msg_exhash',
     'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid', 'view_msg',
     'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-    'create_or_run_dialog', 'stop_dialog', 'load_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
+    'create_or_run_dialog', 'stop_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'spawn_agent',
 ]
 
 allow(
     curr_dialog, realpath, list_dialogs, read_msg, find_msgs, view_dlg, add_msg, read_msgid, view_msg,
     del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment,
-    create_or_run_dialog, stop_dialog, load_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, msg_exhash
+    create_or_run_dialog, stop_dialog, solveit_docs, dialog_link, spawn_agent, lnhashview_msg, msg_exhash
 )
 
 from dialoghelper.core import *

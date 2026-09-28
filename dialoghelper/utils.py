@@ -60,7 +60,7 @@ def ast_grep(
     
     Examples: `import $MODULE` (find imports); `$OBJ.$METHOD($$$)` (find method calls); `await $EXPR` (find await expressions)
     
-    Useful for: Refactoring—find all uses of deprecated APIs or changed signatures; Security review—locate SQL queries, file operations, eval calls; Code exploration—understand how libraries are used across codebase; Pattern analysis—find async functions, error handlers, decorators; Better than regex—handles multi-line code, nested structures, respects syntax"""
+    Use `ast_grep` to find calls to an API before changing it. Patterns match multiline code and nested expressions."""
     cmd = f"ast-grep --pattern '{pattern}' --lang {lang} --json=compact"
     if path != ".": cmd = f"cd {path} && {cmd}"
     res = subprocess.run(cmd, shell=True, capture_output=True, text=True)

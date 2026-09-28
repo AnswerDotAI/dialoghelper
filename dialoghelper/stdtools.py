@@ -9,6 +9,7 @@ from exhash.skill import *
 from safepyrun.core import allow_imports
 from safecmd import bash
 from safepyrun import RunPython
+import aidialog.dlgskill as dsk
 
 for o in ('PIL',): allow_imports.add(o)
 
