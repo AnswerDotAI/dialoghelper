@@ -901,7 +901,7 @@ async def stop_dialog(
 # %% ../nbs/00_core.ipynb #092d1b5a
 _meta_keys = [p for p in signature(_add_msg).parameters if p not in ('self',)]
 
-@delegates(find_msgs, but=['context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta'])
+@delegates(find_msgs, but=['before', 'after', 'context', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'include_meta'])
 async def import_dlg(
     src_dname:str, # Dialog to import code from (path relative to solveit data dir, no .ipynb)
     dname:str='',  # Target dialog (path relative to solveit data dir, no .ipynb); defaults to current dialog
