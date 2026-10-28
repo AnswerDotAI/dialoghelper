@@ -1,4 +1,8 @@
-const noTrack = () => (!window.vtrack || window.vtrack.readyState === 'ended');
+const noTrack = () => !window.vtrack || window.vtrack.readyState === 'ended';
+
+window.shareScreen = async () => {
+    if (noTrack()) window.vtrack = (await navigator.mediaDevices.getDisplayMedia()).getVideoTracks()[0];
+};
 
 window.getScreenshot = async (mxw=1280, mxh=1024) => {
     if (noTrack()) return;
@@ -9,15 +13,4 @@ window.getScreenshot = async (mxw=1280, mxh=1024) => {
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
     img.close();
     return c.toDataURL();
-}
-    
-if (!window._registered) {
-    window._registered = true;
-    document.body.addEventListener('shareScreen', async () => {
-        if (noTrack()) window.vtrack = (await navigator.mediaDevices.getDisplayMedia()).getVideoTracks()[0];
-    });
-    document.body.addEventListener('captureScreen', async e => {
-        if (noTrack()) return;
-        pushData(e.detail.idx, {img_data: await getScreenshot()})
-    });
-}
+};

@@ -11,7 +11,7 @@ __all__ = ['tracetool', 'fmt_trace']
 import builtins
 from fastcore.utils import *
 from tracefunc import tracefunc
-from toolslm.inspecttools import resolve
+from pyskills import resolve
 
 # %% ../nbs/02_tracetools.ipynb #a1a11745
 _builtins = set(dir(builtins))

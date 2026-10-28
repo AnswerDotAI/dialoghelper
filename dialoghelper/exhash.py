@@ -24,7 +24,7 @@ async def lnhashview_msg(
 # %% ../nbs/04_exhash.ipynb #9bdae034
 async def msg_exhash(
     id:str, # id of message to edit
-    cmds:list, # List of exhash command tuples to apply
+    *cmds:tuple, # Exhash command tuples to apply, each passed as its own argument
     dname:str='', # Dialog containing message; defaults to current dialog
 ) -> str:
     """Verified line-addressed editor. Apply command tuples to msg `id` contents, return lnhash diff.
@@ -42,7 +42,7 @@ async def msg_exhash(
 
     Command tuples:
         (addr, "s", pattern, replacement[, flags])
-                           Substitute (Rust regex syntax). Replacement supports $1, $0, ${name}.
+                           Substitute (fancy-regex syntax). Replacement supports $1, $0, ${name}; $$ is a literal $.
                            Flags: g=all, i=case-insensitive. args may contain literal / & newlines
         (addr, "d")        Delete line(s)
         (addr, "a", text)  Append payload after line
@@ -55,12 +55,12 @@ async def msg_exhash(
         (addr, "<", n)     Dedent n levels (default 1)
         (addr, "sort")     Sort lines alphabetically
         (addr, "p")        Print (include in output without changing)
-        (addr, "g", payload), (addr, "g!", payload), (addr, "v", payload)
-                           Global commands; payload uses compact ex syntax such as ``/pattern/d``
-        (addr, "y", payload) Transliterate; payload uses compact ex syntax such as ``/abc/ABC/``
+        (addr, "g", pattern, sub), (addr, "g!", pattern, sub), (addr, "v", pattern, sub)
+                           Run `sub`, an address-free tuple such as ``("d",)`` or ``("s", "a", "b", "g")``, on each
+                           addressed line that matches `pattern` (g) or doesn't (g!, v). Globals can't nest.
+        (addr, "y", source, dest) Transliterate each character of `source` to the one at the same place in `dest`
 
-    `cmds` is a required list of command tuples. Text fields may contain newlines, including
-    multiline a/i/c payloads and s pattern/replacement fields; payloads are inserted literally.
+    Text fields may contain newlines, including multiline a/i/c payloads and s pattern/replacement fields; payloads are inserted literally.
     Do NOT add a trailing `.` line — the string boundary ends the block. A trailing `.` will be inserted literally (with a warning)."""
     msg = await read_msgid(id=id, dname=dname)
     if not msg: return 'No such message.'
