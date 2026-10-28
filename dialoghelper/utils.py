@@ -14,8 +14,8 @@ from tempfile import TemporaryDirectory
 from fastcore.utils import *
 from ghapi.all import *
 from inspect import currentframe
-from fasthtml.common import *
-from fasthtml.components import Solveit_input
+from fastcore.xml import *
+from fastcore.xml import Solveit_input
 from fastcore.tools import *
 
 from .core import *
@@ -125,6 +125,6 @@ def input(prompt='', *args):
     "Solveit customised input to handle fasttag prompts"
     return builtins.input(prompt if isinstance(prompt,str) else Solveit_input(prompt, *args))
 
-def InputForm(*c, **kwargs):
+def InputForm(*c, enctype="multipart/form-data", **kwargs):
     "Create an `input()` with a `Form` with needed `hx_post` and `id`"
-    return input(Form(*c, hx_post='/input_reply_', id='input-request-form', **kwargs))
+    return input(Form(*c, enctype=enctype, hx_post='/input_reply_', id='input-request-form', **kwargs))

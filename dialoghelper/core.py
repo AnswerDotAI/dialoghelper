@@ -6,20 +6,20 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
-           'msg_del_lines', 'names_containing', 'CommTransport', 'find_dname', 'browser', 'add_html', 'Channel',
-           'realpath', 'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg',
-           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid',
-           'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
+           'msg_del_lines', 'names_containing', 'CommTransport', 'find_dname', 'browser', 'add_html', 'realpath',
+           'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid',
+           'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
+           'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'run_cells', 'run_prompt',
            'solveit_docs', 'dialog_link']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
-import os,re,asyncio,json,uuid
-import websockets
+import os,asyncio,json
 
 from typing import Dict
 from os.path import normpath
-from fastcore.xml import to_xml
+from fastcore.xml import *
+from fastcore.xml import Msgs
 from fastcore.meta import splice_sig, delegates
 
 from fastcore.utils import *
@@ -28,8 +28,6 @@ from inspect import currentframe
 import httpx2
 from comm import create_comm
 from IPython.display import Markdown,HTML
-from fasthtml.common import *
-from fasthtml.components import Msgs
 from urllib.parse import urlencode
 from aidialog.dialog import Message, Dialog
 import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `_msg2cell` below uses)
@@ -42,8 +40,7 @@ from fastcore.tools import *
 from fastcore.nbio import item2xml
 
 # %% ../nbs/00_core.ipynb #eb1636a6
-dh_settings = dict(kid=os.environ.get('RUSTYGATE_KERNEL_ID'), path=os.environ.get('RUSTYGATE_KERNEL_PATH'),
-    solveit=os.environ.get('SOLVEIT_URL', 'http://localhost:5001'))
+dh_settings = dict(kid=os.environ.get('RUSTYGATE_KERNEL_ID'), path=os.environ.get('RUSTYGATE_KERNEL_PATH'))
 
 # %% ../nbs/00_core.ipynb #f5cd76ed
 try: load_ipython_extension(get_ipython())
@@ -150,49 +147,6 @@ def add_html(
 ):
     "Swap `content`'s out-of-band elements into each browser showing this dialog"
     _browser_comm(f"htmx.swap(document.body, {json.dumps(to_xml(content))}, {{swapStyle: 'none'}})").close()
-
-# %% ../nbs/00_core.ipynb #84469f4e
-class Channel:
-    "Duplex JSON messaging with the other peers on a named `/wsx` relay channel"
-    def __init__(self, chan, url=None):
-        self.url = url or f"{re.sub('^http', 'ws', dh_settings['solveit'])}/wsx?chan={chan}"
-        self._replies,self.events = {},asyncio.Queue()
-
-    @classmethod
-    async def connect(cls,
-        chan, # Channel name; peers connecting to the same name hear each other
-        url=None # Full relay url (defaults to the `/wsx` of Solveit at `SOLVEIT_URL`)
-    ):
-        "Connect to `chan` and start reading frames"
-        self = cls(chan, url=url)
-        self._ws = await websockets.connect(self.url)
-        self._reader = asyncio.create_task(self._read_loop())
-        return self
-
-    async def _read_loop(self):
-        async for frame in self._ws:
-            msg = dict2obj(json.loads(frame))
-            if (f := self._replies.pop(msg.get('id'), None)): f.set_result(msg)
-            else: await self.events.put(msg)
-
-    async def send(self, **msg): await self._ws.send(json.dumps(msg))
-
-    async def request(self, timeout=15, **msg):
-        "Send `msg` with a unique `id` and wait for a reply with that `id`"
-        mid = msg['id'] = str(uuid.uuid4())
-        f = asyncio.get_running_loop().create_future()
-        self._replies[mid] = f
-        try:
-            await self._ws.send(json.dumps(msg))
-            return await asyncio.wait_for(f, timeout)
-        finally: self._replies.pop(mid, None)
-
-    async def close(self):
-        self._reader.cancel()
-        await self._ws.close()
-
-    @property
-    def is_open(self): return self._ws.state.name == 'OPEN'
 
 # %% ../nbs/00_core.ipynb #e2138315
 def realpath(
@@ -599,7 +553,7 @@ async def paste_msgs(
 mermaid_url = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
 
 def enable_mermaid():
-    return Script("""
+    return Script(Safe("""
 if (window.mermaid) mermaid.run()
 else {
     import('%s').then(m => {
@@ -609,7 +563,7 @@ else {
             if (elt.matches('div.mermaid, pre.mermaid') || htmx.findAll(elt, 'div.mermaid, pre.mermaid')) window.mermaid.run();
         });
     });
-}""" % mermaid_url, type="module")
+}""" % mermaid_url), type="module")
 
 # %% ../nbs/00_core.ipynb #f3d1e424
 def mermaid(code, cls="mermaid", **kwargs):

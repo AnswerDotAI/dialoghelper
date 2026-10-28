@@ -7,3 +7,8 @@ website:
   description: "Helper functions for solveit dialogs"
   repo-branch: main
   repo-url: "https://github.com/AnswerDotAI/dialoghelper"
+
+format-links:
+  - html
+  - format: commonmark
+    text: Markdown
