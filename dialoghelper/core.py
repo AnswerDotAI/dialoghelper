@@ -7,9 +7,9 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
            'msg_del_lines', 'names_containing', 'CommTransport', 'find_dname', 'browser', 'add_html', 'realpath',
-           'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid',
-           'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
-           'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
+           'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs', 'add_msg',
+           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid',
+           'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'run_cells', 'run_prompt',
            'solveit_docs', 'dialog_link']
 
@@ -390,6 +390,22 @@ async def _anchor(msgid, position, dname):
     if msgid: return {position: msgid}
     return dict(at='start') if position in ('before','start') else {}
 
+# %% ../nbs/00_core.ipynb #125a8192
+async def add_msgs(
+    msgs:list, # Note texts, or dicts of `add_msg`'s content and flag arguments
+    msgid:str=None, # Message to place the first one beside; default: as for `add_msg`
+    position:str='after', # 'after' or 'before' `msgid`, or the dialog's 'start' or 'end'
+    dname:str='', # Dialog to add to; defaults to current dialog
+)->list: # Ids of the new messages, in order
+    "Add several messages to a dialog in one request, returning their ids in order"
+    if not msgs: return []
+    cells = [_mk_cell(**m) if isinstance(m, dict) else _mk_cell(m) for m in msgs]
+    ops = [dict(op='add', cell=cells[0], **await _anchor(msgid, position, dname))]
+    ops += [dict(op='add', cell=c, after=prev['id']) for prev,c in zip(cells, cells[1:])]
+    await cells_client(dname).apply(ops)
+    return [c['id'] for c in cells]
+
+# %% ../nbs/00_core.ipynb #b3f6d20c
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     msg_type:str='note', # Message type, can be 'code', 'note', or 'prompt'
@@ -406,10 +422,9 @@ async def add_msg(
     bookmark:int=0, # Bookmark number, 1 to 9, or 0 for none
 )->str: # Message ID of newly created message
     "Add a message to a dialog, returning its id"
-    cell = _mk_cell(content, msg_type=msg_type, output=output, exported=exported, skipped=skipped, i_collapsed=i_collapsed,
+    msg = dict(content=content, msg_type=msg_type, output=output, exported=exported, skipped=skipped, i_collapsed=i_collapsed,
         o_collapsed=o_collapsed, heading_collapsed=heading_collapsed, pinned=pinned, bookmark=bookmark)
-    await cells_client(dname).apply([dict(op='add', cell=cell, **await _anchor(msgid, position, dname))])
-    return cell['id']
+    return (await add_msgs([msg], msgid, position, dname))[0]
 
 # %% ../nbs/00_core.ipynb #afc62c45
 async def read_msgid(
