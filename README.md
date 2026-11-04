@@ -28,3 +28,7 @@ Dialog names include `.ipynb`; [`find_dname`](https://AnswerDotAI.github.io/dial
 ### Folder-local skills
 
 Solveit activates pyskills from the dialog’s opening folder before loading its tool layer. Put a public `.py` module or package in a `_pyskills/` directory there or in an ancestor. Give it a module docstring. `list_pyskills()` discovers it and ordinary imports load it without an install or entry-point declaration. The nearest local folder wins. Changing cwd or moving a live dialog does not change the selected scope; restart its kernel to use the new location. Function permissions remain separate from discovery.
+
+## Development
+
+With the `dev` extra installed, run `pytest -q` from the repository root. The integration checks execute a copied Python module in a disposable notebook-bound gateway kernel. They need no Solveit, browser or model access, and do not change existing dialogs or kernels. The source notebooks contain the API explanations and examples.

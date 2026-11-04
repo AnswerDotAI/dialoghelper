@@ -7,9 +7,9 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
            'msg_del_lines', 'names_containing', 'CommTransport', 'find_dname', 'browser', 'add_html', 'realpath',
-           'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'read_msgid',
-           'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid',
-           'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
+           'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs', 'add_msg',
+           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid',
+           'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
            'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'run_cells', 'run_prompt',
            'solveit_docs', 'dialog_link']
 
@@ -390,6 +390,23 @@ async def _anchor(msgid, position, dname):
     if msgid: return {position: msgid}
     return dict(at='start') if position in ('before','start') else {}
 
+async def _add_cells(cells, msgid, position, dname):
+    if not cells: return []
+    anchor,ops = await _anchor(msgid, position, dname),[]
+    for cell in cells:
+        ops.append(dict(op='add', cell=cell, **anchor))
+        anchor = dict(after=cell['id'])
+    await cells_client(dname).apply(ops)
+    return [c['id'] for c in cells]
+
+async def add_msgs(
+    msgs:list[dict], # Message dictionaries with content and the same per-message options as add_msg
+    msgid:str=None, # Message to place the batch beside; defaults to the calling cell in its own dialog
+    position:str='after', # 'after' or 'before' msgid, or the dialog's 'start' or 'end'
+    dname:str='' # Dialog to add to; defaults to current dialog
+) -> list[str]:
+    "Add messages in their input order with one cells request, returning their ids"
+    return await _add_cells([_mk_cell(**m) for m in msgs], msgid, position, dname)
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     msg_type:str='note', # Message type, can be 'code', 'note', or 'prompt'
@@ -408,8 +425,7 @@ async def add_msg(
     "Add a message to a dialog, returning its id"
     cell = _mk_cell(content, msg_type=msg_type, output=output, exported=exported, skipped=skipped, i_collapsed=i_collapsed,
         o_collapsed=o_collapsed, heading_collapsed=heading_collapsed, pinned=pinned, bookmark=bookmark)
-    await cells_client(dname).apply([dict(op='add', cell=cell, **await _anchor(msgid, position, dname))])
-    return cell['id']
+    return (await _add_cells([cell], msgid, position, dname))[0]
 
 # %% ../nbs/00_core.ipynb #afc62c45
 async def read_msgid(
@@ -456,6 +472,10 @@ def msg_ref(id, dname=None):
     return f'#{find_dname(dname)}/{id}'
 
 # %% ../nbs/00_core.ipynb #f1ee1903
+async def _apply_logged(fc, ops, logs):
+    if ops: await fc.apply(ops)
+    if logs: await add_msg('\n\n'.join(logs))
+
 async def del_msgs(
     ids:str=None, # Comma-separated ids of message(s) to delete
     dname:str='', # Dialog to get info for; defaults to current dialog
@@ -466,8 +486,7 @@ async def del_msgs(
     fc = cells_client(dname)
     logs = [f"> Deleted {msg_ref(c['id'], dname)}\n\n```\n{_cell2dict(c)['content']}\n```"
             for c in await fc.cells(ids=ids)] if log_changed else []
-    await fc.apply([dict(op='delete', id=i) for i in ids])
-    for l in logs: await add_msg(l)
+    await _apply_logged(fc, [dict(op='delete', id=i) for i in ids], logs)
     return ids
 
 # %% ../nbs/00_core.ipynb #023dcb74
@@ -486,28 +505,14 @@ def _umsg(
 ): ...
 
 # %% ../nbs/00_core.ipynb #38875a12
-@delegates(_umsg)
-async def update_msg(
-    id:str=None, # id of message to update (if None, uses current message)
-    msg:Optional[Dict]=None, # Dictionary of field keys/values to update
-    dname:str='', # Dialog to get info for; defaults to current dialog
-    log_changed:bool=False, # Add a note showing the diff?
-    **kwargs) -> str:
-    """Update an existing message. Provide either `msg` OR field key/values to update.
-    - Use `content` param to update contents.
-    - Only include parameters to update--missing ones will be left unchanged."""
-    if msg: kwargs |= msg.get('msg', msg)
-    supplied_id = kwargs.pop('id', None)
-    id = id or supplied_id or await _caller()
-    if not id: raise TypeError("update_msg needs `id=`, a message dict with an id, or a current message")
+def _update_ops(id, kwargs, cell, dname, log_changed):
+    "Operations and optional content log for one already-read message"
     kwargs = {k:v for k,v in kwargs.items() if v is not None}
     flags = _flag_meta({a: kwargs.pop(a) for a in _flag_keys if a in kwargs})
     mm,meta,exported = (kwargs.pop(k, None) for k in ('mergemeta','meta','exported'))
-    fc,ops = cells_client(dname),[]
-    if {'content','msg_type','output'} & set(kwargs) or meta is not None or log_changed:
-        cells = await fc.cells(ids=id)
-        if not cells: raise KeyError(id)
-        m = Dialog(name='-').cell2msg(_norm_cell(cells[0]))
+    ops = []
+    if cell is not None:
+        m = Dialog(name='-').cell2msg(_norm_cell(cell))
         old,typ = m.content,m.msg_type
         if (out := kwargs.get('output')) is not None and (kwargs.get('msg_type') or typ)=='code': kwargs['output'] = loads(out)
         m.msg_type = kwargs.get('msg_type', typ)
@@ -523,10 +528,33 @@ async def update_msg(
     if mm: ops.append(dict(op='merge', id=id, metadata=mm))
     if exported is not None: flags['nbdev'] = dict(export='true') if exported else dict(export=None, exports=None)
     if flags: ops.append(dict(op='merge', id=id, metadata=flags))
-    if ops: await fc.apply(ops)
+    log = None
     if log_changed:
         diff = str_diff(old, m.content)
-        await add_msg(f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.'))
+        log = f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.')
+    return ops, log
+
+@delegates(_umsg)
+async def update_msg(
+    id:str=None, # id of message to update (if None, uses current message)
+    msg:Optional[Dict]=None, # Dictionary of field keys/values to update
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    log_changed:bool=False, # Add a note showing the diff?
+    **kwargs) -> str:
+    """Update an existing message. Provide either `msg` OR field key/values to update.
+    - Use `content` param to update contents.
+    - Only include parameters to update--missing ones will be left unchanged."""
+    if msg: kwargs |= msg.get('msg', msg)
+    supplied_id = kwargs.pop('id', None)
+    id = id or supplied_id or await _caller()
+    if not id: raise TypeError("update_msg needs `id=`, a message dict with an id, or a current message")
+    fc,cell = cells_client(dname),None
+    if log_changed or any(kwargs.get(k) is not None for k in ('content','msg_type','output','meta')):
+        cells = await fc.cells(ids=id)
+        if not cells: raise KeyError(id)
+        cell = cells[0]
+    ops,log = _update_ops(id, kwargs, cell, dname, log_changed)
+    await _apply_logged(fc, ops, [log] if log else [])
     return id
 
 # %% ../nbs/00_core.ipynb #73025e57
@@ -684,7 +712,7 @@ Message editing standard parameters:
 id: Message id to edit, or list of ids, or 'all' for all messages in dialog
 dname: Dialog to get info for; defaults to current dialog
 out: If True, replace in output instead of content
-log_changed: Add a note showing the deleted content?
+log_changed: Add one note listing content changes in the calling dialog?
 
 returns:
 - For single id: diff of changes, or "none: No changes.", or "error: ..."
@@ -693,21 +721,33 @@ returns:
 # %% ../nbs/00_core.ipynb #ee87e70d
 def _msg_edit(f, name=None):
     async def wrapper(id:str|list[str], *args, out:bool=False, dname:str='', log_changed:bool=False, **kw):
+        many = isinstance(id, list) or id=='all'
+        ids = id if isinstance(id, list) else [id or await _caller()]
+        if not ids: return []
+        fc = cells_client(dname)
+        found = await fc.cells(ids=None if id=='all' else [_mid(i) for i in ids])
+        if id=='all':
+            found = [c for c in found if not c.get('metadata', {}).get('skipped')]
+            ids = [c['id'] for c in found]
+        cells = {c['id']:c for c in found}
+        ops,logs = [],[]
         async def _one(mid):
-            msg = await read_msg(n=0, id=mid, dname=dname)
-            if not msg: return f"error: No message {mid}"
+            cell = cells.get(_mid(mid))
+            if cell is None: return f"error: No message {mid}"
+            msg = _cell2dict(cell)
             field = 'output' if out else 'content'
             text = msg.get(field, '')
             if not text: return f"error: Message has no {field}"
             try: new_text = await maybe_await(f(text, *args, **kw))
             except ValueError as e: return f'error: {e}'
-            await update_msg(id=mid, **{field: new_text}, dname=dname, log_changed=log_changed)
+            changes,log = _update_ops(_mid(mid), {field: new_text}, cell, dname, log_changed)
+            ops.extend(changes)
+            if log: logs.append(log)
             diff = str_diff(text, new_text)
             return diff or 'none: No changes.'
-        if isinstance(id, list) or id == 'all':
-            if id=='all': id = [m['id'] for m in (await find_msgs(dname=dname, include_meta=False, include_output=False))]
-            return [(mid, r) for mid in id if not (r:=await _one(mid)).startswith('none:')]
-        return await _one(id)
+        results = [(mid, await _one(mid)) for mid in ids]
+        await _apply_logged(fc, ops, logs)
+        return [(mid, r) for mid,r in results if not r.startswith('none:')] if many else results[0][1]
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
     res.__doc__ = (f.__doc__ or '') + _msg_edit_doc

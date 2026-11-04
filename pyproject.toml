@@ -40,7 +40,7 @@ Documentation = "https://AnswerDotAI.github.io/dialoghelper"
 dialoghelper = "dialoghelper._modidx:d"
 
 [project.optional-dependencies]
-dev = ['tracefunc', 'nbdev', 'rustygate>=0.1.25']
+dev = ['tracefunc', 'nbdev', 'pytest', 'pytest-asyncio', 'rustygate>=0.1.25']
 
 [tool.setuptools.dynamic]
 version = {attr = "dialoghelper.__version__"}
@@ -55,6 +55,9 @@ include = ["dialoghelper"]
 allowed_metadata_keys = ['solveit']
 allowed_cell_metadata_keys = ['solveit_ai']
 
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.chkstyle]
 skip_paths = ["_modidx.py"]
