@@ -40,7 +40,7 @@ Documentation = "https://AnswerDotAI.github.io/dialoghelper"
 dialoghelper = "dialoghelper._modidx:d"
 
 [project.optional-dependencies]
-dev = ['tracefunc', 'nbdev', 'pytest', 'pytest-asyncio', 'rustygate>=0.1.25']
+dev = ['tracefunc', 'nbdev', 'pytest', 'pytest-asyncio', 'rustygate>=0.1.32']
 
 [tool.setuptools.dynamic]
 version = {attr = "dialoghelper.__version__"}

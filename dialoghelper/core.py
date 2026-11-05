@@ -6,12 +6,12 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
-           'msg_del_lines', 'names_containing', 'CommTransport', 'find_dname', 'browser', 'add_html', 'realpath',
-           'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs', 'add_msg',
-           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid',
-           'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
-           'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'run_cells', 'run_prompt',
-           'solveit_docs', 'dialog_link']
+           'msg_del_lines', 'names_containing', 'CommTransport', 'refresh_dlg', 'find_dname', 'browser', 'add_html',
+           'realpath', 'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs',
+           'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs',
+           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment',
+           'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'run_cells',
+           'run_prompt', 'solveit_docs', 'dialog_link']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,asyncio,json
@@ -101,6 +101,10 @@ async def _rg(method, route, **body):
     gw = _gw()
     try: return dict2obj(await gw.transport.request(method, gw.base_url+route, json=body or None))
     except (httpx2.HTTPStatusError, httpx2.RequestError) as e: raise e.api_error(endpoint=route) from e
+
+async def refresh_dlg():
+    "Ask every browser showing this dialog to render its current messages and templates"
+    await _rg('POST', f"/api/kernels/{dh_settings['kid']}/refresh")
 
 # %% ../nbs/00_core.ipynb #65a8b58b
 def find_dname(dname=None, required=True):
