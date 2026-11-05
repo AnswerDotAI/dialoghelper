@@ -10,11 +10,12 @@ __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', '
            'realpath', 'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs',
            'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs',
            'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment',
-           'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog', 'run_code_interactive', 'run_cells',
-           'run_prompt', 'solveit_docs', 'dialog_link']
+           'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog', 'read_frontmatter',
+           'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt', 'solveit_docs',
+           'dialog_link']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
-import os,asyncio,json
+import os,asyncio,json,yaml
 
 from typing import Dict
 from os.path import normpath
@@ -23,7 +24,7 @@ from fastcore.xml import Msgs
 from fastcore.meta import splice_sig, delegates
 
 from fastcore.utils import *
-from fastcore.xtras import str_diff, obj2dict
+from fastcore.xtras import str_diff, obj2dict, frontmatter
 from inspect import currentframe
 import httpx2
 from comm import create_comm
@@ -37,7 +38,7 @@ from jupyasyncclient.core import KernelApi
 from fasttransport.errors import APIError
 from safepyrun import load_ipython_extension
 from fastcore.tools import *
-from fastcore.nbio import item2xml
+from fastcore.nbio import item2xml, deep_merge
 
 # %% ../nbs/00_core.ipynb #eb1636a6
 dh_settings = dict(kid=os.environ.get('RUSTYGATE_KERNEL_ID'), path=os.environ.get('RUSTYGATE_KERNEL_PATH'))
@@ -687,6 +688,53 @@ async def rm_dialog(
     "Delete a dialog or an empty folder, stopping the dialog's kernel first if it's running"
     await stop_dialog(name)
     await _gw().api.contents.delete_path(path=find_dname(name))
+
+# %% ../nbs/00_core.ipynb #48da528f
+def _is_fm(m): return m['msg_type'] in ('raw','note') and m['content'].startswith('---')
+
+async def _fm_msg(dname):
+    "The dialog's first message if it holds frontmatter, else None"
+    m = await read_msg(n=0, relative=False, dname=dname)
+    return m if m and _is_fm(m) else None
+
+async def read_frontmatter(
+    dname:str='' # Dialog to read; defaults to current dialog
+)->dict|None: # The frontmatter, or None if the dialog has none
+    "The YAML frontmatter at the start of a dialog's first message"
+    if m := await _fm_msg(dname): return frontmatter(m['content'])[0]
+
+def _mk_fm(meta, body=''):
+    "Message content holding frontmatter `meta`, followed by `body` if any"
+    res = f"---\n{yaml.safe_dump(meta, sort_keys=False, allow_unicode=True)}---"
+    return f"{res}\n\n{body.lstrip()}" if body.strip() else res
+
+async def update_frontmatter(
+    dname:str='', # Dialog to update; defaults to current dialog
+    **kwargs # Values to merge into the frontmatter; `None` deletes a key
+)->dict: # The updated frontmatter
+    "Deep-merge `kwargs` into a dialog's frontmatter, adding a raw frontmatter message at its start if it has none"
+    m = await _fm_msg(dname)
+    old,body = frontmatter(m['content']) if m else ({},'')
+    fm = deep_merge(old, kwargs)
+    if m: await update_msg(m['id'], content=_mk_fm(fm, body), dname=dname)
+    else: await add_msg(_mk_fm(fm), msg_type='raw', position='start', dname=dname)
+    return fm
+
+# %% ../nbs/00_core.ipynb #c1b96094
+@delegates(find_msgs, but=['before', 'after', 'context', 'include_output', 'include_meta', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'headers_only', 'dname'])
+async def import_dlg(
+    src_dname:str, # Dialog to copy messages from
+    dname:str='', # Dialog to add them to; defaults to current dialog
+    msgid:str=None, # Message to place them beside; default: the calling cell in its own dialog, else the end (or start for `position='before'`)
+    position:str='after', # 'after' or 'before' `msgid`, or the dialog's 'start' or 'end'
+    **kwargs
+)->str: # The copied messages, each under a `# msg <id>` header with its new id
+    "Copy messages matching `find_msgs` criteria from `src_dname` into `dname`, merging a leading frontmatter message into `dname`'s frontmatter"
+    msgs = await find_msgs(dname=src_dname, context=0, include_output=False, **kwargs)
+    if msgs and _is_fm(msgs[0]): await update_frontmatter(dname, **frontmatter(msgs.pop(0)['content'])[0])
+    ids = await add_msgs([{k:v for k,v in m.items() if k not in ('id','meta')} for m in msgs], msgid, position, dname)
+    return '\n'.join(f"# msg {i}\n{m['content']}" for m,i in zip(msgs, ids))
+
 
 # %% ../nbs/00_core.ipynb #5617305b
 async def run_code_interactive(

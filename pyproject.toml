@@ -29,7 +29,7 @@ dependencies = [
   'ast-grep-cli', 'ast-grep-py',
   'restrictedpython', "restrictedpython-async",
   'httpx2', 'comm',
-  'pillow', "pyjwt", "tracefunc"
+  'pillow', "pyjwt", "pyyaml", "tracefunc"
 ]
 
 [project.urls]
