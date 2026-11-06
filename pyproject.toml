@@ -18,6 +18,7 @@ dependencies = [
   'fastcore>=2.2.34',
   'ghapi>=2.0.0',
   'ipymini>=0.1.21',
+  'jupyasyncclient>=0.2.23',
   'python-fastllm',
   'pyskills>=0.0.35',
   'rgapi>=0.1.8',
