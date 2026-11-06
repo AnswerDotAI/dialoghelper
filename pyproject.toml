@@ -16,10 +16,8 @@ classifiers = ["Natural Language :: English", "Intended Audience :: Developers",
 dependencies = [
   'aidialog>=0.0.38',
   'fastcore>=2.2.34',
-  'fasttransport>=0.0.2',
   'ghapi>=2.0.0',
   'ipymini>=0.1.21',
-  'jupyasyncclient>=0.2.21',
   'python-fastllm',
   'pyskills>=0.0.35',
   'rgapi>=0.1.8',
@@ -29,7 +27,7 @@ dependencies = [
   'ast-grep-cli', 'ast-grep-py',
   'restrictedpython', "restrictedpython-async",
   'httpx2', 'comm',
-  'pillow', "pyjwt", "pyyaml", "tracefunc"
+  'pillow', "pyjwt", "tracefunc"
 ]
 
 [project.urls]
@@ -40,7 +38,7 @@ Documentation = "https://AnswerDotAI.github.io/dialoghelper"
 dialoghelper = "dialoghelper._modidx:d"
 
 [project.optional-dependencies]
-dev = ['tracefunc', 'nbdev', 'pytest', 'pytest-asyncio', 'rustygate>=0.1.32']
+dev = ['tracefunc', 'nbdev', 'rustygate>=0.1.33']
 
 [tool.setuptools.dynamic]
 version = {attr = "dialoghelper.__version__"}
@@ -55,9 +53,6 @@ include = ["dialoghelper"]
 allowed_metadata_keys = ['solveit']
 allowed_cell_metadata_keys = ['solveit_ai']
 
-
-[tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.chkstyle]
 skip_paths = ["_modidx.py"]

@@ -7,15 +7,14 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
            'msg_del_lines', 'names_containing', 'CommTransport', 'refresh_dlg', 'find_dname', 'browser', 'add_html',
-           'realpath', 'list_dialogs', 'data_root', 'cells_client', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs',
-           'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs',
-           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment',
-           'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog', 'read_frontmatter',
-           'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt', 'solveit_docs',
-           'dialog_link']
+           'realpath', 'list_dialogs', 'data_root', 'read_msg', 'find_msgs', 'view_dlg', 'add_msgs', 'add_msg',
+           'read_msgid', 'view_msg', 'msg_ref', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid',
+           'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment', 'create_or_run_dialog',
+           'restart_dialog', 'stop_dialog', 'rm_dialog', 'read_frontmatter', 'update_frontmatter', 'import_dlg',
+           'run_code_interactive', 'run_cells', 'run_prompt', 'solveit_docs', 'dialog_link']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
-import os,asyncio,json,yaml
+import os,asyncio,json
 
 from typing import Dict
 from os.path import normpath
@@ -24,21 +23,15 @@ from fastcore.xml import Msgs
 from fastcore.meta import splice_sig, delegates
 
 from fastcore.utils import *
-from fastcore.xtras import str_diff, obj2dict, frontmatter
+from fastcore.xtras import str_diff
 from inspect import currentframe
 import httpx2
 from comm import create_comm
 from IPython.display import Markdown,HTML
-from urllib.parse import urlencode
-from aidialog.dialog import Message, Dialog
-import aidialog.ipynb  # chkstyle: ignore  (patches serialization onto the model classes, which `_msg2cell` below uses)
-import aidialog.dlgskill  # chkstyle: ignore  (patches `Dialog.find_msgs`, which `find_msgs` below calls)
-from jupyasyncclient import JupyAsyncCellsClient
-from jupyasyncclient.core import KernelApi
-from fasttransport.errors import APIError
+from urllib.parse import urlencode, quote
 from safepyrun import load_ipython_extension
 from fastcore.tools import *
-from fastcore.nbio import item2xml, deep_merge
+from fastcore.nbio import item2xml
 
 # %% ../nbs/00_core.ipynb #eb1636a6
 dh_settings = dict(kid=os.environ.get('RUSTYGATE_KERNEL_ID'), path=os.environ.get('RUSTYGATE_KERNEL_PATH'))
@@ -88,20 +81,16 @@ class CommTransport(httpx2.AsyncBaseTransport):
 
 # %% ../nbs/00_core.ipynb #d30b0b15
 def _http():
-    "rustygate's base URL and httpx2 client: the comm proxy in a gateway kernel, else HTTP with a fresh client per request"
-    if dh_settings.get('kid'): return 'http://rustygate', httpx2.AsyncClient(transport=CommTransport(), timeout=None)
-    return dh_settings.get('rusty') or os.environ['RUSTYGATE_URL'], None
+    "An httpx2 client reaching rustygate through the kernel comm, or HTTP outside a gateway kernel"
+    if dh_settings.get('kid'): return httpx2.AsyncClient(base_url='http://rustygate', transport=CommTransport(), timeout=None)
+    return httpx2.AsyncClient(base_url=dh_settings.get('rusty') or os.environ['RUSTYGATE_URL'], timeout=None)
 
-def _gw():
-    "A jupyasyncclient `KernelApi` for rustygate"
-    url,cli = _http()
-    return KernelApi(url, timeout=None, http_client=cli)
-
-async def _rg(method, route, **body):
-    "rustygate's reply from one of its private routes, which jupyasyncclient's spec leaves out, decoded and raising as a spec op does"
-    gw = _gw()
-    try: return dict2obj(await gw.transport.request(method, gw.base_url+route, json=body or None))
-    except (httpx2.HTTPStatusError, httpx2.RequestError) as e: raise e.api_error(endpoint=route) from e
+async def _rg(method, route, json=None, **params):
+    "Request JSON from rustygate over the kernel comm or HTTP"
+    async with _http() as c:
+        r = await c.request(method, route, json=json, params={k:v for k,v in params.items() if v is not None})
+        r.raise_for_status()
+        return r.json() if r.content else None
 
 async def refresh_dlg():
     "Ask every browser showing this dialog to render its current messages and templates"
@@ -121,12 +110,6 @@ def find_dname(dname=None, required=True):
     res = normpath(Path(curr).parent/dname)
     assert '../' not in res, "Path traversal not permitted"
     return res
-
-# %% ../nbs/00_core.ipynb #a01ad161
-def _diff_dialog(pred, dname, err="`id` parameter must be provided when target dialog is different", id=None):
-    "Raise ValueError if targeting a different dialog, `pred` is True, and no `id` provided"
-    if not pred or id: return
-    if dname: raise ValueError(err)
 
 # %% ../nbs/00_core.ipynb #c43c4361
 def _browser_comm(js): return create_comm(target_name='browser', data=dict(code=js))
@@ -169,14 +152,7 @@ async def list_dialogs(
     depth:int=1 # Directory depth
 ) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
-    base = Path(realpath(subpath))
-    if not base.is_dir(): raise NotADirectoryError(f'{subpath} not a directory')
-    def fmt(a,b):
-        j = os.path.join(a,b)
-        res = os.path.relpath(j, base)
-        return res + ('/' if os.path.isdir(j) else '')
-    items = globtastic(base, maxdepth=depth, exts=('ipynb', ''), ret_folders=True, skip_folder_re=r'^\.', sort=True, func=fmt)
-    return {'items': items}
+    return await _rg('GET', '/api/dialogs', **_target(subpath), depth=depth)
 
 # %% ../nbs/00_core.ipynb #92879524
 def data_root():
@@ -188,54 +164,8 @@ def data_root():
     return root
 
 # %% ../nbs/00_core.ipynb #c4582c78
-def cells_client(dname:str=''):
-    "Create a cells client for the current kernel or a separately addressed notebook"
-    url,cli = _http()
-    if not dname and (kid := dh_settings.get('kid')): return JupyAsyncCellsClient(url, kernel_id=kid, timeout=None, http_client=cli)
-    return JupyAsyncCellsClient(url, find_dname(dname), timeout=None, http_client=cli)
-
-_flag_keys = dict(skipped='skipped', pinned='pinned', heading_collapsed='heading_collapsed', bookmark='bookmark',
-    i_collapsed='hide_input', o_collapsed='collapsed')
-
-def _flag_meta(flags):
-    "Cell metadata for `flags`: `True`, or a bookmark's number, for a set flag, and `None` for an unset one"
-    return {_flag_keys[a]: (v if a=='bookmark' else True) if v else None for a,v in flags.items()}
-
-def _msg2dict(m):
-    "Message `m` as the dict the read tools return, with each flag moved from `meta` to its own field"
-    d = m.todict()
-    meta = d['meta'] = dict(d['meta'])
-    return d | {a: meta.pop(k) for a,k in _flag_keys.items() if k in meta}
-
-def _msg2cell(m):
-    "Message `m` as an nbformat cell dict holding the fields a gateway `add` or `update` op takes, id included"
-    c = m.to_cell()
-    return {k: c[k] for k in ('id','cell_type','source','metadata','outputs','execution_count','attachments') if k in c}
-
-def _mk_cell(
-    content:str='', # Message text, `%%prompt` marker excluded for prompts
-    msg_type:str='note', # 'code', 'note', 'prompt', or 'raw'
-    output:str='', # Prompt reply text, or code outputs as an ipynb-compatible JSON array
-    exported:int=0, # Set the nbdev export directive (meta form)?
-    **flags, # Cell flags: skipped, pinned, i_collapsed, o_collapsed, heading_collapsed, bookmark
-) -> dict: # An nbformat cell dict for an `add` or `update` op, id included
-    "Build a notebook cell for a gateway operation using the Message serializer"
-    if msg_type=='code' and output: output = loads(output)
-    m = Message(content, msg_type=msg_type, output=output)
-    if exported: m.meta_exported = True
-    c = _msg2cell(m)
-    c['metadata'] |= {k:v for k,v in _flag_meta(flags).items() if v is not None}
-    return c
-
-def _norm_cell(cell):
-    "Return an `AttrDict` with plain nested values and joined source lines"
-    cell = obj2dict(cell)
-    if isinstance((src := cell.get('source', '')), list): cell['source'] = ''.join(src)
-    return AttrDict(cell)
-
-def _cell2dict(cell) -> AttrDict:
-    "Convert a notebook cell to the message dictionary used by the read tools"
-    return dict2obj(_msg2dict(Dialog(name='-').cell2msg(_norm_cell(cell))))
+def _target(dname=''):
+    return dict(kid=dh_settings.get('kid'), path=dname or None)
 
 # %% ../nbs/00_core.ipynb #57ee78dd
 def _lnhashs_content(s, start_line=1, end_line=None):
@@ -275,24 +205,9 @@ async def read_msg(
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
     if start_line<1: raise ValueError('start_line must be at least 1')
-    id = _mid(id)
-    if id and not relative: raise ValueError('`id` provided while `relative=False`')
-    _diff_dialog(relative, dname, "`id` parameter must be provided, or use `relative=False` with `n`, when target dialog is different", id=id)
-    fc = cells_client(dname)
-    if relative:
-        if not id: id = await _caller()
-        if not id: return None
-        cells = await fc.cells(ids=id, context=abs(n) or None)
-        anchor = first(i for i,c in enumerate(cells) if c['id']==id)
-        if anchor is None: return None
-        if not 0<=anchor+n<len(cells): return None
-        c = cells[anchor+n]
-    else:
-        try: c, = await fc.cells(idx=n)
-        except APIError as e:
-            if e.status_code==400: return None
-            raise
-    res = _cell2dict(c)
+    found = await _rg('GET', '/api/messages', **_target(dname), id=id, n=n, relative=relative)
+    if not found: return None
+    res = AttrDict(found[0])
     if lnhashs: res['content'] = _lnhashs_content(res['content'], start_line, end_line)
     elif start_line!=1 or end_line is not None:
         lines = res['content'].splitlines()
@@ -304,10 +219,6 @@ async def read_msg(
     return res
 
 # %% ../nbs/00_core.ipynb #c7d57efa
-def _cells2dlg(cells, name='-'):
-    "An ephemeral `Dialog` from gateway cells, for model-side matching and rendering"
-    return Dialog(name=name).from_cells([_norm_cell(c) for c in cells])
-
 def _trunc_middle(s, limit=500, msg='\n…TRUNCATED…\n'):
     "Middle-out truncation, keeping both ends of `s`"
     if len(s) <= limit: return s
@@ -349,27 +260,21 @@ async def find_msgs(
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code, use its `id` field."""
-    if context is None: context = 0 if headers_only else 1
-    cells = await cells_client(dname).cells(compare='HEAD' if only_chg else None)
-    changed = {c['id'] for c in cells if c.get('change')}
-    d = _cells2dlg(cells)
-    ms = [m for m in d.messages if include_skipped or not m.skipped]
-    found = Dialog(ms).find_msgs(re_pattern, msg_type=msg_type, only_err=only_err, only_exp=only_exp, ids=[_mid(o) for o in _ids(ids)], limit=limit,
-        use_case=use_case, use_regex=use_regex, headers_only=headers_only, header_section=header_section,
-        before=max(before, context), after=max(after, context), context=0, pred=(lambda m: m.id in changed) if only_chg else None)
-    def _d(m):
-        o = _msg2dict(m)
-        if as_xml: o['output'] = m.ai_res if m.msg_type=='prompt' else (o['output'] or '')
+    found = await _rg('GET', '/api/messages', **_target(dname), re_pattern=re_pattern, msg_type=msg_type,
+        before=before, after=after, context=context, use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp,
+        only_chg=only_chg, ids=','.join(_ids(ids)) if ids else None, limit=limit, headers_only=headers_only,
+        header_section=header_section, include_skipped=include_skipped, raw_prompt_reply=as_xml)
+    res = []
+    for o in found:
         flds = {'id','content','msg_type','exported'}
-        if include_output or m.msg_type=='prompt': flds.add('output')
+        if include_output or o['msg_type']=='prompt': flds.add('output')
         if include_meta: flds |= {'meta','skipped','pinned','bookmark','i_collapsed','o_collapsed','heading_collapsed'}
+        o = AttrDict({k:v for k,v in o.items() if k in flds})
         if nums: o['content'] = '\n'.join(f'{i+1:6d} │ {l}' for i,l in enumerate(o['content'].splitlines()))
         if trunc_in: o['content'] = _trunc_middle(o['content'], 160, msg='\n…\n')
-        if trunc_out and isinstance(o.get('output'), str) and m.msg_type!='prompt': o['output'] = _trunc_middle(o['output'], 100, msg='\n…\n')
-        return AttrDict({k:v for k,v in o.items() if k in flds})
-    res = [_d(o) for o in found]
-    if headers_only:
-        for o in res: o['content'] = o['content'].split('\n', 1)[0] + ('\n<TRUNCATED>' if '\n' in o['content'] else '')
+        if trunc_out and isinstance(o.get('output'), str) and o['msg_type']!='prompt': o['output'] = _trunc_middle(o['output'], 100, msg='\n…\n')
+        if headers_only: o['content'] = o['content'].split('\n', 1)[0] + ('\n<TRUNCATED>' if '\n' in o['content'] else '')
+        res.append(o)
     return _msgs2xml(res) if as_xml else res
 
 # %% ../nbs/00_core.ipynb #9ff2a38e
@@ -387,31 +292,15 @@ async def view_dlg(
         include_meta=False, include_output=include_output, trunc_out=trunc_out, trunc_in=trunc_in, include_skipped=include_skipped)
 
 # %% ../nbs/00_core.ipynb #3ad14786
-async def _anchor(msgid, position, dname):
-    "The cells API placement for an `add` or `paste` op: beside `msgid`, which defaults to the calling cell in its own dialog, else at the dialog's end or start"
-    assert position in ('after','before','start','end'), "`position` is 'after', 'before', 'start' or 'end'"
-    if position in ('start','end'): msgid = None
-    elif not msgid and find_dname(dname, required=False)==dh_settings.get('path'): msgid = await _caller()
-    if msgid: return {position: msgid}
-    return dict(at='start') if position in ('before','start') else {}
-
-async def _add_cells(cells, msgid, position, dname):
-    if not cells: return []
-    anchor,ops = await _anchor(msgid, position, dname),[]
-    for cell in cells:
-        ops.append(dict(op='add', cell=cell, **anchor))
-        anchor = dict(after=cell['id'])
-    await cells_client(dname).apply(ops)
-    return [c['id'] for c in cells]
-
 async def add_msgs(
     msgs:list[dict], # Message dictionaries with content and the same per-message options as add_msg
     msgid:str=None, # Message to place the batch beside; defaults to the calling cell in its own dialog
     position:str='after', # 'after' or 'before' msgid, or the dialog's 'start' or 'end'
     dname:str='' # Dialog to add to; defaults to current dialog
 ) -> list[str]:
-    "Add messages in their input order with one cells request, returning their ids"
-    return await _add_cells([_mk_cell(**m) for m in msgs], msgid, position, dname)
+    "Add messages in their input order with one request, returning their ids"
+    return (await _rg('POST', '/api/messages', **_target(dname),
+        json=dict(op='add', msgs=msgs, msgid=msgid, position=position)))['added_ids']
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     msg_type:str='note', # Message type, can be 'code', 'note', or 'prompt'
@@ -428,9 +317,9 @@ async def add_msg(
     bookmark:int=0, # Bookmark number, 1 to 9, or 0 for none
 )->str: # Message ID of newly created message
     "Add a message to a dialog, returning its id"
-    cell = _mk_cell(content, msg_type=msg_type, output=output, exported=exported, skipped=skipped, i_collapsed=i_collapsed,
+    msg = dict(content=content, msg_type=msg_type, output=output, exported=exported, skipped=skipped, i_collapsed=i_collapsed,
         o_collapsed=o_collapsed, heading_collapsed=heading_collapsed, pinned=pinned, bookmark=bookmark)
-    return (await _add_cells([cell], msgid, position, dname))[0]
+    return (await add_msgs([msg], msgid=msgid, position=position, dname=dname))[0]
 
 # %% ../nbs/00_core.ipynb #afc62c45
 async def read_msgid(
@@ -477,9 +366,12 @@ def msg_ref(id, dname=None):
     return f'#{find_dname(dname)}/{id}'
 
 # %% ../nbs/00_core.ipynb #f1ee1903
-async def _apply_logged(fc, ops, logs):
-    if ops: await fc.apply(ops)
+async def _apply_logged(command, logs, dname=''):
+    if command: await _rg('POST', '/api/messages', **_target(dname), json=command)
     if logs: await add_msg('\n\n'.join(logs))
+
+def _change_log(id, diff, dname):
+    return f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.')
 
 async def del_msgs(
     ids:str=None, # Comma-separated ids of message(s) to delete
@@ -488,10 +380,11 @@ async def del_msgs(
 ) -> list:
     "Delete exactly the named messages (a collapsed heading's hidden section stays). DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     ids = _ids(ids)
-    fc = cells_client(dname)
-    logs = [f"> Deleted {msg_ref(c['id'], dname)}\n\n```\n{_cell2dict(c)['content']}\n```"
-            for c in await fc.cells(ids=ids)] if log_changed else []
-    await _apply_logged(fc, [dict(op='delete', id=i) for i in ids], logs)
+    if not ids: return []
+    found = (await _rg('GET', '/api/messages', **_target(dname), ids=','.join(ids), context=0,
+        include_skipped=True)) if log_changed else []
+    logs = [f"> Deleted {msg_ref(m['id'], dname)}\n\n```\n{m['content']}\n```" for m in found]
+    await _apply_logged(dict(op='delete', ids=ids), logs, dname)
     return ids
 
 # %% ../nbs/00_core.ipynb #023dcb74
@@ -510,35 +403,6 @@ def _umsg(
 ): ...
 
 # %% ../nbs/00_core.ipynb #38875a12
-def _update_ops(id, kwargs, cell, dname, log_changed):
-    "Operations and optional content log for one already-read message"
-    kwargs = {k:v for k,v in kwargs.items() if v is not None}
-    flags = _flag_meta({a: kwargs.pop(a) for a in _flag_keys if a in kwargs})
-    mm,meta,exported = (kwargs.pop(k, None) for k in ('mergemeta','meta','exported'))
-    ops = []
-    if cell is not None:
-        m = Dialog(name='-').cell2msg(_norm_cell(cell))
-        old,typ = m.content,m.msg_type
-        if (out := kwargs.get('output')) is not None and (kwargs.get('msg_type') or typ)=='code': kwargs['output'] = loads(out)
-        m.msg_type = kwargs.get('msg_type', typ)
-        m.update(**kwargs)
-        cell = m.to_cell()
-        fields = {v for k,v in dict(content='source', msg_type='cell_type', output='outputs', execution_count='execution_count').items() if k in kwargs}
-        if m.msg_type!=typ: fields |= {'source','outputs','execution_count'}
-        values = {k:cell[k] for k in fields if k in cell}
-        if meta is not None: values['metadata'] = Message(meta=meta, msg_type=m.msg_type).to_cell()['metadata']
-        if values: ops.append(dict(op='update', id=id, **values))
-        if 'msg_type' in kwargs: flags['solveit_ai'] = True if m.msg_type=='prompt' else None
-    else: assert not kwargs, f"unknown fields: {', '.join(kwargs)}"
-    if mm: ops.append(dict(op='merge', id=id, metadata=mm))
-    if exported is not None: flags['nbdev'] = dict(export='true') if exported else dict(export=None, exports=None)
-    if flags: ops.append(dict(op='merge', id=id, metadata=flags))
-    log = None
-    if log_changed:
-        diff = str_diff(old, m.content)
-        log = f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.')
-    return ops, log
-
 @delegates(_umsg)
 async def update_msg(
     id:str=None, # id of message to update (if None, uses current message)
@@ -552,14 +416,11 @@ async def update_msg(
     if msg: kwargs |= msg.get('msg', msg)
     supplied_id = kwargs.pop('id', None)
     id = id or supplied_id or await _caller()
-    if not id: raise TypeError("update_msg needs `id=`, a message dict with an id, or a current message")
-    fc,cell = cells_client(dname),None
-    if log_changed or any(kwargs.get(k) is not None for k in ('content','msg_type','output','meta')):
-        cells = await fc.cells(ids=id)
-        if not cells: raise KeyError(id)
-        cell = cells[0]
-    ops,log = _update_ops(id, kwargs, cell, dname, log_changed)
-    await _apply_logged(fc, ops, [log] if log else [])
+    old = await read_msg(n=0, id=id, dname=dname) if log_changed else None
+    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='update', msgs=[dict(id=id, msg=kwargs)]))
+    if log_changed:
+        new = kwargs.get('content')
+        await add_msg(_change_log(id, str_diff(old['content'], old['content'] if new is None else new), dname))
     return id
 
 # %% ../nbs/00_core.ipynb #73025e57
@@ -570,7 +431,7 @@ async def copy_msgs(
 ) -> list:
     "Copy messages to the gateway's clipboard, replacing its contents, and delete them if `cut`"
     ids = _ids(ids)
-    await cells_client(dname).apply([dict(op='copy', ids=ids, cut=cut)])
+    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='copy', ids=ids, cut=cut))
     return ids
 
 # %% ../nbs/00_core.ipynb #80def27e
@@ -580,7 +441,8 @@ async def paste_msgs(
     dname:str='' # Dialog to paste into; defaults to current dialog
 ) -> list:
     "Paste the gateway clipboard's messages where `add_msg` would place a new one, returning their ids"
-    return await cells_client(dname).apply([dict(op='paste', **await _anchor(msgid, position, dname))])
+    return (await _rg('POST', '/api/messages', **_target(dname),
+        json=dict(op='paste', msgid=msgid, position=position)))['added_ids']
 
 # %% ../nbs/00_core.ipynb #13e9163a
 mermaid_url = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
@@ -609,7 +471,7 @@ async def toggle_header(
     dname:str='' # Dialog to toggle in; defaults to current dialog
 ) -> dict:
     "Toggle collapsed header state for `id`"
-    await cells_client(dname).apply([dict(op='toggle', id=id, key=['heading_collapsed'])])
+    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='toggle', ids=[id], key=['heading_collapsed']))
     return {'success': True, 'id': id}
 
 # %% ../nbs/00_core.ipynb #90b55ef4
@@ -619,12 +481,7 @@ async def toggle_bookmark(
     dname:str='' # Dialog to set bookmark in; defaults to current dialog
 ) -> dict:
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
-    id = _mid(id)
-    fc = cells_client(dname)
-    holders = [c['id'] for c in await fc.cells(meta=dict(bookmark=n))]
-    ops = [dict(op='merge', id=h, metadata=dict(bookmark=None)) for h in holders]
-    if id not in holders: ops.append(dict(op='merge', id=id, metadata=dict(bookmark=n)))
-    await fc.apply(ops)
+    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='bookmark', id=id, n=n))
     return {'success': True, 'id': id}
 
 # %% ../nbs/00_core.ipynb #a91f99fc
@@ -633,7 +490,8 @@ async def toggle_export(
     dname:str='' # Dialog to get info for; defaults to current dialog
 ) -> dict:
     "Toggle the nbdev `export` directive (meta form) on each message, independently"
-    await cells_client(dname).apply([dict(op='toggle', id=i, key=['nbdev','export'], value='true') for i in _ids(ids)])
+    await _rg('POST', '/api/messages', **_target(dname),
+        json=dict(op='toggle', ids=_ids(ids), key=['nbdev','export'], value='true'))
     return {'success': True}
 
 # %% ../nbs/00_core.ipynb #334395f8
@@ -648,23 +506,24 @@ async def toggle_comment(
     dname:str='' # Dialog to toggle comments in; defaults to current dialog
 ) -> dict:
     "Toggle line comments on code message(s). If any lines are uncommented, comments all; otherwise uncomments all."
-    fc = cells_client(dname)
-    ops = [dict(op='update', id=c['id'], source=_toggle_comment(_cell2dict(c).content))
-        for c in await fc.cells(ids=_ids(id)) if _cell2dict(c).msg_type=='code']
-    if ops: await fc.apply(ops)
+    found = await _rg('GET', '/api/messages', **_target(dname), ids=','.join(_ids(id)), context=0,
+        include_skipped=True)
+    msgs = [dict(id=m['id'], msg=dict(content=_toggle_comment(m['content']))) for m in found if m['msg_type']=='code']
+    if msgs: await _rg('POST', '/api/messages', **_target(dname), json=dict(op='update', msgs=msgs))
     return {'success': True}
 
 # %% ../nbs/00_core.ipynb #f26259cf
 async def _kernel_for(name):
     "The kernel bound to the gateway-root-relative dialog `name`, or None"
-    return first(await _gw().api.kernels.list_kernels(path=name))
+    return first(await _rg('GET', '/api/kernels', path=name))
 
 async def create_or_run_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 )->dict: # The dialog's kernel model
     "Create a new dialog, or start an existing one's kernel. A new dialog takes its mode from the current one."
-    mode = (await cells_client().view(fields='meta', limit=0))['metadata'].get('solveit', {}).get('mode') if find_dname(required=False) else None
-    return await _rg('POST', '/api/kernels', path=find_dname(name), dialog=dict(mode=mode) if mode else {})
+    view = await _rg('GET', f"/api/kernels/{dh_settings['kid']}/cells", fields='meta', limit=0) if dh_settings.get('kid') else {}
+    mode = view.get('metadata', {}).get('solveit', {}).get('mode')
+    return await _rg('POST', '/api/kernels', json=dict(path=find_dname(name), dialog=dict(mode=mode) if mode else {}))
 
 # %% ../nbs/00_core.ipynb #a9c83c4b
 async def restart_dialog(
@@ -672,14 +531,14 @@ async def restart_dialog(
 )->dict: # The dialog's kernel model
     "Restart a dialog's kernel, starting the dialog first if needed"
     k = await _kernel_for(find_dname(name))
-    return await _gw().api.kernels.restart(kid=k['id']) if k else await create_or_run_dialog(name)
+    return await _rg('POST', f"/api/kernels/{k['id']}/restart") if k else await create_or_run_dialog(name)
 
 # %% ../nbs/00_core.ipynb #80433dd1
 async def stop_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Stop a dialog's kernel, if it's running"
-    if k := await _kernel_for(find_dname(name)): await _gw().api.kernels.delete_kernel(kid=k['id'])
+    if k := await _kernel_for(find_dname(name)): await _rg('DELETE', f"/api/kernels/{k['id']}")
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
@@ -687,38 +546,21 @@ async def rm_dialog(
 ):
     "Delete a dialog or an empty folder, stopping the dialog's kernel first if it's running"
     await stop_dialog(name)
-    await _gw().api.contents.delete_path(path=find_dname(name))
+    await _rg('DELETE', f'/api/contents/{quote(find_dname(name))}')
 
 # %% ../nbs/00_core.ipynb #48da528f
-def _is_fm(m): return m['msg_type'] in ('raw','note') and m['content'].startswith('---')
-
-async def _fm_msg(dname):
-    "The dialog's first message if it holds frontmatter, else None"
-    m = await read_msg(n=0, relative=False, dname=dname)
-    return m if m and _is_fm(m) else None
-
 async def read_frontmatter(
     dname:str='' # Dialog to read; defaults to current dialog
 )->dict|None: # The frontmatter, or None if the dialog has none
-    "The YAML frontmatter at the start of a dialog's first message"
-    if m := await _fm_msg(dname): return frontmatter(m['content'])[0]
-
-def _mk_fm(meta, body=''):
-    "Message content holding frontmatter `meta`, followed by `body` if any"
-    res = f"---\n{yaml.safe_dump(meta, sort_keys=False, allow_unicode=True)}---"
-    return f"{res}\n\n{body.lstrip()}" if body.strip() else res
+    "The YAML mapping at the start of a dialog's physical first raw or note message"
+    return (await _rg('GET', '/api/frontmatter', **_target(dname)))['frontmatter']
 
 async def update_frontmatter(
     dname:str='', # Dialog to update; defaults to current dialog
-    **kwargs # Values to merge into the frontmatter; `None` deletes a key
+    **kwargs # Values to merge recursively into the frontmatter; `None` deletes a key
 )->dict: # The updated frontmatter
-    "Deep-merge `kwargs` into a dialog's frontmatter, adding a raw frontmatter message at its start if it has none"
-    m = await _fm_msg(dname)
-    old,body = frontmatter(m['content']) if m else ({},'')
-    fm = deep_merge(old, kwargs)
-    if m: await update_msg(m['id'], content=_mk_fm(fm, body), dname=dname)
-    else: await add_msg(_mk_fm(fm), msg_type='raw', position='start', dname=dname)
-    return fm
+    "Merge `kwargs` into a dialog's frontmatter, preserving its body or adding a raw header when absent"
+    return (await _rg('PATCH', '/api/frontmatter', **_target(dname), json=kwargs))['frontmatter']
 
 # %% ../nbs/00_core.ipynb #c1b96094
 @delegates(find_msgs, but=['before', 'after', 'context', 'include_output', 'include_meta', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'headers_only', 'dname'])
@@ -729,11 +571,14 @@ async def import_dlg(
     position:str='after', # 'after' or 'before' `msgid`, or the dialog's 'start' or 'end'
     **kwargs
 )->str: # The copied messages, each under a `# msg <id>` header with its new id
-    "Copy messages matching `find_msgs` criteria from `src_dname` into `dname`, merging a leading frontmatter message into `dname`'s frontmatter"
-    msgs = await find_msgs(dname=src_dname, context=0, include_output=False, **kwargs)
-    if msgs and _is_fm(msgs[0]): await update_frontmatter(dname, **frontmatter(msgs.pop(0)['content'])[0])
-    ids = await add_msgs([{k:v for k,v in m.items() if k not in ('id','meta')} for m in msgs], msgid, position, dname)
-    return '\n'.join(f"# msg {i}\n{m['content']}" for m,i in zip(msgs, ids))
+    "Import a clean template, merging its selected physical frontmatter into the destination"
+    body = {'from': src_dname, 'msgid': msgid, 'position': position}
+    if set(kwargs)=={'ids'} and isinstance(kwargs['ids'], list): body['ids'] = kwargs['ids']
+    elif kwargs:
+        if isinstance(kwargs.get('ids'), list): kwargs['ids'] = ','.join(kwargs['ids'])
+        body['selection'] = kwargs
+    res = await _rg('POST', '/api/import', **_target(dname), json=body)
+    return '\n'.join(f"# msg {c['id']}\n{c['source']}" for c in res['cells'])
 
 
 # %% ../nbs/00_core.ipynb #5617305b
@@ -753,7 +598,7 @@ async def run_cells(
     kid:str=None, # Kernel whose dialog holds them (default: this one)
 )->list: # Each cell's saved outputs
     "Run code cells in a dialog's kernel through rustygate, saving their outputs; the run stops at the first cell that raises"
-    return (await _rg('POST', f"/api/kernels/{kid or dh_settings['kid']}/run", ids=_ids(ids)))['outputs']
+    return (await _rg('POST', f"/api/kernels/{kid or dh_settings['kid']}/run", json=dict(ids=_ids(ids))))['outputs']
 
 # %% ../nbs/00_core.ipynb #5250fa23
 _msg_edit_doc = f"""
@@ -776,29 +621,25 @@ def _msg_edit(f, name=None):
         many = isinstance(id, list) or id=='all'
         ids = id if isinstance(id, list) else [id or await _caller()]
         if not ids: return []
-        fc = cells_client(dname)
-        found = await fc.cells(ids=None if id=='all' else [_mid(i) for i in ids])
-        if id=='all':
-            found = [c for c in found if not c.get('metadata', {}).get('skipped')]
-            ids = [c['id'] for c in found]
-        cells = {c['id']:c for c in found}
-        ops,logs = [],[]
+        found = await _rg('GET', '/api/messages', **_target(dname), ids=None if id=='all' else ','.join(ids),
+            context=0, include_skipped=id!='all', raw_prompt_reply=True)
+        if id=='all': ids = [m['id'] for m in found]
+        msgs = {m['id']:m for m in found}
+        updates,logs = [],[]
         async def _one(mid):
-            cell = cells.get(_mid(mid))
-            if cell is None: return f"error: No message {mid}"
-            msg = _cell2dict(cell)
+            msg = msgs.get(_mid(mid))
+            if msg is None: return f"error: No message {mid}"
             field = 'output' if out else 'content'
             text = msg.get(field, '')
             if not text: return f"error: Message has no {field}"
             try: new_text = await maybe_await(f(text, *args, **kw))
             except ValueError as e: return f'error: {e}'
-            changes,log = _update_ops(_mid(mid), {field: new_text}, cell, dname, log_changed)
-            ops.extend(changes)
-            if log: logs.append(log)
+            updates.append(dict(id=mid, msg={field: new_text}))
             diff = str_diff(text, new_text)
+            if log_changed: logs.append(_change_log(mid, diff, dname))
             return diff or 'none: No changes.'
         results = [(mid, await _one(mid)) for mid in ids]
-        await _apply_logged(fc, ops, logs)
+        await _apply_logged(dict(op='update', msgs=updates) if updates else None, logs, dname)
         return [(mid, r) for mid,r in results if not r.startswith('none:')] if many else results[0][1]
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
@@ -836,8 +677,7 @@ async def run_prompt(
     "Run a prompt message, or answer `text` with the dialog as context, and return the reply"
     body = dict(cell=msgid) if text is None else dict(text=text, msgid=msgid or await _caller())
     if tools: body['tools'] = tools
-    url,cli = _http()
-    async with (cli or httpx2.AsyncClient(timeout=None)) as c, c.stream('POST', f"{url}/api/kernels/{kid or dh_settings['kid']}/prompt", json=body) as r:
+    async with _http() as c, c.stream('POST', f"/api/kernels/{kid or dh_settings['kid']}/prompt", json=body) as r:
         r.raise_for_status()
         async for line in r.aiter_lines():
             d = json.loads(line)
