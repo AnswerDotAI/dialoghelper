@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.49
+
+### New Features
+
+- Use jupyasyncclient for rustygate CommTransport and JSON requests, drop local transport and `names_containing`, add jupyasyncclient dep ([#263](https://github.com/AnswerDotAI/dialoghelper/issues/263))
+
+
 ## 0.2.48
 
 ### New Features
