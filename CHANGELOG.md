@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.50
+
+### New Features
+
+- Move display repr/init patches to ipymini.term.display, wrap DisplayFormatter.format for prose marking ([#264](https://github.com/AnswerDotAI/dialoghelper/issues/264))
+
+
 ## 0.2.49
 
 ### New Features
