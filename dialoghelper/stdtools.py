@@ -1,4 +1,4 @@
-"Everything `from dialoghelper.stdtools import *` provides, by defining module."
+"Everything `from dialoghelper.stdtools import *` provides, by module."
 from dialoghelper import *
 from dialoghelper.solveitskill import *
 from fastcore.tools import *
@@ -14,19 +14,15 @@ import aidialog.dlgskill as dsk
 
 allow_imports.update(['PIL'])
 
-def _doc_rows():
-    "One row per module: the public names here that it defines"
-    import types
-    groups = {}
-    for nm,o in list(globals().items()):
-        if nm.startswith('_'): continue
-        if isinstance(o, types.ModuleType):
-            if o.__name__.rsplit('.', 1)[-1] == nm: continue
-            src = o.__name__
-        else: src = getattr(o, '__module__', None)
-        if not src or src == 'builtins': src = 'other'
-        groups.setdefault(src, []).append(nm)
-    return [f"- `{src}`: " + ', '.join(f'`{nm}`' for nm in nms) for src,nms in sorted(groups.items())]
+def _provided():
+    "Module -> names this file imports from it, read from its own import statements"
+    import ast, sys
+    res = {}
+    for o in ast.parse(open(__file__).read()).body:
+        if isinstance(o, ast.ImportFrom): res[o.module] = xdir(sys.modules[o.module]) if o.names[0].name=='*' else [a.name for a in o.names]
+        elif isinstance(o, ast.Import): res.update({a.name: [a.asname] for a in o.names})
+    return res
 
-__doc__ += '\n\n' + '\n'.join(_doc_rows())
+provided = _provided()
+__doc__ += '\n\n' + '\n'.join(f"- `{m}`: {', '.join(f'`{n}`' for n in ns)}" for m,ns in provided.items())
 
