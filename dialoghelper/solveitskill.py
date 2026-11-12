@@ -12,15 +12,15 @@ Messages above the current prompt are already in your context, with up-to-date c
 
 ## Changing messages
 
-`add_msg` adds after the current message unless `msgid` names a message to place it beside, after it by default or before it with `position='before'`. Use `add_msgs` with a list of dictionaries containing `content` and any per-message `add_msg` options to add messages in order with one request. In another dialog, or with no current message, `add_msg` appends at the end. `position='start'` or `position='end'` places a message at the dialog's start or end. `update_msg` changes only the fields passed. `del_msgs` only when the user asks for a deletion. `copy_msgs`/`paste_msgs` copy or cut messages to the clipboard that Solveit's copy and paste also use, and paste them where `add_msg` would add a message. `toggle_header`/`toggle_bookmark`/`toggle_comment` switch a message's collapsed heading, numbered bookmark, or line comments.
+`add_msg` adds after the current message unless `msgid` names a message to place it beside, after it by default or before it with `position='before'`. Use `add_msgs` with a list of dictionaries containing `content` and any per-message `add_msg` options to add messages in order with one request. In another dialog, or with no current message, `add_msg` appends at the end. `position='start'` or `position='end'` places a message at the dialog's start or end. `update_msg` changes only the fields passed. `del_msgs` only when the user asks for a deletion. `copy_msgs`/`paste_msgs` copy or cut messages to the clipboard that Solveit's copy and paste also use, and paste them where `add_msg` would add a message. `toggle_header`/`toggle_bookmark`/`toggle_comment`/`toggle_export` switch a message's collapsed heading, numbered bookmark, line comments, or nbdev export directive.
 
 Text edits use exhash (read `doc(exhash.skill)` first): take the id from context, `view_dlg`, or `find_msgs`; view with `lnhashview_msg(id)`; apply `msg_exhash(id, *cmds)`, passing each command tuple as its own argument; view again before further edits.
 
 ## Dialogs and other tools
 
-`list_dialogs`: dialogs and folders under a path. `realpath`: on-disk path. `create_or_run_dialog`/`stop_dialog`: create a dialog or start its kernel / stop it. `dialog_link`: link that opens a dialog in Solveit. `run_code_interactive`: puts code in the user's dialog for them to run; only when no other function does the job. `solveit_docs`: Solveit reference docs.
+`list_dialogs`: dialogs and folders under a path. `realpath`: on-disk path. `create_or_run_dialog`/`restart_dialog`/`stop_dialog`: create a dialog or start its kernel / restart its kernel / stop it. `dialog_link`: link that opens a dialog in Solveit. `run_code_interactive`: puts code in the user's dialog for them to run; only when no other function does the job. `solveit_docs`: Solveit reference docs.
 
-Not allowed by default, because they run code or prompts, or delete data: `run_cells` (runs code cells), `run_prompt` (runs a prompt), `browser` (runs JavaScript in the browser pages showing this dialog), `rm_dialog` (deletes a dialog).
+Not exported here, because they run code or prompts, or delete data: `run_cells` (runs code cells), `run_prompt` (runs a prompt), `browser` (runs JavaScript in the browser pages showing this dialog), `rm_dialog` (deletes a dialog). 
 """
 
 from dialoghelper.core import *
@@ -30,13 +30,13 @@ from pyskills.core import allow
 __all__ = [
     'realpath', 'list_dialogs', 'lnhashview_msg', 'msg_exhash',
     'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'add_msgs', 'read_msgid', 'view_msg',
-    'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-    'create_or_run_dialog', 'stop_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link',
+    'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'toggle_header', 'toggle_bookmark', 'toggle_comment', 'toggle_export',
+    'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link', 'msg_ref', 'find_dname',
 ]
 
 allow(
     realpath, list_dialogs, read_msg, find_msgs, view_dlg, add_msg, add_msgs, read_msgid, view_msg,
-    del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment,
-    create_or_run_dialog, stop_dialog, solveit_docs, dialog_link, lnhashview_msg, msg_exhash
+    del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment, toggle_export,
+    create_or_run_dialog, restart_dialog, stop_dialog, solveit_docs, dialog_link, lnhashview_msg, msg_exhash, msg_ref, find_dname
 )
 

@@ -1,5 +1,4 @@
 "Everything `from dialoghelper.stdtools import *` provides, by module."
-from dialoghelper import *
 from dialoghelper.solveitskill import *
 from fastcore.tools import *
 from fastcore.funccall import call_func_async
@@ -23,6 +22,5 @@ def _provided():
         elif isinstance(o, ast.Import): res.update({a.name: [a.asname] for a in o.names})
     return res
 
-provided = _provided()
-__doc__ += '\n\n' + '\n'.join(f"- `{m}`: {', '.join(f'`{n}`' for n in ns)}" for m,ns in provided.items())
+__doc__ += '\n\n' + '\n'.join(f"- {m}: {', '.join(f'{n}' for n in ns)}" for m,ns in _provided().items())
 
