@@ -10,6 +10,7 @@ def repoint(nm):
     from IPython import get_ipython
     from dialoghelper.core import dh_settings
     dh_settings['path'] = nm
+    os.environ['RUSTYGATE_KERNEL_PATH'] = nm
     fname = Path(dh_settings['root'])/nm
     os.chdir(fname.parent)
     get_ipython().ex(f'''import aidialog.dlgskill as dsk, dialoghelper.core as dh
