@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.51
+
+### New Features
+
+- Add mode param to `run_prompt`, let tools=[] disable automatic tools, set `RUSTYGATE_KERNEL_PATH` on bootstrap ([#266](https://github.com/AnswerDotAI/dialoghelper/issues/266))
+
+
 ## 0.2.50
 
 ### New Features
