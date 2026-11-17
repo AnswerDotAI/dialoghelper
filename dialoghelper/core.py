@@ -627,13 +627,15 @@ msg_del_lines =  _msg_edit (del_lines, 'msg_del_lines')
 async def run_prompt(
     msgid:str=None, # Prompt message to run; with `text`, the message the context ends at (default: the calling cell)
     text:str=None, # Prompt text to answer without saving anything in the dialog
-    tools:list=None, # Names of the tools the model may call
+    tools:list=None, # Tools to allow; None inherits dialog defaults, [] disables automatic tools
     show:bool=True, # Print the reply as it streams?
     kid:str=None, # Kernel whose dialog holds the prompt (default: this one); with `text` and another dialog's kernel, pass `msgid`
+    mode:str=None, # Framing for this turn; otherwise the invoking turn's mode or the dialog's saved mode
 )->str: # The reply, in its stored format
     "Run a prompt message, or answer `text` with the dialog as context, and return the reply"
     body = dict(cell=msgid) if text is None else dict(text=text, msgid=msgid or await _caller())
-    if tools: body['tools'] = tools
+    if tools is not None: body['tools'] = tools
+    if mode is not None: body['mode'] = mode
     async with http_client(**_http_options()) as c, c.stream('POST', f"/api/kernels/{kid or dh_settings['kid']}/prompt", json=body) as r:
         r.raise_for_status()
         async for line in r.aiter_lines():
