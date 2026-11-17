@@ -11,7 +11,7 @@ __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', '
            'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
            'toggle_export', 'toggle_comment', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog',
            'read_frontmatter', 'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt',
-           'solveit_docs', 'dialog_link']
+           'solveit_docs', 'dialog_link', 'solveit_host', 'file_url']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,asyncio,json
@@ -666,3 +666,13 @@ def dialog_link(
     if msg_id: url += '#_'+_mid(msg_id)  # the fragment targets the DOM id, which carries a `_` prefix
     return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')
 
+
+# %% ../nbs/00_core.ipynb #0a1cd3e3
+def solveit_host(): return f"https://{os.environ['PRIVATE_DOMAIN']}.{os.environ['SOLVE_DOM']}"
+
+def file_url(
+    path:str # File to link to: gateway-root-relative with a leading slash, otherwise relative to the current notebook's folder
+)->str: # Absolute download URL
+    "Absolute URL that downloads `path` through Solveit's `/static/` route"
+    rel = Path(realpath(path)).relative_to(realpath('/'))
+    return f"{solveit_host()}/static/{quote(str(rel))}"
