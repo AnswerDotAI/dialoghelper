@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.52
+
+### New Features
+
+- Add `raw_outputs` option to `read_msg` and `read_msgid` to return raw Jupyter outputs and unformatted prompt replies ([#268](https://github.com/AnswerDotAI/dialoghelper/issues/268))
+
+
 ## 0.2.51
 
 ### New Features
