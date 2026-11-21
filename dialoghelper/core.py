@@ -154,7 +154,8 @@ async def read_msg(
     end_line:int=None, # End line (defaults to last line if None; -1 for EOF)
     nums:bool=False, # Whether to show line numbers
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
-    dname:str='' # Dialog to get info for; defaults to current dialog
+    dname:str='', # Dialog to get info for; defaults to current dialog
+    raw_outputs:bool=False # Return raw Jupyter output list for code cells and unformatted reply for prompts?
     ) -> dict|None:
     """Get the message indexed in the current dialog, or None when there's no such message.
     NB: Messages in the current dialog above the current message are *already* visible; use this only when you need line numbers for editing operations, or for messages not in the current dialog or below the current message.
@@ -162,7 +163,7 @@ async def read_msg(
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
     if start_line<1: raise ValueError('start_line must be at least 1')
-    found = await _rg('GET', '/api/messages', **_target(dname), id=id, n=n, relative=relative)
+    found = await _rg('GET', '/api/messages', **_target(dname), id=id, n=n, relative=relative, raw_outputs=True if raw_outputs else None)
     if not found: return None
     res = AttrDict(found[0])
     if lnhashs: res['content'] = _lnhashs_content(res['content'], start_line, end_line)
@@ -286,11 +287,12 @@ async def read_msgid(
     nums:bool=False, # Whether to show line numbers
     lnhashs:bool=False, # Show exhash `lineno|hash|` addresses instead of line numbers?
     dname:str='', # Dialog to get message from; defaults to current dialog
-    add_to_dlg:bool=False # Whether to add message content to current dialog (as a raw message)
+    add_to_dlg:bool=False, # Whether to add message content to current dialog (as a raw message)
+    raw_outputs:bool=False # Return raw Jupyter output list for code cells and unformatted reply for prompts?
 ) -> dict|None:
     """Get message `id`, or None when there's no such message. Message IDs can be view directly in LLM chat history/context, or found in `find_msgs` results.
     Use `add_to_dlg` if the LLM or human may need to refer to the message content again later."""
-    res = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname)
+    res = await read_msg(0, id=id, start_line=start_line, end_line=end_line, nums=nums, lnhashs=lnhashs, dname=dname, raw_outputs=raw_outputs)
     if add_to_dlg and res: await add_msg(res['content'], msg_type='raw')
     return res
 

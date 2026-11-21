@@ -11,6 +11,8 @@ notation: /why
 - current message: running cell; in a tool call, prompt being answered
 - `dname`: dialog filename, `.ipynb` optional, relative to current dialog's folder; leading `/`: gateway root, not disk root
 - messages above current prompt: in context, content and outputs current: don't reread; read only for fresh addresses before editing (earlier tool results may be truncated), messages below prompt (only when sure user wants them), or another dialog
+- `read_msg`/`read_msgid`: flattened text `output` by default; `raw_outputs=True` returns the raw Jupyter output list for code cells (MIME bundles, metadata) and unformatted `{.tool}` replies for prompts
+- closed/on-disk notebooks, structural/AST queries: `aidialog.dlgskill`, never `json.loads`
 - text edits: `lnhashview_msg(id)`, then `msg_exhash(id, *cmds)`; `doc(exhash.skill)` first
 - `copy_msgs`, `paste_msgs`: same clipboard as Solveit's own copy and paste
 - not allowed by default: `run_cells`, `run_prompt`, `browser` (JavaScript in pages showing this dialog), `rm_dialog`    /they run code or prompts, or delete data
