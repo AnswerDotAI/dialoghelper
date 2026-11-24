@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.2.53
+
+### New Features
+
+- Delegate dialog path resolution to gateway, remove local path helpers and repointing, switch to JUPYGATE env vars, and update toggle API ([#269](https://github.com/AnswerDotAI/dialoghelper/issues/269))
+
+
 ## 0.2.52
 
 ### New Features
