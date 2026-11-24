@@ -6,18 +6,17 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
-           'msg_del_lines', 'refresh_dlg', 'find_dname', 'browser', 'add_html', 'realpath', 'list_dialogs', 'data_root',
-           'read_msg', 'find_msgs', 'view_dlg', 'add_msgs', 'add_msg', 'read_msgid', 'view_msg', 'msg_ref', 'del_msgs',
-           'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
-           'toggle_export', 'toggle_comment', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog',
-           'read_frontmatter', 'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt',
-           'solveit_docs', 'dialog_link']
+           'msg_del_lines', 'refresh_dlg', 'browser', 'add_html', 'list_dialogs', 'read_msg', 'find_msgs', 'view_dlg',
+           'add_msgs', 'add_msg', 'read_msgid', 'view_msg', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs',
+           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment',
+           'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog', 'read_frontmatter',
+           'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt', 'solveit_docs',
+           'dialog_link']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,asyncio,json
 
 from typing import Dict
-from os.path import normpath
 from fastcore.xml import *
 from fastcore.xml import Msgs
 from fastcore.meta import splice_sig, delegates
@@ -28,14 +27,14 @@ from inspect import currentframe
 import httpx2
 from comm import create_comm
 from IPython.display import Markdown,HTML
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode
 from jupyasyncclient import CommTransport, http_client, request_json
 from safepyrun import load_ipython_extension
 from fastcore.tools import *
 from fastcore.nbio import item2xml
 
 # %% ../nbs/00_core.ipynb #eb1636a6
-dh_settings = dict(kid=os.environ.get('RUSTYGATE_KERNEL_ID'), path=os.environ.get('RUSTYGATE_KERNEL_PATH'))
+dh_settings = dict(kid=os.environ.get('JUPYGATE_KERNEL_ID'))
 
 # %% ../nbs/00_core.ipynb #f5cd76ed
 try: load_ipython_extension(get_ipython())
@@ -44,7 +43,7 @@ except NameError: pass
 # %% ../nbs/00_core.ipynb #d30b0b15
 def _http_options():
     if dh_settings.get('kid'): return dict(base_url='http://rustygate', transport=CommTransport(), timeout=None)
-    return dict(base_url=dh_settings.get('rusty') or os.environ['RUSTYGATE_URL'], timeout=None)
+    return dict(base_url=dh_settings.get('rusty') or os.environ['JUPYGATE_URL'], timeout=None)
 
 async def _rg(method, route, json=None, **params):
     return await request_json(method, route, json=json, params=params, **_http_options())
@@ -52,21 +51,6 @@ async def _rg(method, route, json=None, **params):
 async def refresh_dlg():
     "Ask every browser showing this dialog to render its current messages and templates"
     await _rg('POST', f"/api/kernels/{dh_settings['kid']}/refresh")
-
-# %% ../nbs/00_core.ipynb #65a8b58b
-def find_dname(dname=None, required=True):
-    "Return `dname` as a gateway-root-relative notebook name without a leading slash, adding a missing `.ipynb`. A leading `/` starts from the gateway root, other names are relative to the current dialog's folder, and a trailing `/` names a folder."
-    if dname and not dname.endswith(('.ipynb','/')): dname += '.ipynb'
-    if dname and dname.startswith('/'): return dname.strip('/')
-    curr = dh_settings.get('path')
-    if not curr:
-        if not required: return None
-        raise ValueError("No dialog context: Please pass absolute `dname` starting with '/'")
-    curr = curr.lstrip('/')
-    if not dname: return curr
-    res = normpath(Path(curr).parent/dname)
-    assert '../' not in res, "Path traversal not permitted"
-    return res
 
 # %% ../nbs/00_core.ipynb #c43c4361
 def _browser_comm(js): return create_comm(target_name='browser', data=dict(code=js))
@@ -93,16 +77,6 @@ def add_html(
     "Swap `content`'s out-of-band elements into each browser showing this dialog"
     _browser_comm(f"htmx.swap(document.body, {json.dumps(to_xml(content))}, {{swapStyle: 'none'}})").close()
 
-# %% ../nbs/00_core.ipynb #e2138315
-def realpath(
-    subpath:str='/' # Gateway-root-relative with a leading slash, otherwise relative to the current notebook's folder
-) -> str:
-    "The on-disk path of `subpath`, which must stay within the gateway root"
-    root = data_root().resolve()
-    p = (root/subpath.lstrip('/') if subpath.startswith('/') else root/Path(find_dname()).parent/subpath).resolve()
-    if not p.is_relative_to(root): raise ValueError(f'{subpath!r} is outside the gateway root')
-    return str(p)
-
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(
     subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
@@ -110,15 +84,6 @@ async def list_dialogs(
 ) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
     return await _rg('GET', '/api/dialogs', **_target(subpath), depth=depth)
-
-# %% ../nbs/00_core.ipynb #92879524
-def data_root():
-    "The gateway root recorded at startup, or derived from the current notebook's folder"
-    if r := dh_settings.get('root'): return Path(r)
-    if not (nm := find_dname(required=False)): raise RuntimeError('data_root requires a bound gateway kernel')
-    root = Path.cwd()
-    for _ in Path(nm).parent.parts: root = root.parent
-    return root
 
 # %% ../nbs/00_core.ipynb #c4582c78
 def _target(dname=''):
@@ -317,20 +282,16 @@ async def view_msg(
     if add_to_dlg: await add_msg(res, msg_type='raw')
     return res
 
-# %% ../nbs/00_core.ipynb #79cdeb39
-def msg_ref(id, dname=None):
-    "Markdown ref to a message — same-dialog `#_id` or cross-dialog `#dname/_id` (anchors target DOM ids, which carry a `_` prefix)"
-    id = '_'+_mid(id)
-    if not dname: return f'#{id}'
-    return f'#{find_dname(dname)}/{id}'
-
 # %% ../nbs/00_core.ipynb #f1ee1903
-async def _apply_logged(command, logs, dname=''):
-    if command: await _rg('POST', '/api/messages', **_target(dname), json=command)
+async def _apply_logged(command, mk_logs, dname=''):
+    res = await _rg('POST', '/api/messages', **_target(dname), json=command) if command else {}
+    logs = mk_logs(res.get('path', '') if dname else '')
     if logs: await add_msg('\n\n'.join(logs))
+    return res
 
-def _change_log(id, diff, dname):
-    return f'> Updated {msg_ref(id, dname)}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.')
+def _change_log(id, diff, path=''):
+    ref = f'#{path}/_{_mid(id)}' if path else f'#_{_mid(id)}'
+    return f'> Updated {ref}\n\n' + (f'```diff\n{diff}\n```' if diff else 'No changes.')
 
 async def del_msgs(
     ids:str=None, # Comma-separated ids of message(s) to delete
@@ -342,8 +303,10 @@ async def del_msgs(
     if not ids: return []
     found = (await _rg('GET', '/api/messages', **_target(dname), ids=','.join(ids), context=0,
         include_skipped=True)) if log_changed else []
-    logs = [f"> Deleted {msg_ref(m['id'], dname)}\n\n```\n{m['content']}\n```" for m in found]
-    await _apply_logged(dict(op='delete', ids=ids), logs, dname)
+    def _logs(path):
+        pfx = f'#{path}/' if path else '#'
+        return [f"> Deleted {pfx}_{_mid(m['id'])}\n\n```\n{m['content']}\n```" for m in found]
+    await _apply_logged(dict(op='delete', ids=ids), _logs, dname)
     return ids
 
 # %% ../nbs/00_core.ipynb #023dcb74
@@ -376,10 +339,10 @@ async def update_msg(
     supplied_id = kwargs.pop('id', None)
     id = id or supplied_id or await _caller()
     old = await read_msg(n=0, id=id, dname=dname) if log_changed else None
-    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='update', msgs=[dict(id=id, msg=kwargs)]))
+    res = await _rg('POST', '/api/messages', **_target(dname), json=dict(op='update', msgs=[dict(id=id, msg=kwargs)]))
     if log_changed:
         new = kwargs.get('content')
-        await add_msg(_change_log(id, str_diff(old['content'], old['content'] if new is None else new), dname))
+        await add_msg(_change_log(id, str_diff(old['content'], old['content'] if new is None else new), res['path'] if dname else ''))
     return id
 
 # %% ../nbs/00_core.ipynb #73025e57
@@ -430,7 +393,7 @@ async def toggle_header(
     dname:str='' # Dialog to toggle in; defaults to current dialog
 ) -> dict:
     "Toggle collapsed header state for `id`"
-    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='toggle', ids=[id], key=['heading_collapsed']))
+    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='toggle', ids=[id], key='heading_collapsed'))
     return {'success': True, 'id': id}
 
 # %% ../nbs/00_core.ipynb #90b55ef4
@@ -448,9 +411,9 @@ async def toggle_export(
     ids:str|list, # Message id(s) to toggle (comma-separated str, or list)
     dname:str='' # Dialog to get info for; defaults to current dialog
 ) -> dict:
-    "Toggle the nbdev `export` directive (meta form) on each message, independently"
+    "Toggle the nbdev `export` directive (meta form) on `ids`, matching the inverse of the first message"
     await _rg('POST', '/api/messages', **_target(dname),
-        json=dict(op='toggle', ids=_ids(ids), key=['nbdev','export'], value='true'))
+        json=dict(op='toggle', ids=_ids(ids), key='exported'))
     return {'success': True}
 
 # %% ../nbs/00_core.ipynb #334395f8
@@ -473,8 +436,8 @@ async def toggle_comment(
 
 # %% ../nbs/00_core.ipynb #f26259cf
 async def _kernel_for(name):
-    "The kernel bound to the gateway-root-relative dialog `name`, or None"
-    return first(await _rg('GET', '/api/kernels', path=name))
+    "The kernel bound to dialog `name`, or None"
+    return first(await _rg('GET', '/api/kernels', **_target(name)))
 
 async def create_or_run_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
@@ -482,14 +445,14 @@ async def create_or_run_dialog(
     "Create a new dialog, or start an existing one's kernel. A new dialog takes its mode from the current one."
     view = await _rg('GET', f"/api/kernels/{dh_settings['kid']}/cells", fields='meta', limit=0) if dh_settings.get('kid') else {}
     mode = view.get('metadata', {}).get('solveit', {}).get('mode')
-    return await _rg('POST', '/api/kernels', json=dict(path=find_dname(name), dialog=dict(mode=mode) if mode else {}))
+    return await _rg('POST', '/api/kernels', json=dict(**_target(name), dialog=dict(mode=mode) if mode else {}))
 
 # %% ../nbs/00_core.ipynb #a9c83c4b
 async def restart_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 )->dict: # The dialog's kernel model
     "Restart a dialog's kernel, starting the dialog first if needed"
-    k = await _kernel_for(find_dname(name))
+    k = await _kernel_for(name)
     return await _rg('POST', f"/api/kernels/{k['id']}/restart") if k else await create_or_run_dialog(name)
 
 # %% ../nbs/00_core.ipynb #80433dd1
@@ -497,15 +460,15 @@ async def stop_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Stop a dialog's kernel, if it's running"
-    if k := await _kernel_for(find_dname(name)): await _rg('DELETE', f"/api/kernels/{k['id']}")
+    if k := await _kernel_for(name): await _rg('DELETE', f"/api/kernels/{k['id']}")
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
     name:str, # Name/path of the dialog, or of an empty folder, to delete (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Delete a dialog or an empty folder, stopping the dialog's kernel first if it's running"
-    await stop_dialog(name)
-    await _rg('DELETE', f'/api/contents/{quote(find_dname(name))}')
+    if name and not name.endswith(('.ipynb', '/')): name += '.ipynb'
+    await _rg('DELETE', '/api/contents', **_target(name))
 
 # %% ../nbs/00_core.ipynb #48da528f
 async def read_frontmatter(
@@ -584,7 +547,7 @@ def _msg_edit(f, name=None):
             context=0, include_skipped=id!='all', raw_prompt_reply=True)
         if id=='all': ids = [m['id'] for m in found]
         msgs = {m['id']:m for m in found}
-        updates,logs = [],[]
+        updates,diffs = [],[]
         async def _one(mid):
             msg = msgs.get(_mid(mid))
             if msg is None: return f"error: No message {mid}"
@@ -595,10 +558,10 @@ def _msg_edit(f, name=None):
             except ValueError as e: return f'error: {e}'
             updates.append(dict(id=mid, msg={field: new_text}))
             diff = str_diff(text, new_text)
-            if log_changed: logs.append(_change_log(mid, diff, dname))
+            if log_changed: diffs.append((mid, diff))
             return diff or 'none: No changes.'
         results = [(mid, await _one(mid)) for mid in ids]
-        await _apply_logged(dict(op='update', msgs=updates) if updates else None, logs, dname)
+        await _apply_logged(dict(op='update', msgs=updates) if updates else None, lambda p: [_change_log(mid, d, p) for mid, d in diffs], dname)
         return [(mid, r) for mid,r in results if not r.startswith('none:')] if many else results[0][1]
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
@@ -656,8 +619,8 @@ If the user wants more info, give them a link to https://gist.github.com/jph00/{
     return pre + (await GhApi().gist_file(_ref_gist_id))['content']
 
 # %% ../nbs/00_core.ipynb #70ec67db
-def dialog_link(
-    dname:str='', # Dialog to link to (relative to current dialog's folder, or absolute if starts with '/'); empty for in-page anchor link
+async def dialog_link(
+    dname:str='', # Gateway-relative dialog path; empty for in-page anchor link
     msg_id:str=None # Optional message id to scroll to
 ):
     """Return an IPython HTML link to open a dialog in Solveit.
@@ -665,7 +628,8 @@ def dialog_link(
     if not (dname or msg_id): return 'err: no dname or msg_id'
     url = ''
     if dname:
-        dname = find_dname(dname)
+        dname = dname.strip('/')
+        if not dname.endswith('.ipynb'): dname += '.ipynb'
         url += f"/dialog_?{urlencode({'name': dname})}"
     if msg_id: url += '#_'+_mid(msg_id)  # the fragment targets the DOM id, which carries a `_` prefix
     return HTML(f'<a href="{url}" target="_blank">{dname}</a>') if dname else Markdown(f'[{url}]({url})')
