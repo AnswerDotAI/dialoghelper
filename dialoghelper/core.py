@@ -77,6 +77,10 @@ def add_html(
     "Swap `content`'s out-of-band elements into each browser showing this dialog"
     _browser_comm(f"htmx.swap(document.body, {json.dumps(to_xml(content))}, {{swapStyle: 'none'}})").close()
 
+# %% ../nbs/00_core.ipynb #c4582c78
+def _target(dname=''):
+    return dict(kid=dh_settings.get('kid'), path=dname or None)
+
 # %% ../nbs/00_core.ipynb #dab9c929
 async def list_dialogs(
     subpath:str='', # Path under data root (absolute with `/`, else relative to current dialog's folder)
@@ -84,10 +88,6 @@ async def list_dialogs(
 ) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
     return await _rg('GET', '/api/dialogs', **_target(subpath), depth=depth)
-
-# %% ../nbs/00_core.ipynb #c4582c78
-def _target(dname=''):
-    return dict(kid=dh_settings.get('kid'), path=dname or None)
 
 # %% ../nbs/00_core.ipynb #57ee78dd
 def _lnhashs_content(s, start_line=1, end_line=None):
@@ -487,14 +487,15 @@ async def update_frontmatter(
 # %% ../nbs/00_core.ipynb #c1b96094
 @delegates(find_msgs, but=['before', 'after', 'context', 'include_output', 'include_meta', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'headers_only', 'dname'])
 async def import_dlg(
-    src_dname:str, # Dialog to copy messages from
+    src_dname:str=None, # Dialog to copy messages from (gateway path or URL)
     dname:str='', # Dialog to add them to; defaults to current dialog
     msgid:str=None, # Message to place them beside; default: the calling cell in its own dialog, else the end (or start for `position='before'`)
     position:str='after', # 'after' or 'before' `msgid`, or the dialog's 'start' or 'end'
+    content:str=None, # Raw `.ipynb` JSON text to import instead of `src_dname`
     **kwargs
 )->str: # The copied messages, each under a `# msg <id>` header with its new id
     "Import a clean template, merging its selected physical frontmatter into the destination"
-    body = {'from': src_dname, 'msgid': msgid, 'position': position}
+    body = {'from': src_dname, 'content': content, 'msgid': msgid, 'position': position}
     if set(kwargs)=={'ids'} and isinstance(kwargs['ids'], list): body['ids'] = kwargs['ids']
     elif kwargs:
         if isinstance(kwargs.get('ids'), list): kwargs['ids'] = ','.join(kwargs['ids'])
