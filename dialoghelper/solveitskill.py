@@ -15,7 +15,6 @@ notation: /why
 - closed/on-disk notebooks, structural/AST queries: `aidialog.dlgskill`, never `json.loads`
 - text edits: `lnhashview_msg(id)`, then `msg_exhash(id, *cmds)`; `doc(exhash.skill)` first
 - `copy_msgs`, `paste_msgs`: same clipboard as Solveit's own copy and paste
-- not allowed by default: `run_cells`, `run_prompt`, `browser` (JavaScript in pages showing this dialog), `rm_dialog`    /they run code or prompts, or delete data
 """
 
 from dialoghelper.core import *
