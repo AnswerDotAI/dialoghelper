@@ -6,12 +6,12 @@ Docs: https://AnswerDotAI.github.io/dialoghelper/core.html.md"""
 
 # %% auto #0
 __all__ = ['dh_settings', 'mermaid_url', 'msg_insert_line', 'msg_str_replace', 'msg_strs_replace', 'msg_replace_lines',
-           'msg_del_lines', 'refresh_dlg', 'browser', 'add_html', 'list_dialogs', 'read_msg', 'find_msgs', 'view_dlg',
-           'add_msgs', 'add_msg', 'read_msgid', 'view_msg', 'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs',
-           'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark', 'toggle_export', 'toggle_comment',
-           'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog', 'read_frontmatter',
-           'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt', 'solveit_docs',
-           'dialog_link']
+           'msg_del_lines', 'rget', 'rpost', 'rpatch', 'rdelete', 'refresh_dlg', 'browser', 'add_html', 'list_dialogs',
+           'read_msg', 'find_msgs', 'view_dlg', 'add_msgs', 'add_msg', 'read_msgid', 'view_msg', 'del_msgs',
+           'update_msg', 'copy_msgs', 'paste_msgs', 'enable_mermaid', 'mermaid', 'toggle_header', 'toggle_bookmark',
+           'toggle_export', 'toggle_comment', 'create_or_run_dialog', 'restart_dialog', 'stop_dialog', 'rm_dialog',
+           'read_frontmatter', 'update_frontmatter', 'import_dlg', 'run_code_interactive', 'run_cells', 'run_prompt',
+           'list_models', 'prompt', 'solveit_docs', 'dialog_link']
 
 # %% ../nbs/00_core.ipynb #4dd4b925
 import os,asyncio,json
@@ -45,12 +45,46 @@ def _http_options():
     if dh_settings.get('kid'): return dict(base_url='http://rustygate', transport=CommTransport(), timeout=None)
     return dict(base_url=dh_settings.get('rusty') or os.environ['JUPYGATE_URL'], timeout=None)
 
-async def _rg(method, route, json=None, **params):
-    return await request_json(method, route, json=json, params=params, **_http_options())
+def _rg_path(path): return path if path.startswith('/') else f'/api/{path}'
 
+async def _rg(method, path, /, json=None, **params):
+    return await request_json(method, _rg_path(path), json=json, params=params, **_http_options())
+
+# %% ../nbs/00_core.ipynb #44b47326
+async def rget(
+    path:str, /, # Route on rustygate; without a leading `/`, `/api/` is prepended
+    **kwargs # Query parameters (`None` values are omitted)
+):
+    "Send a GET request to rustygate over the comm (or `JUPYGATE_URL` outside a kernel)"
+    return await _rg('GET', path, **kwargs)
+
+async def rpost(
+    path:str, # Route on rustygate; without a leading `/`, `/api/` is prepended
+    params:dict=None, /, # Optional query parameters
+    **kwargs # JSON request body fields
+):
+    "Send a POST request to rustygate over the comm (or `JUPYGATE_URL` outside a kernel)"
+    return await _rg('POST', path, json=kwargs or None, **(params or {}))
+
+async def rpatch(
+    path:str, # Route on rustygate; without a leading `/`, `/api/` is prepended
+    params:dict=None, /, # Optional query parameters
+    **kwargs # JSON request body fields
+):
+    "Send a PATCH request to rustygate over the comm (or `JUPYGATE_URL` outside a kernel)"
+    return await _rg('PATCH', path, json=kwargs or None, **(params or {}))
+
+async def rdelete(
+    path:str, /, # Route on rustygate; without a leading `/`, `/api/` is prepended
+    **kwargs # Query parameters (`None` values are omitted)
+):
+    "Send a DELETE request to rustygate over the comm (or `JUPYGATE_URL` outside a kernel)"
+    return await _rg('DELETE', path, **kwargs)
+
+# %% ../nbs/00_core.ipynb #36b3f94e
 async def refresh_dlg():
     "Ask every browser showing this dialog to render its current messages and templates"
-    await _rg('POST', f"/api/kernels/{dh_settings['kid']}/refresh")
+    await rpost(f"kernels/{dh_settings['kid']}/refresh")
 
 # %% ../nbs/00_core.ipynb #c43c4361
 def _browser_comm(js): return create_comm(target_name='browser', data=dict(code=js))
@@ -87,7 +121,7 @@ async def list_dialogs(
     depth:int=1 # Directory depth
 ) -> dict:
     "List dialogs and folders under `subpath`. Folders have `/` suffix."
-    return await _rg('GET', '/api/dialogs', **_target(subpath), depth=depth)
+    return await rget('dialogs', **_target(subpath), depth=depth)
 
 # %% ../nbs/00_core.ipynb #57ee78dd
 def _lnhashs_content(s, start_line=1, end_line=None):
@@ -108,7 +142,7 @@ def _ids(ids):
 async def _caller():
     "Id of the cell this code runs for: the running cell, or a tool call's prompt cell (None outside any cell)"
     if not (kid := dh_settings.get('kid')): return None
-    return (await _rg('GET', f'/api/kernels/{kid}/caller'))['cell']
+    return (await rget(f'kernels/{kid}/caller'))['cell']
 
 # %% ../nbs/00_core.ipynb #558c6aa7
 async def read_msg(
@@ -128,7 +162,7 @@ async def read_msg(
     - To get a relative message use `n` (relative position index).
     - To get the nth message use `n` with `relative=False`, e.g `n=0` first message, `n=-1` last message."""
     if start_line<1: raise ValueError('start_line must be at least 1')
-    found = await _rg('GET', '/api/messages', **_target(dname), id=id, n=n, relative=relative, raw_outputs=True if raw_outputs else None)
+    found = await rget('messages', **_target(dname), id=id, n=n, relative=relative, raw_outputs=True if raw_outputs else None)
     if not found: return None
     res = AttrDict(found[0])
     if lnhashs: res['content'] = _lnhashs_content(res['content'], start_line, end_line)
@@ -183,7 +217,7 @@ async def find_msgs(
     Message ids are identical to those in LLM chat history, so do NOT call this to view a specific message if it's in the chat history--instead use `view_msg`.
     Do NOT use find_msgs to view message content in the current dialog above the current prompt -- these are *already* provided in LLM context, so just read the content there directly. (NB: LLM context only includes messages *above* the current prompt, whereas `find_msgs` can access *all* messages.)
     To refer to a found message from code, use its `id` field."""
-    found = await _rg('GET', '/api/messages', **_target(dname), re_pattern=re_pattern, msg_type=msg_type,
+    found = await rget('messages', **_target(dname), re_pattern=re_pattern, msg_type=msg_type,
         before=before, after=after, context=context, use_case=use_case, use_regex=use_regex, only_err=only_err, only_exp=only_exp,
         only_chg=only_chg, ids=','.join(_ids(ids)) if ids else None, limit=limit, headers_only=headers_only,
         header_section=header_section, include_skipped=include_skipped, raw_prompt_reply=as_xml)
@@ -222,8 +256,7 @@ async def add_msgs(
     dname:str='' # Dialog to add to; defaults to current dialog
 ) -> list[str]:
     "Add messages in their input order with one request, returning their ids"
-    return (await _rg('POST', '/api/messages', **_target(dname),
-        json=dict(op='add', msgs=msgs, msgid=msgid, position=position)))['added_ids']
+    return (await rpost('messages', _target(dname), op='add', msgs=msgs, msgid=msgid, position=position))['added_ids']
 async def add_msg(
     content:str, # Content of the message (i.e the message prompt, code, or note text)
     msg_type:str='note', # Message type, can be 'code', 'note', or 'prompt'
@@ -284,7 +317,7 @@ async def view_msg(
 
 # %% ../nbs/00_core.ipynb #f1ee1903
 async def _apply_logged(command, mk_logs, dname=''):
-    res = await _rg('POST', '/api/messages', **_target(dname), json=command) if command else {}
+    res = await rpost('messages', _target(dname), **command) if command else {}
     logs = mk_logs(res.get('path', '') if dname else '')
     if logs: await add_msg('\n\n'.join(logs))
     return res
@@ -301,8 +334,7 @@ async def del_msgs(
     "Delete exactly the named messages (a collapsed heading's hidden section stays). DO NOT USE THIS unless you have been explicitly instructed to delete messages."
     ids = _ids(ids)
     if not ids: return []
-    found = (await _rg('GET', '/api/messages', **_target(dname), ids=','.join(ids), context=0,
-        include_skipped=True)) if log_changed else []
+    found = (await rget('messages', **_target(dname), ids=','.join(ids), context=0, include_skipped=True)) if log_changed else []
     def _logs(path):
         pfx = f'#{path}/' if path else '#'
         return [f"> Deleted {pfx}_{_mid(m['id'])}\n\n```\n{m['content']}\n```" for m in found]
@@ -339,7 +371,7 @@ async def update_msg(
     supplied_id = kwargs.pop('id', None)
     id = id or supplied_id or await _caller()
     old = await read_msg(n=0, id=id, dname=dname) if log_changed else None
-    res = await _rg('POST', '/api/messages', **_target(dname), json=dict(op='update', msgs=[dict(id=id, msg=kwargs)]))
+    res = await rpost('messages', _target(dname), op='update', msgs=[dict(id=id, msg=kwargs)])
     if log_changed:
         new = kwargs.get('content')
         await add_msg(_change_log(id, str_diff(old['content'], old['content'] if new is None else new), res['path'] if dname else ''))
@@ -353,7 +385,7 @@ async def copy_msgs(
 ) -> list:
     "Copy messages to the gateway's clipboard, replacing its contents, and delete them if `cut`"
     ids = _ids(ids)
-    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='copy', ids=ids, cut=cut))
+    await rpost('messages', _target(dname), op='copy', ids=ids, cut=cut)
     return ids
 
 # %% ../nbs/00_core.ipynb #80def27e
@@ -363,8 +395,7 @@ async def paste_msgs(
     dname:str='' # Dialog to paste into; defaults to current dialog
 ) -> list:
     "Paste the gateway clipboard's messages where `add_msg` would place a new one, returning their ids"
-    return (await _rg('POST', '/api/messages', **_target(dname),
-        json=dict(op='paste', msgid=msgid, position=position)))['added_ids']
+    return (await rpost('messages', _target(dname), op='paste', msgid=msgid, position=position))['added_ids']
 
 # %% ../nbs/00_core.ipynb #13e9163a
 mermaid_url = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
@@ -393,7 +424,7 @@ async def toggle_header(
     dname:str='' # Dialog to toggle in; defaults to current dialog
 ) -> dict:
     "Toggle collapsed header state for `id`"
-    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='toggle', ids=[id], key='heading_collapsed'))
+    await rpost('messages', _target(dname), op='toggle', ids=[id], key='heading_collapsed')
     return {'success': True, 'id': id}
 
 # %% ../nbs/00_core.ipynb #90b55ef4
@@ -403,7 +434,7 @@ async def toggle_bookmark(
     dname:str='' # Dialog to set bookmark in; defaults to current dialog
 ) -> dict:
     "Toggle numbered bookmark (1-9) on a message, clearing it from any other message when setting"
-    await _rg('POST', '/api/messages', **_target(dname), json=dict(op='bookmark', id=id, n=n))
+    await rpost('messages', _target(dname), op='bookmark', id=id, n=n)
     return {'success': True, 'id': id}
 
 # %% ../nbs/00_core.ipynb #a91f99fc
@@ -412,8 +443,7 @@ async def toggle_export(
     dname:str='' # Dialog to get info for; defaults to current dialog
 ) -> dict:
     "Toggle the nbdev `export` directive (meta form) on `ids`, matching the inverse of the first message"
-    await _rg('POST', '/api/messages', **_target(dname),
-        json=dict(op='toggle', ids=_ids(ids), key='exported'))
+    await rpost('messages', _target(dname), op='toggle', ids=_ids(ids), key='exported')
     return {'success': True}
 
 # %% ../nbs/00_core.ipynb #334395f8
@@ -428,24 +458,23 @@ async def toggle_comment(
     dname:str='' # Dialog to toggle comments in; defaults to current dialog
 ) -> dict:
     "Toggle line comments on code message(s). If any lines are uncommented, comments all; otherwise uncomments all."
-    found = await _rg('GET', '/api/messages', **_target(dname), ids=','.join(_ids(id)), context=0,
-        include_skipped=True)
+    found = await rget('messages', **_target(dname), ids=','.join(_ids(id)), context=0, include_skipped=True)
     msgs = [dict(id=m['id'], msg=dict(content=_toggle_comment(m['content']))) for m in found if m['msg_type']=='code']
-    if msgs: await _rg('POST', '/api/messages', **_target(dname), json=dict(op='update', msgs=msgs))
+    if msgs: await rpost('messages', _target(dname), op='update', msgs=msgs)
     return {'success': True}
 
 # %% ../nbs/00_core.ipynb #f26259cf
 async def _kernel_for(name):
     "The kernel bound to dialog `name`, or None"
-    return first(await _rg('GET', '/api/kernels', **_target(name)))
+    return first(await rget('kernels', **_target(name)))
 
 async def create_or_run_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 )->dict: # The dialog's kernel model
     "Create a new dialog, or start an existing one's kernel. A new dialog takes its mode from the current one."
-    view = await _rg('GET', f"/api/kernels/{dh_settings['kid']}/cells", fields='meta', limit=0) if dh_settings.get('kid') else {}
+    view = await rget(f"kernels/{dh_settings['kid']}/cells", fields='meta', limit=0) if dh_settings.get('kid') else {}
     mode = view.get('metadata', {}).get('solveit', {}).get('mode')
-    return await _rg('POST', '/api/kernels', json=dict(**_target(name), dialog=dict(mode=mode) if mode else {}))
+    return await rpost('kernels', **_target(name), dialog=dict(mode=mode) if mode else {})
 
 # %% ../nbs/00_core.ipynb #a9c83c4b
 async def restart_dialog(
@@ -453,14 +482,14 @@ async def restart_dialog(
 )->dict: # The dialog's kernel model
     "Restart a dialog's kernel, starting the dialog first if needed"
     k = await _kernel_for(name)
-    return await _rg('POST', f"/api/kernels/{k['id']}/restart") if k else await create_or_run_dialog(name)
+    return await rpost(f"kernels/{k['id']}/restart") if k else await create_or_run_dialog(name)
 
 # %% ../nbs/00_core.ipynb #80433dd1
 async def stop_dialog(
     name:str, # Name/path of the dialog (relative to current dialog's folder, or absolute if starts with '/')
 ):
     "Stop a dialog's kernel, if it's running"
-    if k := await _kernel_for(name): await _rg('DELETE', f"/api/kernels/{k['id']}")
+    if k := await _kernel_for(name): await rdelete(f"kernels/{k['id']}")
 
 # %% ../nbs/00_core.ipynb #e393f14b
 async def rm_dialog(
@@ -468,21 +497,21 @@ async def rm_dialog(
 ):
     "Delete a dialog or an empty folder, stopping the dialog's kernel first if it's running"
     if name and not name.endswith(('.ipynb', '/')): name += '.ipynb'
-    await _rg('DELETE', '/api/contents', **_target(name))
+    await rdelete('contents', **_target(name))
 
 # %% ../nbs/00_core.ipynb #48da528f
 async def read_frontmatter(
     dname:str='' # Dialog to read; defaults to current dialog
 )->dict|None: # The frontmatter, or None if the dialog has none
     "The YAML mapping at the start of a dialog's physical first raw or note message"
-    return (await _rg('GET', '/api/frontmatter', **_target(dname)))['frontmatter']
+    return (await rget('frontmatter', **_target(dname)))['frontmatter']
 
 async def update_frontmatter(
     dname:str='', # Dialog to update; defaults to current dialog
     **kwargs # Values to merge recursively into the frontmatter; `None` deletes a key
 )->dict: # The updated frontmatter
     "Merge `kwargs` into a dialog's frontmatter, preserving its body or adding a raw header when absent"
-    return (await _rg('PATCH', '/api/frontmatter', **_target(dname), json=kwargs))['frontmatter']
+    return (await rpatch('frontmatter', _target(dname), **kwargs))['frontmatter']
 
 # %% ../nbs/00_core.ipynb #c1b96094
 @delegates(find_msgs, but=['before', 'after', 'context', 'include_output', 'include_meta', 'as_xml', 'nums', 'trunc_out', 'trunc_in', 'headers_only', 'dname'])
@@ -500,7 +529,7 @@ async def import_dlg(
     elif kwargs:
         if isinstance(kwargs.get('ids'), list): kwargs['ids'] = ','.join(kwargs['ids'])
         body['selection'] = kwargs
-    res = await _rg('POST', '/api/import', **_target(dname), json=body)
+    res = await rpost('import', _target(dname), **body)
     return '\n'.join(f"# msg {c['id']}\n{c['source']}" for c in res['cells'])
 
 
@@ -521,7 +550,7 @@ async def run_cells(
     kid:str=None, # Kernel whose dialog holds them (default: this one)
 )->list: # Each cell's saved outputs
     "Run code cells in a dialog's kernel through rustygate, saving their outputs; the run stops at the first cell that raises"
-    return (await _rg('POST', f"/api/kernels/{kid or dh_settings['kid']}/run", json=dict(ids=_ids(ids))))['outputs']
+    return (await rpost(f"kernels/{kid or dh_settings['kid']}/run", ids=_ids(ids)))['outputs']
 
 # %% ../nbs/00_core.ipynb #5250fa23
 _msg_edit_doc = f"""
@@ -544,7 +573,7 @@ def _msg_edit(f, name=None):
         many = isinstance(id, list) or id=='all'
         ids = id if isinstance(id, list) else [id or await _caller()]
         if not ids: return []
-        found = await _rg('GET', '/api/messages', **_target(dname), ids=None if id=='all' else ','.join(ids),
+        found = await rget('messages', **_target(dname), ids=None if id=='all' else ','.join(ids),
             context=0, include_skipped=id!='all', raw_prompt_reply=True)
         if id=='all': ids = [m['id'] for m in found]
         msgs = {m['id']:m for m in found}
@@ -608,6 +637,40 @@ async def run_prompt(
             d = json.loads(line)
             if 'reply' in d: return d['reply']
             if show: print(d['text'], end='', flush=True)
+
+# %% ../nbs/00_core.ipynb #1b0ae07d
+async def list_models(
+    refresh:bool=False # Bypass rustygate's cached catalog and re-fetch from Solve-LP?
+)->dict: # Catalog with `defaults` (`standard`, `reasoning`) and `data` list of model specs
+    "List models available to the current caller via rustygate's `/api/models`"
+    return await rget('models', refresh=True if refresh else None)
+
+def _img_item(o):
+    u = o['url'] if isinstance(o, dict) else o
+    if not (isinstance(u, str) and u.startswith(('data:image/', 'http://', 'https://'))):
+        u = to_data_url(Path(u) if isinstance(u, str) else u)
+    return dict(url=u, label=str(o['label'])) if isinstance(o, dict) and o.get('label') else u
+
+async def prompt(
+    text:str, # Prompt text to send
+    model:str=None, # Model ID or short name (defaults to caller's standard default from `/api/models`)
+    instructions:str=None, # Optional developer/system instructions
+    max_output_tokens:int=None, # Optional maximum output tokens
+    reasoning:dict|str|int=None, # Optional reasoning config: dict, effort name (e.g. 'low'), or level (0-3)
+    images=None, # Optional image or sequence of images (path, URL, data URL, bytes, or `{'url', 'label'}` dict)
+    full:bool=False, # Return full `AttrDict` (`text`, `status`, `model`, `usage`, optional `incomplete_reason`) instead of plain `text`?
+)->str|AttrDict: # Plain-text reply, or full response `AttrDict` when `full=True`
+    "Send a single-turn prompt with optional images to any model via rustygate's `/api/prompt`"
+    if model is None: model = (await list_models())['defaults']['standard']
+    if isinstance(reasoning, str): reasoning = dict(effort=reasoning)
+    elif isinstance(reasoning, int) and not isinstance(reasoning, bool): reasoning = dict(level=reasoning)
+    if images is not None:
+        if isinstance(images, (str, Path, bytes, bytearray, memoryview, dict)): images = [images]
+        images = [_img_item(o) for o in images] or None
+    body = {k:v for k,v in dict(model=model, text=text, instructions=instructions,
+        max_output_tokens=max_output_tokens, reasoning=reasoning, images=images).items() if v is not None}
+    res = await rpost('prompt', **body)
+    return dict2obj(res) if full else res['text']
 
 # %% ../nbs/00_core.ipynb #11ee26d9
 async def solveit_docs():

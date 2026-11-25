@@ -15,6 +15,7 @@ notation: /why
 - closed/on-disk notebooks, structural/AST queries: `aidialog.dlgskill`, never `json.loads`
 - text edits: `lnhashview_msg(id)`, then `msg_exhash(id, *cmds)`; `doc(exhash.skill)` first
 - `copy_msgs`, `paste_msgs`: same clipboard as Solveit's own copy and paste
+- `list_models`, `prompt`: model catalog (aliases); standalone single-turn prompt, optional `images`, `full=True` (`status`/`model`/`usage`), no dialog context/tools
 """
 
 from dialoghelper.core import *
@@ -25,12 +26,12 @@ __all__ = [
     'list_dialogs', 'lnhashview_msg', 'msg_exhash',
     'read_msg', 'find_msgs', 'view_dlg', 'add_msg', 'add_msgs', 'read_msgid', 'view_msg',
     'del_msgs', 'update_msg', 'copy_msgs', 'paste_msgs', 'toggle_header', 'toggle_bookmark', 'toggle_comment',
-    'create_or_run_dialog', 'stop_dialog', 'run_code_interactive', 'solveit_docs', 'dialog_link',
+    'create_or_run_dialog', 'stop_dialog', 'run_code_interactive', 'list_models', 'prompt', 'solveit_docs', 'dialog_link',
 ]
 
 allow(
     list_dialogs, read_msg, find_msgs, view_dlg, add_msg, add_msgs, read_msgid, view_msg,
     del_msgs, update_msg, copy_msgs, paste_msgs, toggle_header, toggle_bookmark, toggle_comment,
-    create_or_run_dialog, stop_dialog, solveit_docs, dialog_link, lnhashview_msg, msg_exhash
+    create_or_run_dialog, stop_dialog, list_models, prompt, solveit_docs, dialog_link, lnhashview_msg, msg_exhash
 )
 
